@@ -1,0 +1,565 @@
+{
+  "info": {
+    "name": "시장 탐방 API 테스트 컬렉션",
+    "description": "방한 외국인을 위한 시장 탐방 서비스 API 테스트",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000",
+      "type": "string"
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "헬스체크",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/health",
+          "host": ["{{base_url}}"],
+          "path": ["health"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "인증",
+      "item": [
+        {
+          "name": "Google OAuth 인증",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"google_auth_code\",\n  \"redirect_uri\": \"http://localhost:3000/callback\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/google",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "google"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "현재 사용자 정보",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/me",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "me"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "시장",
+      "item": [
+        {
+          "name": "시장 목록 조회",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/markets/",
+              "host": ["{{base_url}}"],
+              "path": ["markets", ""]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "시장 상세 정보",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/markets/{{market_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["markets", "{{market_id}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "시장 메뉴 아이템",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/markets/{{market_id}}/menu-items",
+              "host": ["{{base_url}}"],
+              "path": ["markets", "{{market_id}}", "menu-items"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "가게",
+      "item": [
+        {
+          "name": "근처 가게 검색",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"lat\": 37.5703,\n  \"lng\": 126.9998,\n  \"radius_meters\": 100\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/shops/nearby",
+              "host": ["{{base_url}}"],
+              "path": ["shops", "nearby"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "가게 상세 정보",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/shops/{{shop_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["shops", "{{shop_id}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "가게 메뉴",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/shops/{{shop_id}}/menu",
+              "host": ["{{base_url}}"],
+              "path": ["shops", "{{shop_id}}", "menu"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "사진 업로드",
+      "item": [
+        {
+          "name": "사진 업로드 초기화",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"lat\": 37.5703,\n  \"lng\": 126.9998,\n  \"taken_at\": \"2024-01-01T12:00:00Z\",\n  \"is_member\": false\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/uploads/photo-init",
+              "host": ["{{base_url}}"],
+              "path": ["uploads", "photo-init"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "사진 업로드 완료",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"upload_token\": \"upload_token_here\",\n  \"s3_key\": \"photos/example.jpg\",\n  \"lat\": 37.5703,\n  \"lng\": 126.9998,\n  \"taken_at\": \"2024-01-01T12:00:00Z\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/uploads/photo-complete",
+              "host": ["{{base_url}}"],
+              "path": ["uploads", "photo-complete"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "내 사진 목록",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/uploads/my-photos",
+              "host": ["{{base_url}}"],
+              "path": ["uploads", "my-photos"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "검색",
+      "item": [
+        {
+          "name": "이미지 검색",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"image_url\": \"https://example.com/food.jpg\",\n  \"user_prompt\": \"이게 뭔 음식인가요?\",\n  \"lat\": 37.5703,\n  \"lng\": 126.9998\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/search/image",
+              "host": ["{{base_url}}"],
+              "path": ["search", "image"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "메뉴 텍스트 검색",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/search/menu-items?q=김치&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["search", "menu-items"],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "김치"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "인기 메뉴",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/search/popular-menus?limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["search", "popular-menus"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "추천",
+      "item": [
+        {
+          "name": "개인화 추천",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/recommendations/?limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["recommendations", ""],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "트렌딩 메뉴",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/recommendations/trending?limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["recommendations", "trending"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "초보자 추천",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/recommendations/for-beginners?limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["recommendations", "for-beginners"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "다이어리",
+      "item": [
+        {
+          "name": "다이어리 작성",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"market_id\": \"{{market_id}}\",\n  \"content\": \"오늘 광장시장에서 정말 맛있는 빈대떡을 먹었어요!\",\n  \"keywords\": [\"맛있는\", \"바삭바삭\", \"추천\"]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/diary/",
+              "host": ["{{base_url}}"],
+              "path": ["diary", ""]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "내 다이어리 목록",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/diary/my",
+              "host": ["{{base_url}}"],
+              "path": ["diary", "my"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "좋아요 추가",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"menu_item_id\": \"{{menu_item_id}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/diary/likes",
+              "host": ["{{base_url}}"],
+              "path": ["diary", "likes"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "핀 추가",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"shop_id\": \"{{shop_id}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/diary/pins",
+              "host": ["{{base_url}}"],
+              "path": ["diary", "pins"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "사용자",
+      "item": [
+        {
+          "name": "프로필 조회",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/users/profile",
+              "host": ["{{base_url}}"],
+              "path": ["users", "profile"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "프로필 수정",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"display_name\": \"김민수\",\n  \"country\": \"KR\",\n  \"spice_level\": 3,\n  \"adventure\": \"moderate\",\n  \"korean_experience\": \"some_experience\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/users/profile",
+              "host": ["{{base_url}}"],
+              "path": ["users", "profile"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "온보딩 완료",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"country\": \"US\",\n  \"birth_yyyy_mm\": \"1990-05\",\n  \"spice_level\": 2,\n  \"adventure\": \"conservative\",\n  \"korean_experience\": \"first_time\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/users/onboarding",
+              "host": ["{{base_url}}"],
+              "path": ["users", "onboarding"]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
