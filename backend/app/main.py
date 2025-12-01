@@ -9,7 +9,7 @@ import uvicorn
 import logging
 
 from app.config import settings
-from app.api import auth, users, markets, shops, photos, search, recommendations, diary
+from app.api import auth, users, markets, shops, photos, search, recommendations, diary, market_photos
 from app.db.database import engine, Base
 
 # 로깅 설정
@@ -70,6 +70,7 @@ app.include_router(photos.router, prefix="/uploads", tags=["사진 업로드"])
 app.include_router(search.router, prefix="/search", tags=["검색"])
 app.include_router(recommendations.router, prefix="/recommendations", tags=["추천"])
 app.include_router(diary.router, prefix="/diary", tags=["다이어리"])
+app.include_router(market_photos.router, prefix="/markets", tags=["지도-시장"])
 
 if __name__ == "__main__":
     uvicorn.run(

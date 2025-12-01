@@ -49,6 +49,13 @@ async def create_diary(
                     detail="일부 사진에 대한 권한이 없습니다"
                 )
         
+        # 키워드 검증 (최소 1개 필요)
+        if not diary_data.keywords or len(diary_data.keywords) == 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="최소 하나의 키워드를 선택해주세요"
+            )
+        
         # 다이어리 생성
         diary = Diary(
             user_id=current_user.id,
@@ -62,10 +69,31 @@ async def create_diary(
         db.commit()
         db.refresh(diary)
         
-        # 키워드 리뷰 업데이트 (비동기로 처리 가능)
+        # 키워드 리뷰 업데이트 (시장별 키워드 저장)
         if diary_data.keywords:
             from app.tasks.maintenance_tasks import update_keyword_reviews
-            update_keyword_reviews.delay(str(diary_data.market_id), diary_data.keywords)
+            from app.db.models import KeywordReview
+            from datetime import datetime, timezone
+            
+            # 즉시 업데이트 (비동기 대신)
+            for keyword in diary_data.keywords:
+                existing_review = db.query(KeywordReview).filter(
+                    KeywordReview.market_id == diary_data.market_id,
+                    KeywordReview.keyword == keyword
+                ).first()
+                
+                if existing_review:
+                    existing_review.count += 1
+                    existing_review.last_updated = datetime.now(timezone.utc)
+                else:
+                    new_review = KeywordReview(
+                        market_id=diary_data.market_id,
+                        keyword=keyword,
+                        count=1
+                    )
+                    db.add(new_review)
+            
+            db.commit()
         
         # 이벤트 기록
         from app.db.models import Event, ActionType, TargetType

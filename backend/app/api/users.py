@@ -8,8 +8,15 @@ from sqlalchemy.orm import Session
 
 from app.db.database import get_db
 from app.db.models import User
-from app.models.schemas import User as UserSchema, UserUpdate, BaseResponse
+from app.models.schemas import (
+    User as UserSchema, 
+    UserUpdate, 
+    BaseResponse,
+    KoreanNameGenerateRequest,
+    KoreanNameGenerateResponse
+)
 from app.api.auth import get_current_user
+from app.services.korean_name_service import KoreanNameService
 
 router = APIRouter()
 
@@ -63,6 +70,9 @@ async def complete_onboarding(
     for field, value in update_data.items():
         setattr(current_user, field, value)
     
+    # 온보딩 완료 플래그 설정
+    current_user.onboarding_completed = True
+    
     db.commit()
     db.refresh(current_user)
     
@@ -103,3 +113,26 @@ async def get_user_preferences(current_user: User = Depends(get_current_user)):
         "locale": current_user.locale,
         "country": current_user.country
     }
+
+
+@router.post("/generate-korean-name", response_model=KoreanNameGenerateResponse)
+async def generate_korean_name(
+    request: KoreanNameGenerateRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """한국 이름 생성"""
+    try:
+        service = KoreanNameService()
+        korean_name, english_pronunciation = service.generate_korean_name(request.input_name)
+        
+        return KoreanNameGenerateResponse(
+            success=True,
+            message="한국 이름이 성공적으로 생성되었습니다",
+            korean_name=korean_name,
+            english_pronunciation=english_pronunciation
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"한국 이름 생성 실패: {str(e)}"
+        )

@@ -1,28 +1,38 @@
-# 🗄️ 데이터베이스 ERD (Entity Relationship Diagram)
+# 데이터베이스 ERD (Entity Relationship Diagram)
 
-## 📊 테이블 구조 및 관계
+## 개요
+
+이 문서는 시장 탐방 서비스의 데이터베이스 엔티티 관계 다이어그램입니다.
+
+---
+
+## 전체 ERD
 
 ```mermaid
 erDiagram
-    USERS ||--o{ PHOTOS : uploads
-    USERS ||--o{ LIKES : creates
-    USERS ||--o{ PINS : creates
-    USERS ||--o{ DIARIES : writes
-    USERS ||--o{ EVENTS : generates
+    users ||--o{ photos : "uploads"
+    users ||--o{ likes : "likes"
+    users ||--o{ pins : "pins"
+    users ||--o{ diaries : "writes"
+    users ||--o{ events : "generates"
     
-    MARKETS ||--o{ SHOPS : contains
-    MARKETS ||--o{ MENU_ITEMS : has
-    MARKETS ||--o{ DIARIES : visited_at
-    MARKETS ||--o{ KEYWORD_REVIEWS : aggregated_for
+    markets ||--o{ shops : "contains"
+    markets ||--o{ menu_items : "has"
+    markets ||--o{ diaries : "referenced_in"
+    markets ||--o{ keyword_reviews : "aggregated_for"
     
-    SHOPS ||--o{ SHOP_MENU : sells
-    SHOPS ||--o{ PINS : pinned_at
+    shops ||--o{ shop_menu : "sells"
+    shops ||--o{ photos : "reported_in"
+    shops ||--o{ pins : "pinned_by"
     
-    MENU_ITEMS ||--o{ SHOP_MENU : sold_at
-    MENU_ITEMS ||--o{ LIKES : liked
-    MENU_ITEMS ||--o{ PINS : pinned
+    menu_items ||--o{ shop_menu : "sold_at"
+    menu_items ||--o{ likes : "liked_by"
+    menu_items ||--o{ pins : "pinned_by"
     
-    USERS {
+    shop_menu }o--|| shops : "belongs_to"
+    shop_menu }o--|| menu_items : "is"
+    
+    users {
         uuid id PK
         string google_id UK
         string display_name
@@ -30,15 +40,16 @@ erDiagram
         string email
         string country
         string birth_yyyy_mm
-        int spice_level
+        integer spice_level
         enum adventure
         enum korean_experience
         string locale
+        boolean onboarding_completed
         timestamp created_at
         timestamp updated_at
     }
     
-    MARKETS {
+    markets {
         uuid id PK
         string name
         string name_en
@@ -49,7 +60,7 @@ erDiagram
         timestamp created_at
     }
     
-    SHOPS {
+    shops {
         uuid id PK
         uuid market_id FK
         string name
@@ -60,11 +71,15 @@ erDiagram
         float lng
         geography geom
         string address
+        string rep_image_url
+        string open_time
+        string close_time
+        jsonb closed_days
         timestamp last_reported_open_at
         timestamp created_at
     }
     
-    MENU_ITEMS {
+    menu_items {
         uuid id PK
         uuid market_id FK
         string name
@@ -73,67 +88,70 @@ erDiagram
         string name_ja
         text description
         string rep_image_url
+        string category
         jsonb tags
-        int spice_level
+        integer spice_level
         timestamp created_at
     }
     
-    SHOP_MENU {
+    shop_menu {
         uuid id PK
         uuid shop_id FK
         uuid menu_item_id FK
-        int price
+        integer price
         boolean available
         timestamp created_at
     }
     
-    PHOTOS {
+    photos {
         uuid id PK
-        uuid uploader_user_id FK
-        string upload_token
+        uuid uploader_user_id FK "nullable"
+        uuid shop_id FK "nullable"
+        string upload_token "nullable"
         string s3_key
-        string thumbnail_s3_key
+        string thumbnail_s3_key "nullable"
         float lat
         float lng
         timestamp taken_at
         boolean processed
-        jsonb parsed_items
+        jsonb parsed_items "nullable"
+        string photo_type "nullable"
         timestamp created_at
     }
     
-    LIKES {
+    likes {
         uuid id PK
         uuid user_id FK
         uuid menu_item_id FK
         timestamp created_at
     }
     
-    PINS {
+    pins {
         uuid id PK
         uuid user_id FK
-        uuid shop_id FK
-        uuid menu_item_id FK
+        uuid shop_id FK "nullable"
+        uuid menu_item_id FK "nullable"
         timestamp created_at
     }
     
-    DIARIES {
+    diaries {
         uuid id PK
         uuid user_id FK
         uuid market_id FK
-        text content
-        jsonb photo_ids
-        jsonb keywords
+        text content "nullable"
+        jsonb photo_ids "nullable"
+        jsonb keywords "nullable"
         timestamp created_at
     }
     
-    KEYWORD_REVIEWS {
-        uuid market_id FK
-        string keyword
-        int count
+    keyword_reviews {
+        uuid market_id PK
+        string keyword PK
+        integer count
         timestamp last_updated
     }
     
-    EVENTS {
+    events {
         uuid id PK
         uuid user_id FK
         enum action_type
@@ -143,131 +161,230 @@ erDiagram
     }
 ```
 
-## 📋 테이블별 상세 설명
+---
 
-### 👥 USERS (사용자)
-- **목적**: 서비스 사용자 정보 저장
-- **특징**: 
-  - Google OAuth 기반 인증
-  - 다국어 지원 (locale)
-  - 개인화를 위한 선호도 정보 (spice_level, adventure, korean_experience)
-- **인덱스**: google_id (UNIQUE)
+## 관계 설명
 
-### 🏪 MARKETS (시장)
-- **목적**: 시장 정보 저장
-- **특징**: 
-  - 다국어 이름 지원
-  - 시장 실루엣 이미지 URL
-- **관계**: 1:N으로 가게와 메뉴 아이템 포함
+### 1. 사용자 (users) 중심 관계
 
-### 🏬 SHOPS (가게)
-- **목적**: 시장 내 개별 가게 정보
-- **특징**: 
-  - PostGIS geography 타입으로 정확한 위치 저장
-  - 마지막 영업 확인 시간 추적
-- **인덱스**: geom (GiST), market_id
-
-### 🍜 MENU_ITEMS (메뉴 아이템)
-- **목적**: 시장에서 판매되는 음식 메뉴
-- **특징**: 
-  - 다국어 이름 및 설명
-  - JSONB 태그로 유연한 메타데이터 저장
-  - 매운맛 수준 (1-5)
-- **관계**: N:M으로 가게와 연결 (SHOP_MENU 통해)
-
-### 🔗 SHOP_MENU (가게-메뉴 연결)
-- **목적**: 어떤 가게에서 어떤 메뉴를 얼마에 파는지
-- **특징**: 
-  - 가격 정보
-  - 판매 가능 여부
-- **관계**: SHOPS와 MENU_ITEMS를 N:M 연결
-
-### 📸 PHOTOS (사진)
-- **목적**: 사용자가 업로드한 사진 정보
-- **특징**: 
-  - S3 키로 실제 파일 참조
-  - AI 분석 결과를 JSONB로 저장
-  - 비회원도 업로드 가능 (upload_token 사용)
-- **인덱스**: lat, lng (위치 기반 검색용)
-
-### ❤️ LIKES (좋아요)
-- **목적**: 사용자의 메뉴 선호도 추적
-- **특징**: 
-  - 추천 시스템의 핵심 데이터
-  - 암시적 피드백 (implicit feedback)
-- **인덱스**: user_id, menu_item_id (복합)
-
-### 📌 PINS (핀/북마크)
-- **목적**: 사용자가 저장한 가게나 메뉴
-- **특징**: 
-  - 가게 또는 메뉴 아이템 둘 다 핀 가능
-  - NULL 허용으로 유연성 제공
-
-### 📔 DIARIES (다이어리)
-- **목적**: 사용자의 시장 방문 기록
-- **특징**: 
-  - 자유 텍스트 + 키워드 태깅
-  - 관련 사진 ID들을 JSONB 배열로 저장
-
-### 🏷️ KEYWORD_REVIEWS (키워드 리뷰 집계)
-- **목적**: 시장별 키워드 통계
-- **특징**: 
-  - 실시간 집계가 아닌 배치 처리로 업데이트
-  - 트렌딩 키워드 분석용
-
-### 📊 EVENTS (이벤트)
-- **목적**: 사용자 행동 추적
-- **특징**: 
-  - 추천 시스템 학습 데이터
-  - 분석 및 통계용
-- **인덱스**: user_id, timestamp (시계열 분석용)
-
-## 🔍 주요 쿼리 패턴
-
-### 1. 반경 검색 (PostGIS)
-```sql
-SELECT * FROM shops 
-WHERE ST_DWithin(
-    geom, 
-    ST_GeogFromText('POINT(126.9998 37.5703)'), 
-    100
-);
+```
+users (1) ────< (N) photos          : 사용자는 여러 사진을 업로드할 수 있음
+users (1) ────< (N) likes           : 사용자는 여러 메뉴에 좋아요를 누를 수 있음
+users (1) ────< (N) pins            : 사용자는 여러 가게/메뉴를 핀할 수 있음
+users (1) ────< (N) diaries         : 사용자는 여러 다이어리를 작성할 수 있음
+users (1) ────< (N) events          : 사용자는 여러 이벤트를 발생시킬 수 있음
 ```
 
-### 2. 협업 필터링 데이터
-```sql
-SELECT user_id, menu_item_id, 1 as rating 
-FROM likes 
-WHERE created_at >= NOW() - INTERVAL '30 days';
-```
-
-### 3. 인기 메뉴 (가중 점수)
-```sql
-SELECT m.*, COUNT(l.id) as like_count
-FROM menu_items m
-LEFT JOIN likes l ON m.id = l.menu_item_id
-WHERE l.created_at >= NOW() - INTERVAL '7 days'
-GROUP BY m.id
-ORDER BY like_count DESC;
-```
-
-## 📈 확장 고려사항
-
-### 성능 최적화
-- **파티셔닝**: events 테이블을 월별로 파티션
-- **인덱싱**: 자주 사용되는 쿼리 패턴에 맞는 복합 인덱스
-- **캐싱**: Redis를 통한 자주 조회되는 데이터 캐싱
-
-### 스케일링
-- **읽기 복제본**: 읽기 전용 쿼리 분산
-- **샤딩**: 지역별 데이터 분산 (향후 다중 도시 지원 시)
-- **CQRS**: 명령과 조회 분리
-
-### 데이터 보존 정책
-- **사진**: 180일 후 익명화 또는 삭제
-- **이벤트**: 1년 후 집계 데이터로 변환
-- **개인정보**: GDPR 준수를 위한 삭제 프로세스
+**특징:**
+- `photos.uploader_user_id`는 NULL 가능 (비회원 제보 지원)
+- `likes`는 사용자-메뉴별로 UNIQUE (중복 좋아요 방지)
 
 ---
 
-이 ERD는 MVP 버전을 기준으로 하며, 서비스 성장에 따라 점진적으로 확장될 예정입니다.
+### 2. 시장 (markets) 중심 관계
+
+```
+markets (1) ────< (N) shops            : 시장은 여러 가게를 포함
+markets (1) ────< (N) menu_items       : 시장은 여러 메뉴 아이템을 가짐
+markets (1) ────< (N) diaries          : 시장은 여러 다이어리에서 언급됨
+markets (1) ────< (N) keyword_reviews  : 시장별 키워드 리뷰 집계
+```
+
+**특징:**
+- `keyword_reviews`는 복합 기본 키 `(market_id, keyword)`
+
+---
+
+### 3. 가게 (shops) 중심 관계
+
+```
+shops (1) ────< (N) shop_menu    : 가게는 여러 메뉴를 판매 (다대다)
+shops (1) ────< (N) photos       : 가게는 여러 사진에 제보/리뷰됨
+shops (1) ────< (N) pins         : 가게는 여러 사용자에게 핀됨
+```
+
+**특징:**
+- `shops.geom`은 PostGIS Geography 타입으로 공간 검색 지원
+- `shops.last_reported_open_at`으로 실시간 영업 상태 추정
+
+---
+
+### 4. 메뉴 아이템 (menu_items) 중심 관계
+
+```
+menu_items (1) ────< (N) shop_menu  : 메뉴는 여러 가게에서 판매됨 (다대다)
+menu_items (1) ────< (N) likes      : 메뉴는 여러 사용자에게 좋아요 받음
+menu_items (1) ────< (N) pins       : 메뉴는 여러 사용자에게 핀됨
+```
+
+**특징:**
+- `shop_menu`는 조인 테이블로 가게-메뉴의 다대다 관계 표현
+- 같은 메뉴라도 가게마다 가격이 다를 수 있음
+
+---
+
+### 5. 사진 (photos) 관계
+
+```
+photos (N) ────> (1) users  : 사진은 한 명의 사용자가 업로드 (NULL 가능)
+photos (N) ────> (1) shops  : 사진은 한 가게를 제보/리뷰 (NULL 가능)
+```
+
+**특징:**
+- 비회원 제보 지원: `uploader_user_id`는 NULL 가능
+- 제보 완료 전까지는 `shop_id`가 NULL일 수 있음
+- `photo_type`으로 'report' (제보용) 또는 'review' (리뷰용) 구분
+
+---
+
+### 6. 핀 (pins) 관계
+
+```
+pins (N) ────> (1) users       : 핀은 한 명의 사용자가 생성
+pins (N) ────> (1) shops       : 핀은 한 가게를 참조 (NULL 가능)
+pins (N) ────> (1) menu_items  : 핀은 한 메뉴를 참조 (NULL 가능)
+```
+
+**특징:**
+- `shop_id`와 `menu_item_id` 중 하나는 반드시 있어야 함 (애플리케이션 레벨 검증)
+
+---
+
+## 주요 관계도
+
+### 시장-가게-메뉴 관계
+
+```
+markets
+  │
+  ├── shops (가게들)
+  │     │
+  │     └── shop_menu ──── menu_items
+  │
+  └── menu_items (메뉴들)
+        │
+        └── shop_menu ──── shops
+```
+
+### 사용자-콘텐츠 관계
+
+```
+users
+  │
+  ├── photos (업로드한 사진)
+  │     └── shops (제보/리뷰된 가게)
+  │
+  ├── likes (좋아요한 메뉴)
+  │     └── menu_items
+  │
+  ├── pins (핀한 가게/메뉴)
+  │     ├── shops
+  │     └── menu_items
+  │
+  └── diaries (작성한 다이어리)
+        └── markets
+```
+
+---
+
+## 데이터 흐름도
+
+### 사진 업로드 플로우
+
+```
+1. 사용자 촬영
+   ↓
+2. photos 테이블에 레코드 생성 (processed = FALSE)
+   ↓
+3. Celery 작업 큐에 추가
+   ↓
+4. 이미지 분석 (OpenAI)
+   ↓
+5. 메뉴 매칭 (MenuMatcher)
+   ↓
+6. parsed_items 업데이트
+   ↓
+7. processed = TRUE
+```
+
+### 제보 완료 플로우
+
+```
+1. 사용자가 가게 선택
+   ↓
+2. photos.shop_id 업데이트
+   ↓
+3. shops.last_reported_open_at 업데이트
+```
+
+### 다이어리 작성 플로우
+
+```
+1. 사용자가 다이어리 작성
+   ↓
+2. diaries 테이블에 레코드 생성
+   ↓
+3. keyword_reviews 업데이트 (키워드 집계)
+   ↓
+4. events 테이블에 이벤트 기록
+```
+
+---
+
+## 참고 사항
+
+1. **NULL 허용**: 
+   - `photos.uploader_user_id` (비회원 제보)
+   - `photos.shop_id` (제보 완료 전)
+   - `pins.shop_id` 또는 `pins.menu_item_id` (둘 중 하나만)
+
+2. **UNIQUE 제약**:
+   - `users.google_id`
+   - `likes(user_id, menu_item_id)`
+   - `keyword_reviews(market_id, keyword)` (복합 PK)
+
+3. **JSONB 필드**:
+   - `shops.closed_days`: 휴무일 배열
+   - `photos.parsed_items`: 파싱된 음식 정보
+   - `diaries.photo_ids`: 사진 ID 배열
+   - `diaries.keywords`: 키워드 배열
+
+4. **공간 데이터**:
+   - `shops.geom`: PostGIS Geography 타입
+   - 거리 기반 검색 지원
+
+---
+
+## 테이블별 카디널리티
+
+| 테이블 | 예상 레코드 수 | 비고 |
+|--------|---------------|------|
+| users | 수백~수천 | 사용자 수에 따라 |
+| markets | 10~100 | 시장 개수는 제한적 |
+| shops | 수백~수천 | 시장당 평균 10~50개 가게 |
+| menu_items | 수백~수천 | 시장당 평균 20~100개 메뉴 |
+| shop_menu | 수천~수만 | 가게-메뉴 조인 |
+| photos | 수만~수십만 | 계속 증가 |
+| likes | 수만 | 사용자-메뉴 조인 |
+| pins | 수천 | 사용자-가게/메뉴 조인 |
+| diaries | 수천 | 사용자별 평균 1~10개 |
+| keyword_reviews | 수백 | 시장-키워드 조합 |
+| events | 수만~수십만 | 모든 사용자 행동 로그 |
+
+---
+
+## 인덱스 전략
+
+### 클러스터 인덱스
+- `photos.created_at` (DESC) - 최신 사진 조회 빈번
+- `shops.market_id` - 시장별 가게 조회
+
+### 보조 인덱스
+- 공간 인덱스: `shops.geom` (GIST)
+- 해시 인덱스: `users.google_id`, `photos.upload_token`
+- B-tree 인덱스: 모든 FK, 타임스탬프, 카테고리 등
+
+---
+
+이 ERD는 Mermaid 다이어그램 형식으로 작성되었습니다. GitHub나 Mermaid 지원 에디터에서 시각적으로 확인할 수 있습니다.
+

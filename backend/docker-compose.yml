@@ -55,11 +55,17 @@ services:
       - REDIS_URL=redis://redis:6379/0
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - AWS_ACCESS_KEY_ID=minioadmin
+      - AWS_SECRET_ACCESS_KEY=minioadmin123
+      - AWS_REGION=us-east-1
+      - S3_BUCKET_NAME=market-explorer-photos
+      - S3_ENDPOINT_URL=http://minio:9000
     volumes:
       - .:/app
     depends_on:
       - postgres
       - redis
+      - minio
     networks:
       - market_explorer_network
 
@@ -73,11 +79,17 @@ services:
       - REDIS_URL=redis://redis:6379/0
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - AWS_ACCESS_KEY_ID=minioadmin
+      - AWS_SECRET_ACCESS_KEY=minioadmin123
+      - AWS_REGION=us-east-1
+      - S3_BUCKET_NAME=market-explorer-photos
+      - S3_ENDPOINT_URL=http://minio:9000
     volumes:
       - .:/app
     depends_on:
       - postgres
       - redis
+      - minio
     networks:
       - market_explorer_network
 

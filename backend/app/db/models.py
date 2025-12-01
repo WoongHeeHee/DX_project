@@ -60,6 +60,7 @@ class User(Base):
     adventure = Column(Enum(AdventureLevel), default=AdventureLevel.MODERATE)
     korean_experience = Column(Enum(KoreanExperience), default=KoreanExperience.FIRST_TIME)
     locale = Column(String(5), default="ko")  # ko, en, zh, ja
+    onboarding_completed = Column(Boolean, default=False)  # 온보딩 완료 여부
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     
@@ -104,6 +105,10 @@ class Shop(Base):
     lng = Column(Float, nullable=False)
     geom = Column(Geography('POINT'), nullable=False)
     address = Column(String(200), nullable=True)
+    rep_image_url = Column(String(500), nullable=True)  # 가게 대표 사진
+    open_time = Column(String(5), nullable=True)  # 운영 시작 시간 (HH:MM 형식)
+    close_time = Column(String(5), nullable=True)  # 운영 종료 시간 (HH:MM 형식)
+    closed_days = Column(JSONB, nullable=True)  # 휴무일 배열 (예: [0, 6] = 일요일, 토요일)
     last_reported_open_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
@@ -111,6 +116,7 @@ class Shop(Base):
     market = relationship("Market", back_populates="shops")
     shop_menus = relationship("ShopMenu", back_populates="shop")
     pins = relationship("Pin", back_populates="shop")
+    photos = relationship("Photo", back_populates="shop")
 
 
 class MenuItem(Base):
@@ -125,6 +131,7 @@ class MenuItem(Base):
     name_ja = Column(String(100), nullable=True)
     description = Column(Text, nullable=True)
     rep_image_url = Column(String(500), nullable=True)
+    category = Column(String(50), nullable=True)  # 카테고리 (Meals, Snacks, Sweets, Drink 등)
     tags = Column(JSONB, nullable=True)
     spice_level = Column(Integer, default=1)  # 1-5 매운맛 수준
     created_at = Column(DateTime(timezone=True), server_default=func.now())
@@ -158,6 +165,7 @@ class Photo(Base):
     
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     uploader_user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+    shop_id = Column(UUID(as_uuid=True), ForeignKey("shops.id"), nullable=True)  # 제보/리뷰용 사진의 가게 ID
     upload_token = Column(String(255), nullable=True)  # 비회원용 임시 토큰
     s3_key = Column(String(500), nullable=False)
     thumbnail_s3_key = Column(String(500), nullable=True)
@@ -166,10 +174,12 @@ class Photo(Base):
     taken_at = Column(DateTime(timezone=True), nullable=False)
     processed = Column(Boolean, default=False)
     parsed_items = Column(JSONB, nullable=True)  # 파싱된 음식 정보
+    photo_type = Column(String(20), nullable=True)  # 'report' (제보용) or 'review' (리뷰용)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
     # 관계
     uploader = relationship("User", back_populates="photos")
+    shop = relationship("Shop", back_populates="photos")
 
 
 class Like(Base):

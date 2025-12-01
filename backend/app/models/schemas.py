@@ -103,6 +103,18 @@ class GoogleAuthRequest(BaseModel):
     redirect_uri: str
 
 
+# 한국 이름 생성 관련 모델
+class KoreanNameGenerateRequest(BaseModel):
+    """한국 이름 생성 요청"""
+    input_name: str = Field(..., min_length=1, max_length=100, description="원본 이름 (영어, 중국어, 일본어 등)")
+
+
+class KoreanNameGenerateResponse(BaseResponse):
+    """한국 이름 생성 응답"""
+    korean_name: str
+    english_pronunciation: str
+
+
 # 시장 관련 모델
 class MarketBase(BaseModel):
     """시장 기본 모델"""
@@ -198,6 +210,13 @@ class PhotoUploadComplete(BaseModel):
     lng: float = Field(..., ge=-180, le=180)
     taken_at: datetime
     uploader_user_id: Optional[UUID] = None
+    photo_type: Optional[str] = Field(None, description="'report' (제보용) or 'review' (리뷰용)")
+
+
+class PhotoReportComplete(BaseModel):
+    """제보 완료 요청 (가게 선택 후)"""
+    upload_token: str
+    shop_id: UUID
 
 
 class Photo(BaseModel):
@@ -218,9 +237,9 @@ class Photo(BaseModel):
 
 # 검색 관련 모델
 class ImageSearchRequest(BaseModel):
-    """이미지 검색 요청"""
-    image_url: str
-    user_prompt: Optional[str] = None
+    """이미지/텍스트 검색 요청"""
+    image_url: Optional[str] = None
+    user_text: Optional[str] = None  # 사용자 텍스트 설명 (user_prompt 대신 user_text 사용)
     lat: Optional[float] = Field(None, ge=-90, le=90)
     lng: Optional[float] = Field(None, ge=-180, le=180)
 
