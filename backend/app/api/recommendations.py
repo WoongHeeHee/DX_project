@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db
-from app.db.models import User, MenuItem, Like, Pin
+from app.db.models import User, MenuItem, Like
 from app.models.schemas import (
     RecommendationRequest,
     RecommendationResponse,
@@ -26,47 +26,49 @@ async def get_recommendations(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """사용자 맞춤 추천"""
+    """
+    사용자 맞춤 추천
+    nationality와 birth만 활용
+    """
     try:
         recommendation_service = RecommendationService(db)
         
-        # 사용자의 활동 기록 확인
-        user_likes_count = db.query(Like).filter(Like.user_id == current_user.id).count()
-        user_pins_count = db.query(Pin).filter(Pin.user_id == current_user.id).count()
+        # 통합 추천 (국적-나이별 트렌드 + 개인 맞춤 + 전체 인기)
+        all_recommendations = recommendation_service.get_recommendations(
+            user_id=str(current_user.id),
+            country=current_user.country,
+            birth_yyyy_mm=current_user.birth_yyyy_mm,
+            limit=limit
+        )
         
-        recommendations = []
-        recommendation_type = "cold_start"
+        # 개인 맞춤 추천 우선 사용
+        recommendations = all_recommendations.get("personalized", [])
+        recommendation_type = "personalized"
         
-        if user_likes_count >= 3 or user_pins_count >= 2:
-            # 충분한 활동이 있는 경우 - 협업 필터링
-            recommendations = recommendation_service.get_collaborative_recommendations(
-                user_id=current_user.id,
-                limit=limit
-            )
-            recommendation_type = "collaborative"
-        
-        # 협업 필터링 결과가 부족한 경우 인기도 기반으로 보완
+        # 개인 맞춤이 부족하면 국적-나이별 트렌드 추가
         if len(recommendations) < limit:
-            popularity_recommendations = recommendation_service.get_popularity_recommendations(
-                user_preferences={
-                    "country": current_user.country,
-                    "spice_level": current_user.spice_level,
-                    "adventure": current_user.adventure,
-                    "korean_experience": current_user.korean_experience
-                },
-                limit=limit - len(recommendations),
-                exclude_ids=[r.id for r in recommendations]
-            )
-            recommendations.extend(popularity_recommendations)
-            
-            if recommendation_type == "collaborative" and popularity_recommendations:
+            trend_recs = all_recommendations.get("nationality_age_trend", [])
+            # 중복 제거
+            existing_ids = {r.id for r in recommendations}
+            for rec in trend_recs:
+                if rec.id not in existing_ids and len(recommendations) < limit:
+                    recommendations.append(rec)
+            if trend_recs:
                 recommendation_type = "hybrid"
-            elif not recommendations:
-                recommendation_type = "popularity"
+        
+        # 여전히 부족하면 전체 인기 메뉴 추가
+        if len(recommendations) < limit:
+            popular_recs = all_recommendations.get("popular", [])
+            existing_ids = {r.id for r in recommendations}
+            for rec in popular_recs:
+                if rec.id not in existing_ids and len(recommendations) < limit:
+                    recommendations.append(rec)
+            if not recommendations:
+                recommendation_type = "popular"
         
         return RecommendationResponse(
             success=True,
-            recommendations=recommendations,
+            recommendations=recommendations[:limit],
             recommendation_type=recommendation_type,
             message=f"{len(recommendations)}개의 추천 메뉴를 찾았습니다"
         )
@@ -78,18 +80,34 @@ async def get_recommendations(
         )
 
 
-@router.get("/similar-users", response_model=List[MenuItemSchema])
-async def get_similar_users_recommendations(
-    limit: int = 10,
-    current_user: User = Depends(get_current_user),
+@router.get("/nationality-age-trend", response_model=List[MenuItemSchema])
+async def get_nationality_age_trend_recommendations(
+    country: Optional[str] = None,
+    birth_yyyy_mm: Optional[str] = None,
+    limit: int = 3,
+    current_user: Optional[User] = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """유사한 사용자 기반 추천"""
+    """
+    국적-나이별 트렌드 메뉴 추천
+    
+    Args:
+        country: 국가 코드 (선택, 없으면 현재 사용자 정보 사용)
+        birth_yyyy_mm: 생년월 (선택, 없으면 현재 사용자 정보 사용)
+        limit: 반환할 메뉴 개수
+    """
     try:
         recommendation_service = RecommendationService(db)
         
-        recommendations = recommendation_service.get_similar_users_recommendations(
-            user_id=current_user.id,
+        # 파라미터가 없으면 현재 사용자 정보 사용
+        if not country and current_user:
+            country = current_user.country
+        if not birth_yyyy_mm and current_user:
+            birth_yyyy_mm = current_user.birth_yyyy_mm
+        
+        recommendations = recommendation_service.get_nationality_age_trend_recommendations(
+            country=country,
+            birth_yyyy_mm=birth_yyyy_mm,
             limit=limit
         )
         
@@ -98,7 +116,7 @@ async def get_similar_users_recommendations(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"유사 사용자 추천 생성 중 오류가 발생했습니다: {str(e)}"
+            detail=f"국적-나이별 트렌드 추천 생성 중 오류가 발생했습니다: {str(e)}"
         )
 
 

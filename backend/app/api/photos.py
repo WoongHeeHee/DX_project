@@ -9,11 +9,12 @@ from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db
-from app.db.models import Photo, User
+from app.db.models import Photo, User, Shop
 from app.models.schemas import (
     PhotoUploadInit, 
     PhotoUploadInitResponse, 
     PhotoUploadComplete,
+    PhotoReportComplete,
     BaseResponse,
     Photo as PhotoSchema
 )
@@ -91,6 +92,7 @@ async def complete_photo_upload(
             lat=request.lat,
             lng=request.lng,
             taken_at=request.taken_at,
+            photo_type=request.photo_type or "report",
             processed=False
         )
         
@@ -111,6 +113,57 @@ async def complete_photo_upload(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"사진 업로드 완료 처리 실패: {str(e)}"
+        )
+
+
+@router.post("/report-complete", response_model=BaseResponse)
+async def complete_photo_report(
+    request: PhotoReportComplete,
+    db: Session = Depends(get_db)
+):
+    """제보 완료 처리: 가게 선택 후 shop_id 저장 및 영업 상태 업데이트"""
+    try:
+        # 업로드 토큰으로 사진 찾기
+        photo = db.query(Photo).filter(
+            Photo.upload_token == request.upload_token
+        ).first()
+        
+        if not photo:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="사진을 찾을 수 없습니다. 업로드 토큰이 유효하지 않습니다."
+            )
+        
+        # 가게 존재 확인
+        shop = db.query(Shop).filter(Shop.id == request.shop_id).first()
+        if not shop:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="가게를 찾을 수 없습니다"
+            )
+        
+        # 사진에 shop_id 연결
+        photo.shop_id = request.shop_id
+        
+        # 가게 영업 상태 업데이트 (last_reported_open_at)
+        from datetime import datetime, timezone
+        shop.last_reported_open_at = datetime.now(timezone.utc)
+        
+        db.commit()
+        db.refresh(photo)
+        
+        return BaseResponse(
+            success=True,
+            message="제보가 성공적으로 완료되었습니다"
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"제보 완료 처리 실패: {str(e)}"
         )
 
 

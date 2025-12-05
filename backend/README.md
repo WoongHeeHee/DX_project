@@ -70,11 +70,9 @@ PINECONE_API_KEY=your-pinecone-api-key
 GOOGLE_CLIENT_ID=your-google-client-id
 GOOGLE_CLIENT_SECRET=your-google-client-secret
 
-# 지도 API (선택)
-KAKAO_API_KEY=your-kakao-api-key
-# 또는
-NAVER_CLIENT_ID=your-naver-client-id
-NAVER_CLIENT_SECRET=your-naver-client-secret
+# 지도 API (Kakao Maps - 프론트엔드에서 사용)
+KAKAO_MAP_API_KEY=your-kakao-map-api-key
+# 참고: Kakao Maps API 키는 프론트엔드 .env 파일에도 설정해야 합니다
 ```
 
 ### 3. Docker Compose로 서비스 시작

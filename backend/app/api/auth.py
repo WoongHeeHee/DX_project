@@ -64,13 +64,41 @@ def get_current_user(user_id: str = Depends(verify_token), db: Session = Depends
     return user
 
 
+# 선택적 인증을 위한 보안 스키마 (에러 발생하지 않음)
+optional_security = HTTPBearer(auto_error=False)
+
+
+def get_optional_user(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(optional_security),
+    db: Session = Depends(get_db)
+) -> Optional[User]:
+    """
+    선택적 사용자 인증 (토큰이 있으면 사용자 반환, 없으면 None)
+    온보딩 단계 등에서 인증 없이도 사용 가능한 엔드포인트에 사용
+    """
+    if credentials is None:
+        return None
+    
+    try:
+        payload = jwt.decode(credentials.credentials, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        user_id: str = payload.get("sub")
+        if user_id is None:
+            return None
+        
+        user = db.query(User).filter(User.id == user_id).first()
+        return user
+    except (JWTError, Exception):
+        # 토큰이 유효하지 않아도 None 반환 (에러 발생하지 않음)
+        return None
+
+
 @router.post("/google", response_model=Token)
 async def google_auth(auth_request: GoogleAuthRequest, db: Session = Depends(get_db)):
     """Google OAuth 인증"""
     try:
         # Google ID 토큰 검증
         idinfo = id_token.verify_oauth2_token(
-            auth_request.code, 
+            auth_request.id_token, 
             requests.Request(), 
             settings.GOOGLE_CLIENT_ID
         )

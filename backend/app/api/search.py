@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db
-from app.db.models import MenuItem, Shop, ShopMenu
+from app.db.models import MenuItem, Shop, ShopMenu, MarketMenuItem
 from app.models.schemas import (
     ImageSearchRequest, 
     ImageSearchResponse, 
@@ -17,6 +17,7 @@ from app.models.schemas import (
 )
 from app.services.openai_service import OpenAIService
 from app.services.pinecone_service import PineconeService
+from app.services.menu_matcher_service import MenuMatcherService
 from app.api.shops import get_nearby_shops
 from app.models.schemas import NearbyShopsRequest
 
@@ -28,96 +29,102 @@ async def search_by_image(
     request: ImageSearchRequest,
     db: Session = Depends(get_db)
 ):
-    """이미지로 음식 검색"""
+    """
+    이미지/텍스트/이미지+텍스트로 음식 검색
+    menu_matcher의 match_menu() 활용
+    """
     try:
-        openai_service = OpenAIService()
-        pinecone_service = PineconeService()
+        # 이미지와 텍스트 모두 없는 경우
+        if not request.image_url and not request.user_text:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="이미지 URL 또는 텍스트 설명 중 하나는 필수입니다"
+            )
         
-        # 1. 이미지 분석
-        analysis_result = openai_service.analyze_food_image(request.image_url)
+        # menu_matcher 서비스 사용
+        menu_matcher = MenuMatcherService(db)
         
-        if not analysis_result.get('is_food'):
+        # 메뉴 매칭 (이미지+텍스트 모두 활용)
+        matched_menu_name = menu_matcher.match_menu(
+            image_url=request.image_url,
+            user_text=request.user_text
+        )
+        
+        if not matched_menu_name:
             return ImageSearchResponse(
                 success=True,
                 results=[],
-                message="음식 이미지가 감지되지 않았습니다"
+                message="메뉴를 찾을 수 없습니다. 다른 사진/텍스트를 입력해주세요"
             )
         
-        # 2. 이미지 임베딩 생성
-        image_embedding = openai_service.generate_image_embedding(request.image_url)
+        # 매칭된 메뉴 아이템 조회
+        menu_item = db.query(MenuItem).filter(MenuItem.name == matched_menu_name).first()
         
-        if not image_embedding:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="이미지 임베딩 생성에 실패했습니다"
+        if not menu_item:
+            return ImageSearchResponse(
+                success=True,
+                results=[],
+                message="메뉴를 찾을 수 없습니다"
             )
         
-        # 3. Pinecone에서 유사한 메뉴 검색
-        similar_menus = pinecone_service.search_similar_menus(
-            query_embedding=image_embedding,
-            top_k=10
-        )
-        
-        # 4. 검색 결과 구성
-        results = []
-        for menu_match in similar_menus:
-            menu_item_id = menu_match.get('menu_item_id')
-            confidence = menu_match.get('score', 0.0)
+        # 근처 가게 검색 (위치 정보가 있는 경우)
+        shops_nearby = []
+        if request.lat is not None and request.lng is not None:
+            # 해당 메뉴를 판매하는 가게 조회
+            shops_with_menu = db.query(Shop).join(ShopMenu).filter(
+                ShopMenu.menu_item_id == menu_item.id,
+                ShopMenu.available == True
+            ).all()
             
-            # 메뉴 아이템 정보 조회
-            menu_item = db.query(MenuItem).filter(MenuItem.id == menu_item_id).first()
-            if not menu_item:
-                continue
-            
-            # 근처 가게 검색 (위치 정보가 있는 경우)
-            shops_nearby = []
-            if request.lat is not None and request.lng is not None:
-                nearby_request = NearbyShopsRequest(
-                    lat=request.lat,
-                    lng=request.lng,
-                    radius_meters=1000,  # 1km 반경
-                    market_id=menu_item.market_id
+            # 하버사인 공식으로 거리 계산
+            from app.utils.geography import haversine_distance
+            for shop in shops_with_menu[:5]:  # 최대 5개
+                distance = haversine_distance(
+                    request.lat, request.lng,
+                    shop.lat, shop.lng
                 )
                 
-                # 해당 메뉴를 판매하는 가게만 필터링
-                shops_with_menu = db.query(Shop).join(ShopMenu).filter(
-                    ShopMenu.menu_item_id == menu_item.id,
-                    ShopMenu.available == True
-                ).all()
-                
-                # 거리 계산은 별도 함수로 처리 (간단화)
-                for shop in shops_with_menu[:5]:  # 최대 5개
-                    shops_nearby.append(ShopWithDistance(
-                        id=shop.id,
-                        market_id=shop.market_id,
-                        name=shop.name,
-                        name_en=shop.name_en,
-                        name_zh=shop.name_zh,
-                        name_ja=shop.name_ja,
-                        lat=shop.lat,
-                        lng=shop.lng,
-                        address=shop.address,
-                        last_reported_open_at=shop.last_reported_open_at,
-                        created_at=shop.created_at,
-                        distance_meters=0.0  # 실제로는 계산 필요
-                    ))
+                shops_nearby.append(ShopWithDistance(
+                    id=shop.id,
+                    market_id=shop.market_id,
+                    name=shop.name,
+                    name_en=shop.name_en,
+                    name_zh=shop.name_zh,
+                    name_ja=shop.name_ja,
+                    lat=shop.lat,
+                    lng=shop.lng,
+                    last_reported_open_at=shop.last_reported_open_at,
+                    created_at=shop.created_at,
+                    distance_meters=round(distance, 2)
+                ))
             
-            results.append(SearchResult(
-                menu_item=MenuItemSchema.model_validate(menu_item),
-                confidence=confidence,
-                shops_nearby=shops_nearby
-            ))
+            # 거리순 정렬
+            shops_nearby.sort(key=lambda x: x.distance_meters)
+        
+        # 가장 가까운 가게가 속한 시장 찾기
+        nearest_market_id = None
+        if shops_nearby:
+            nearest_shop = shops_nearby[0]
+            nearest_market_id = nearest_shop.market_id
+        
+        results = [SearchResult(
+            menu_item=MenuItemSchema.model_validate(menu_item),
+            confidence=1.0,  # menu_matcher는 boolean 결과이므로 confidence는 1.0
+            shops_nearby=shops_nearby
+        )]
         
         return ImageSearchResponse(
             success=True,
             results=results,
-            message=f"{len(results)}개의 검색 결과를 찾았습니다"
+            message=f"'{matched_menu_name}' 메뉴를 찾았습니다"
         )
         
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"이미지 검색 중 오류가 발생했습니다: {str(e)}"
+            detail=f"검색 중 오류가 발생했습니다: {str(e)}"
         )
 
 
@@ -141,9 +148,9 @@ async def search_menu_items(
             MenuItem.description.ilike(f"%{q}%")
         )
     
-    # 시장 필터
+    # 시장 필터 (MarketMenuItem 조인 테이블을 통해)
     if market_id:
-        query = query.filter(MenuItem.market_id == market_id)
+        query = query.join(MarketMenuItem).filter(MarketMenuItem.market_id == market_id)
     
     # 매운맛 수준 필터
     query = query.filter(MenuItem.spice_level <= spice_level_max)
@@ -170,7 +177,7 @@ async def get_popular_menus(
     ).outerjoin(Like).group_by(MenuItem.id)
     
     if market_id:
-        query = query.filter(MenuItem.market_id == market_id)
+        query = query.join(MarketMenuItem).filter(MarketMenuItem.market_id == market_id)
     
     # 좋아요 수로 정렬
     popular_items = query.order_by(func.count(Like.id).desc()).limit(limit).all()
