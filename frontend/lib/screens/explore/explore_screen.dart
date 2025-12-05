@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../widgets/bottom_navigation_bar.dart';
-import '../../services/recommendation_service.dart';
-import '../../services/market_service.dart';
-import '../../models/menu_model.dart';
-import '../../models/market_model.dart';
+import '../../data/services/recommendation_service.dart';
+import '../../data/services/market_service.dart';
+import '../../data/models/menu_models.dart';
+import '../../data/models/market_models.dart';
 import '../../models/enums.dart';
 
 class ExploreScreen extends StatefulWidget {
@@ -15,9 +15,9 @@ class ExploreScreen extends StatefulWidget {
 }
 
 class _ExploreScreenState extends State<ExploreScreen> {
-  List<MenuModel> _trendingMenus = [];
-  List<MenuModel> _personalRecommendations = [];
-  List<MenuModel> _categoryMenus = [];
+  List<MenuItemModel> _trendingMenus = [];
+  List<MenuItemModel> _personalRecommendations = [];
+  List<MenuItemModel> _categoryMenus = [];
   List<MarketModel> _markets = [];
   MenuCategory _selectedCategory = MenuCategory.meals;
   bool _isLoading = true;
@@ -34,16 +34,16 @@ class _ExploreScreenState extends State<ExploreScreen> {
       final marketService = Provider.of<MarketService>(context, listen: false);
 
       final results = await Future.wait([
-        recommendationService.getPersonalRecommendations(limit: 3),
+        recommendationService.getRecommendations(limit: 3),
         recommendationService.getTrendingMenus(limit: 3),
-        recommendationService.getMenusByCategory(_selectedCategory.value),
+        recommendationService.getRecommendations(category: _selectedCategory.value, limit: 10),
         marketService.getMarkets(),
       ]);
 
       setState(() {
-        _personalRecommendations = results[0] as List<MenuModel>;
-        _trendingMenus = results[1] as List<MenuModel>;
-        _categoryMenus = results[2] as List<MenuModel>;
+        _personalRecommendations = results[0] as List<MenuItemModel>;
+        _trendingMenus = results[1] as List<MenuItemModel>;
+        _categoryMenus = results[2] as List<MenuItemModel>;
         _markets = results[3] as List<MarketModel>;
         _isLoading = false;
       });
@@ -62,7 +62,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
   Future<void> _loadCategoryMenus() async {
     try {
       final recommendationService = Provider.of<RecommendationService>(context, listen: false);
-      final menus = await recommendationService.getMenusByCategory(_selectedCategory.value);
+      final menus = await recommendationService.getRecommendations(category: _selectedCategory.value, limit: 10);
       setState(() {
         _categoryMenus = menus;
       });

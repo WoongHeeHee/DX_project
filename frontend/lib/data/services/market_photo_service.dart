@@ -1,4 +1,4 @@
-import '../services/api_service.dart';
+import 'api_service.dart';
 
 /// 시장 사진 관련 API 서비스
 class MarketPhotoService {

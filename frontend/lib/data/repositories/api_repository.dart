@@ -8,6 +8,8 @@ import '../services/photo_service.dart';
 import '../services/google_auth_service.dart';
 import '../services/user_service.dart';
 import '../services/market_photo_service.dart';
+import '../services/shop_service.dart';
+import '../services/diary_service.dart';
 
 /// API 서비스 레포지토리 (싱글톤)
 class ApiRepository {
@@ -25,6 +27,8 @@ class ApiRepository {
   late final GoogleAuthService _googleAuthService;
   late final UserService _userService;
   late final MarketPhotoService _marketPhotoService;
+  late final ShopService _shopService;
+  late final DiaryService _diaryService;
 
   void initialize() {
     _apiService = ApiService();
@@ -37,6 +41,8 @@ class ApiRepository {
     _googleAuthService = GoogleAuthService();
     _userService = UserService(_apiService);
     _marketPhotoService = MarketPhotoService(_apiService);
+    _shopService = ShopService(_apiService);
+    _diaryService = DiaryService(_apiService);
   }
 
   ApiService get apiService => _apiService;
@@ -49,5 +55,7 @@ class ApiRepository {
   GoogleAuthService get googleAuthService => _googleAuthService;
   UserService get userService => _userService;
   MarketPhotoService get marketPhotoService => _marketPhotoService;
+  ShopService get shopService => _shopService;
+  DiaryService get diaryService => _diaryService;
 }
 

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../../models/enums.dart';
 
 class OnboardingMain1Screen extends StatefulWidget {
   const OnboardingMain1Screen({super.key});

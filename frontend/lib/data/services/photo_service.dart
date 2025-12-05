@@ -1,6 +1,6 @@
 import 'dart:typed_data';
 import 'package:dio/dio.dart';
-import '../services/api_service.dart';
+import 'api_service.dart';
 import '../models/photo_models.dart';
 
 /// 사진 업로드 관련 API 서비스

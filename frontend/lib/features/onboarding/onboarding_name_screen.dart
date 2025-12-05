@@ -5,7 +5,6 @@ import "../../core/widgets/responsive_helper.dart";
 import "../../core/widgets/responsive_padding.dart";
 import "../../core/theme/app_colors.dart";
 import "../../core/widgets/loading_overlay.dart";
-import "../../core/widgets/error_screen.dart";
 import "../../data/repositories/api_repository.dart";
 import "onboarding_loading_screen.dart";
 import "onboarding_name_confirm_screen.dart";
@@ -253,8 +252,15 @@ class _OnboardingNameScreenState extends State<OnboardingNameScreen> {
 
               try {
                 // 한국 이름 생성 API 호출
+                debugPrint('한국 이름 생성 요청: ${_nameController.text.trim()}');
                 final koreanNameResponse = await _apiRepository.userService
                     .generateKoreanName(_nameController.text.trim());
+                
+                debugPrint('한국 이름 생성 응답: ${koreanNameResponse.koreanName}, ${koreanNameResponse.englishPronunciation}');
+
+                if (koreanNameResponse.koreanName.isEmpty) {
+                  throw Exception('한국 이름이 생성되지 않았습니다.');
+                }
 
                 if (mounted) {
                   // 로딩 화면으로 이동
@@ -281,13 +287,18 @@ class _OnboardingNameScreenState extends State<OnboardingNameScreen> {
                   );
                 }
               } catch (e) {
+                debugPrint('한국 이름 생성 에러: $e');
                 if (mounted) {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => ErrorScreen(
-                        message: '한국 이름 생성에 실패했습니다. 다시 시도해주세요.',
-                        onRetry: () => Navigator.pop(context),
+                  // 에러 화면 대신 스낵바로 표시하고 재시도 가능하도록
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('한국 이름 생성에 실패했습니다: ${e.toString()}'),
+                      duration: const Duration(seconds: 3),
+                      action: SnackBarAction(
+                        label: '다시 시도',
+                        onPressed: () {
+                          // 재시도 로직은 사용자가 버튼을 다시 누르면 실행됨
+                        },
                       ),
                     ),
                   );

@@ -1,5 +1,5 @@
 import 'package:google_sign_in/google_sign_in.dart';
-import '../../core/config/app_config.dart';
+import '../../config/app_config.dart';
 
 /// Google 인증 서비스
 class GoogleAuthService {

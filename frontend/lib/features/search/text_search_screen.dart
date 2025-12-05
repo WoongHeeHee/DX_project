@@ -6,7 +6,6 @@ import "../../core/widgets/responsive_padding.dart";
 import "../../core/theme/app_colors.dart";
 import "../../core/widgets/loading_overlay.dart";
 import "../../data/repositories/api_repository.dart";
-import "../../data/services/user_service.dart";
 import "models/search_result_model.dart";
 import "search_result_screen.dart";
 import "search_error_screen.dart";
@@ -60,31 +59,32 @@ class _TextSearchScreenState extends State<TextSearchScreen> {
           backgroundColor: AppColors.white,
           resizeToAvoidBottomInset: true,
           body: SafeArea(
-          child: Column(
-            children: [
-              // 상단 제목과 입력 영역
-              Expanded(
-                child: SingleChildScrollView(
-                  child: Container(
-                    color: AppColors.white,
-                    child: Column(
-                      children: [
-                        _buildContent(responsive, textTheme),
-                        // 하단 이미지 배너 (키보드가 올라오지 않았을 때만 표시)
-                        if (currentKeyboardHeight == 0)
-                          _buildBanner(responsive),
-                        // 메뉴 찾기 버튼 (스크롤 영역 내부에 배치)
-                        _buildSearchButton(
-                          responsive,
-                          textTheme,
-                          currentKeyboardHeight,
-                        ),
-                      ],
+            child: Column(
+              children: [
+                // 상단 제목과 입력 영역
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Container(
+                      color: AppColors.white,
+                      child: Column(
+                        children: [
+                          _buildContent(responsive, textTheme),
+                          // 하단 이미지 배너 (키보드가 올라오지 않았을 때만 표시)
+                          if (currentKeyboardHeight == 0)
+                            _buildBanner(responsive),
+                          // 메뉴 찾기 버튼 (스크롤 영역 내부에 배치)
+                          _buildSearchButton(
+                            responsive,
+                            textTheme,
+                            currentKeyboardHeight,
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -276,20 +276,20 @@ class _TextSearchScreenState extends State<TextSearchScreen> {
     }
   }
 
-  // 더미 검색 결과 생성 (서버 연결 전 임시)
-  SearchResultModel _createDummySearchResult(String query) {
-    // 쿼리에 따라 다른 더미 데이터 반환
-    // 실제로는 서버에서 받아올 데이터
-    return SearchResultModel(
-      id: "search_${DateTime.now().millisecondsSinceEpoch}",
-      menuName: "계란빵",
-      imageUrl: "https://placehold.co/343x220",
-      description:
-          "촉촉하고 따뜻한 계란이 가득 들어간 길거리 간식이에요. 출출할 때 하나만 먹어도 든든하고, 시장을 지나가다 향만 맡아도 한 번쯤은 꼭 먹고 싶은 메뉴죠.",
-      nearestMarketName: "광장시장",
-      nearestMarketId: "market_1",
-    );
-  }
+  // 더미 검색 결과 생성 (서버 연결 전 임시) - 현재 사용하지 않음
+  // SearchResultModel _createDummySearchResult(String query) {
+  //   // 쿼리에 따라 다른 더미 데이터 반환
+  //   // 실제로는 서버에서 받아올 데이터
+  //   return SearchResultModel(
+  //     id: "search_${DateTime.now().millisecondsSinceEpoch}",
+  //     menuName: "계란빵",
+  //     imageUrl: "https://placehold.co/343x220",
+  //     description:
+  //         "촉촉하고 따뜻한 계란이 가득 들어간 길거리 간식이에요. 출출할 때 하나만 먹어도 든든하고, 시장을 지나가다 향만 맡아도 한 번쯤은 꼭 먹고 싶은 메뉴죠.",
+  //     nearestMarketName: "광장시장",
+  //     nearestMarketId: "market_1",
+  //   );
+  // }
 
   void _showEmptyTextDialog() {
     showDialog(

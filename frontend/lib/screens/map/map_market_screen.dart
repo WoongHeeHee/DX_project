@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../widgets/bottom_navigation_bar.dart';
-import '../../services/market_photos_service.dart';
-import '../../services/shop_service.dart';
+import '../../data/services/market_photo_service.dart';
+import '../../data/services/shop_service.dart';
 import '../../models/shop_model.dart';
 
 class MapMarketScreen extends StatefulWidget {
@@ -29,18 +29,32 @@ class _MapMarketScreenState extends State<MapMarketScreen> {
 
   Future<void> _loadData() async {
     try {
-      final marketPhotosService = Provider.of<MarketPhotosService>(context, listen: false);
+      final marketPhotosService = Provider.of<MarketPhotoService>(context, listen: false);
       final shopService = Provider.of<ShopService>(context, listen: false);
 
       final results = await Future.wait([
         marketPhotosService.getMarketRecentPhotos(marketId: widget.marketId, limit: 10),
-        marketPhotosService.getMarketBestsellingMenus(marketId: widget.marketId, limit: 3),
+        marketPhotosService.getMarketBestselling(marketId: widget.marketId, limit: 3),
         shopService.getPinnedShops(marketId: widget.marketId),
       ]);
 
       setState(() {
-        _recentPhotos = results[0] as List<Map<String, dynamic>>;
-        _bestsellingMenus = results[1] as List<Map<String, dynamic>>;
+        final photosResponse = results[0] as MarketRecentPhotosResponse;
+        _recentPhotos = photosResponse.photos.map((photo) => {
+          'id': photo.id,
+          's3_key': photo.s3Key,
+          'image_url': photo.imageUrl,
+          'lat': photo.lat,
+          'lng': photo.lng,
+          'taken_at': photo.takenAt.toIso8601String(),
+        }).toList();
+        final bestsellingItems = results[1] as List<MarketBestsellingItem>;
+        _bestsellingMenus = bestsellingItems.map((item) => {
+          'menu_item_id': item.menuItemId,
+          'menu_item_name': item.menuItemName,
+          'rep_image_url': item.repImageUrl,
+          'order_count': item.orderCount,
+        }).toList();
         _pinnedShops = results[2] as List<ShopModel>;
         _isLoading = false;
       });
@@ -58,15 +72,22 @@ class _MapMarketScreenState extends State<MapMarketScreen> {
 
   Future<void> _loadRecentPhotos() async {
     try {
-      final marketPhotosService = Provider.of<MarketPhotosService>(context, listen: false);
+      final marketPhotosService = Provider.of<MarketPhotoService>(context, listen: false);
       final category = _selectedCategory == '전체보기' ? null : _selectedCategory;
-      final photos = await marketPhotosService.getMarketRecentPhotos(
+      final photosResponse = await marketPhotosService.getMarketRecentPhotos(
         marketId: widget.marketId,
         category: category,
         limit: 10,
       );
       setState(() {
-        _recentPhotos = photos;
+        _recentPhotos = photosResponse.photos.map((photo) => {
+          'id': photo.id,
+          's3_key': photo.s3Key,
+          'image_url': photo.imageUrl,
+          'lat': photo.lat,
+          'lng': photo.lng,
+          'taken_at': photo.takenAt.toIso8601String(),
+        }).toList();
       });
     } catch (e) {
       if (mounted) {

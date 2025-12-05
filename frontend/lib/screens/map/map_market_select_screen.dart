@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../widgets/bottom_navigation_bar.dart';
-import '../../services/market_service.dart';
-import '../../models/market_model.dart';
+import '../../data/services/market_service.dart';
+import '../../data/models/market_models.dart';
 
 class MapMarketSelectScreen extends StatefulWidget {
   const MapMarketSelectScreen({super.key});

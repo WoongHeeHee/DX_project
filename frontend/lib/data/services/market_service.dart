@@ -1,4 +1,4 @@
-import '../services/api_service.dart';
+import 'api_service.dart';
 import '../models/market_models.dart';
 
 /// 시장 관련 API 서비스

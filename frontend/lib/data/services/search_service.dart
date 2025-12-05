@@ -1,4 +1,4 @@
-import '../services/api_service.dart';
+import 'api_service.dart';
 import '../models/menu_models.dart';
 
 /// 검색 관련 API 서비스

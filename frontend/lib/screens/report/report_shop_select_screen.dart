@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import '../../services/shop_service.dart';
+import '../../data/services/shop_service.dart';
 import '../../models/shop_model.dart';
 
 class ReportShopSelectScreen extends StatefulWidget {

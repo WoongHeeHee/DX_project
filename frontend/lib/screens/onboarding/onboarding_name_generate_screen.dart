@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import '../../services/api_service.dart';
+import '../../data/services/api_service.dart';
 
 class OnboardingNameGenerateScreen extends StatefulWidget {
   const OnboardingNameGenerateScreen({super.key});

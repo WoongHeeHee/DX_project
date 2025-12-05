@@ -1,5 +1,5 @@
 import 'package:shared_preferences/shared_preferences.dart';
-import '../services/api_service.dart';
+import 'api_service.dart';
 import '../models/auth_models.dart';
 
 /// 사용자 관련 API 서비스
@@ -59,7 +59,8 @@ class UserService {
       if (locale != null) 'locale': locale,
     };
 
-    final response = await _apiService.post('/users/onboarding', data: data);
+    // 백엔드 API는 PUT /users/complete-onboarding을 사용
+    final response = await _apiService.put('/users/complete-onboarding', data: data);
     final user = UserResponse.fromJson(response.data as Map<String, dynamic>);
     if (locale != null) {
       await setLocale(locale);
@@ -69,11 +70,43 @@ class UserService {
 
   /// 한국 이름 생성
   Future<KoreanNameResponse> generateKoreanName(String inputName) async {
-    final response = await _apiService.post(
-      '/users/generate-korean-name',
-      data: {'input_name': inputName},
-    );
-    return KoreanNameResponse.fromJson(response.data as Map<String, dynamic>);
+    try {
+      final response = await _apiService.post(
+        '/users/generate-korean-name',
+        data: {'input_name': inputName},
+      );
+      
+      // 응답 데이터 확인
+      if (response.data == null) {
+        throw Exception('서버 응답이 없습니다.');
+      }
+      
+      final data = response.data as Map<String, dynamic>;
+      
+      // 응답 형식 확인 및 처리
+      // API가 직접 korean_name과 english_pronunciation을 반환하는 경우
+      if (data.containsKey('korean_name') && data.containsKey('english_pronunciation')) {
+        return KoreanNameResponse.fromJson(data);
+      }
+      
+      // API가 result 객체 안에 데이터를 반환하는 경우
+      if (data.containsKey('result')) {
+        final result = data['result'] as Map<String, dynamic>;
+        return KoreanNameResponse.fromJson(result);
+      }
+      
+      // API가 data 객체 안에 데이터를 반환하는 경우
+      if (data.containsKey('data')) {
+        final result = data['data'] as Map<String, dynamic>;
+        return KoreanNameResponse.fromJson(result);
+      }
+      
+      // 직접 반환
+      return KoreanNameResponse.fromJson(data);
+    } catch (e) {
+      // 에러를 다시 throw하여 상위에서 처리할 수 있도록
+      throw Exception('한국 이름 생성 실패: $e');
+    }
   }
 
   /// Locale 저장
@@ -114,10 +147,27 @@ class KoreanNameResponse {
   });
 
   factory KoreanNameResponse.fromJson(Map<String, dynamic> json) {
+    // 다양한 응답 형식 지원
+    final koreanName = json['korean_name'] as String? ?? 
+                       json['koreanName'] as String? ?? 
+                       json['name'] as String? ?? 
+                       '';
+    
+    final englishPronunciation = json['english_pronunciation'] as String? ?? 
+                                 json['englishPronunciation'] as String? ?? 
+                                 json['pronunciation'] as String? ?? 
+                                 '';
+    
+    if (koreanName.isEmpty) {
+      throw Exception('한국 이름이 응답에 포함되어 있지 않습니다.');
+    }
+    
     return KoreanNameResponse(
       success: json['success'] as bool? ?? true,
-      koreanName: json['korean_name'] as String,
-      englishPronunciation: json['english_pronunciation'] as String,
+      koreanName: koreanName,
+      englishPronunciation: englishPronunciation.isNotEmpty 
+          ? englishPronunciation 
+          : koreanName, // 영어 발음이 없으면 한국 이름을 사용
     );
   }
 }

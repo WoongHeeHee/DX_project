@@ -6,8 +6,6 @@ import "../../core/widgets/responsive_padding.dart";
 import "../../core/theme/app_colors.dart";
 import "../../core/widgets/loading_overlay.dart";
 import "../../data/repositories/api_repository.dart";
-import "../../data/services/user_service.dart";
-import "../../data/models/market_models.dart";
 import "../home/models/market_model.dart";
 import "../search/search_screen.dart";
 import "market_map_detail_screen.dart";
@@ -25,43 +23,6 @@ class _MapScreenState extends State<MapScreen> {
   int _currentCardIndex = 0;
   bool _isLoading = true;
   List<MapMarketData> _markets = [];
-    MapMarketData(
-      id: "1",
-      name: "광장시장",
-      address: "주소가 들어갈 자리\n야호야호",
-      imageUrl: "https://placehold.co/319x241",
-      isOpen: true,
-      pinPosition: const Offset(0.4, 0.3), // 지도 상대 위치
-      keywords: ["야호야호", "키워드가 들어갈 자리", "여기는 조금 더 긴 키워드가 들어가도"],
-    ),
-    MapMarketData(
-      id: "2",
-      name: "망원시장",
-      address: "서울특별시 마포구 망원동",
-      imageUrl: "https://placehold.co/319x241",
-      isOpen: false,
-      pinPosition: const Offset(0.6, 0.3),
-      keywords: ["키워드1", "키워드2"],
-    ),
-    MapMarketData(
-      id: "3",
-      name: "통인시장",
-      address: "서울특별시 종로구 통인동",
-      imageUrl: "https://placehold.co/319x241",
-      isOpen: true,
-      pinPosition: const Offset(0.3, 0.6),
-      keywords: ["키워드1", "키워드2"],
-    ),
-    MapMarketData(
-      id: "4",
-      name: "서울풍물시장",
-      address: "서울특별시 종로구",
-      imageUrl: "https://placehold.co/319x241",
-      isOpen: true,
-      pinPosition: const Offset(0.7, 0.5),
-      keywords: ["키워드1", "키워드2"],
-    ),
-  ];
 
   @override
   void initState() {
@@ -153,17 +114,18 @@ class _MapScreenState extends State<MapScreen> {
       child: Scaffold(
         backgroundColor: AppColors.white,
         body: SafeArea(
-        child: Column(
-          children: [
-            // 검색창
-            _buildSearchBar(responsive, textTheme),
-            // 지도 배너와 핀
-            Expanded(
-              child: _buildMapSection(responsive, textTheme),
-            ),
-            // 휠 피커 카드 영역
-            _buildWheelPickerCards(responsive, textTheme),
-          ],
+          child: Column(
+            children: [
+              // 검색창
+              _buildSearchBar(responsive, textTheme),
+              // 지도 배너와 핀
+              Expanded(
+                child: _buildMapSection(responsive, textTheme),
+              ),
+              // 휠 피커 카드 영역
+              _buildWheelPickerCards(responsive, textTheme),
+            ],
+          ),
         ),
       ),
     );

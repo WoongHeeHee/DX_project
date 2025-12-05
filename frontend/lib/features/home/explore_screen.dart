@@ -8,8 +8,7 @@ import "../../core/widgets/responsive_padding.dart";
 import "../../core/widgets/custom_dropdown.dart";
 import "../../core/widgets/loading_overlay.dart";
 import "../../data/repositories/api_repository.dart";
-import "../../data/services/user_service.dart";
-import "../../data/models/market_models.dart";
+import "../../data/models/market_models.dart" as api_models;
 import "../../data/models/menu_models.dart";
 import "models/filter_model.dart";
 import "models/market_model.dart";
@@ -33,10 +32,10 @@ class _ExploreScreenState extends State<ExploreScreen> {
   int currentTrendBannerIndex = 0; // Now Trend 배너 인덱스
   final PageController _trendBannerController = PageController();
   bool _isLoading = false;
-  
+
   // API로 가져온 데이터
   List<TrendBannerModel> _trendBanners = [];
-  List<MenuItemModel> _recommendations = [];
+  // List<MenuItemModel> _recommendations = []; // TODO: 추후 사용 예정
   List<MarketModel> _markets = [];
   Map<String, List<MenuItemModel>> _foodsByCategory = {};
 
@@ -52,7 +51,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
         "Drink": _getDrinkFoods(),
       };
     }
-    
+
     // MenuItemModel을 FoodModel로 변환
     return {
       "Meals": _convertMenuItemsToFoodModels(_foodsByCategory["Meals"] ?? []),
@@ -96,22 +95,27 @@ class _ExploreScreenState extends State<ExploreScreen> {
       final locale = await _apiRepository.userService.getLocale();
       final countryCode = _getCountryCode(selectedCountry?.id ?? '');
       final birthYyyyMm = _getBirthYyyyMm(selectedAge?.id ?? '');
-      final trendMenus = await _apiRepository.recommendationService.getNationalityAgeTrend(
+      final trendMenus =
+          await _apiRepository.recommendationService.getNationalityAgeTrend(
         country: countryCode,
         birthYyyyMm: birthYyyyMm,
         limit: 3,
       );
-      
+
       if (mounted) {
         setState(() {
-          _trendBanners = trendMenus.take(3).map((menu) => TrendBannerModel(
-            id: menu.id,
-            foodName: menu.getNameByLocale(locale),
-            description: "지금 가장 많이 선택되고 있는 실시간 인기 메뉴예요.",
-            imageUrl: menu.repImageUrl ?? 'https://placehold.co/375x233',
-            countryId: selectedCountry?.id,
-            ageId: selectedAge?.id,
-          )).toList();
+          _trendBanners = trendMenus
+              .take(3)
+              .map((menu) => TrendBannerModel(
+                    id: menu.id,
+                    foodName: menu.getNameByLocale(locale),
+                    description: "지금 가장 많이 선택되고 있는 실시간 인기 메뉴예요.",
+                    imageUrl:
+                        menu.repImageUrl ?? 'https://placehold.co/375x233',
+                    countryId: selectedCountry?.id,
+                    ageId: selectedAge?.id,
+                  ))
+              .toList();
           // 배너 인덱스 리셋
           currentTrendBannerIndex = 0;
           if (_trendBannerController.hasClients) {
@@ -379,7 +383,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
         "제주": _getJejuMarkets(),
       };
     }
-    
+
     // TODO: 시장 데이터에 지역 정보가 있으면 지역별로 분류
     // 현재는 모든 시장을 "서울"에 표시
     return {
@@ -949,15 +953,13 @@ class _ExploreScreenState extends State<ExploreScreen> {
       name: marketName,
       description:
           "Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
-      imageUrls:
-          imageUrls ??
+      imageUrls: imageUrls ??
           [
             "https://placehold.co/362x244",
             "https://placehold.co/279x233",
             "https://placehold.co/279x233",
           ],
-      mustTryItems:
-          mustTryItems ??
+      mustTryItems: mustTryItems ??
           List.generate(
             3,
             (i) => MustTryItem(
@@ -1001,35 +1003,37 @@ class _ExploreScreenState extends State<ExploreScreen> {
 
     try {
       final locale = await _apiRepository.userService.getLocale();
-      
+
       // 1. 시장 목록 조회
       final markets = await _apiRepository.marketService.getMarkets();
-      
+
       // 2. 트렌드 배너 조회 (국가/나이 필터)
       final countryCode = _getCountryCode(selectedCountry?.id ?? '');
       final birthYyyyMm = _getBirthYyyyMm(selectedAge?.id ?? '');
-      final trendMenus = await _apiRepository.recommendationService.getNationalityAgeTrend(
+      final trendMenus =
+          await _apiRepository.recommendationService.getNationalityAgeTrend(
         country: countryCode,
         birthYyyyMm: birthYyyyMm,
         limit: 3,
       );
-      
+
       // 3. 추천 메뉴 조회 (좋아요가 있으면 개인화 추천, 없으면 전체 트렌드)
-      List<MenuItemModel> recommendations;
+      // List<MenuItemModel> recommendations; // TODO: 추후 사용 예정
       try {
-        final savedMenus = await _apiRepository.menuService.getSavedMenuItems(limit: 1);
+        final savedMenus =
+            await _apiRepository.menuService.getSavedMenuItems(limit: 1);
         if (savedMenus.isNotEmpty) {
           // 개인화 추천
-          recommendations = await _apiRepository.recommendationService.getRecommendations(limit: 3);
+          // recommendations = await _apiRepository.recommendationService.getRecommendations(limit: 3);
         } else {
           // 전체 트렌드
-          recommendations = await _apiRepository.recommendationService.getTrendingMenus(limit: 3);
+          // recommendations = await _apiRepository.recommendationService.getTrendingMenus(limit: 3);
         }
       } catch (e) {
         // 에러 발생 시 전체 트렌드 사용
-        recommendations = await _apiRepository.recommendationService.getTrendingMenus(limit: 3);
+        // recommendations = await _apiRepository.recommendationService.getTrendingMenus(limit: 3);
       }
-      
+
       // 4. 카테고리별 메뉴 조회
       final categories = ["Meals", "Snacks", "Sweets", "Drink"];
       final foodsByCategory = <String, List<MenuItemModel>>{};
@@ -1040,19 +1044,24 @@ class _ExploreScreenState extends State<ExploreScreen> {
         );
         foodsByCategory[category] = menus;
       }
-      
+
       if (mounted) {
         setState(() {
-          _markets = markets.map((m) => _convertToMarketModel(m, locale)).toList();
-          _trendBanners = trendMenus.take(3).map((menu) => TrendBannerModel(
-            id: menu.id,
-            foodName: menu.getNameByLocale(locale),
-            description: "지금 가장 많이 선택되고 있는 실시간 인기 메뉴예요.",
-            imageUrl: menu.repImageUrl ?? 'https://placehold.co/375x233',
-            countryId: selectedCountry?.id,
-            ageId: selectedAge?.id,
-          )).toList();
-          _recommendations = recommendations;
+          _markets =
+              markets.map((m) => _convertToMarketModel(m, locale)).toList();
+          _trendBanners = trendMenus
+              .take(3)
+              .map((menu) => TrendBannerModel(
+                    id: menu.id,
+                    foodName: menu.getNameByLocale(locale),
+                    description: "지금 가장 많이 선택되고 있는 실시간 인기 메뉴예요.",
+                    imageUrl:
+                        menu.repImageUrl ?? 'https://placehold.co/375x233',
+                    countryId: selectedCountry?.id,
+                    ageId: selectedAge?.id,
+                  ))
+              .toList();
+          // _recommendations = recommendations; // TODO: 추후 사용 예정
           _foodsByCategory = foodsByCategory;
           _isLoading = false;
         });
@@ -1089,7 +1098,8 @@ class _ExploreScreenState extends State<ExploreScreen> {
     return ageMap[ageId] ?? '2000-01';
   }
 
-  MarketModel _convertToMarketModel(MarketModel apiMarket, String locale) {
+  MarketModel _convertToMarketModel(
+      api_models.MarketModel apiMarket, String locale) {
     // API MarketModel을 화면용 MarketModel로 변환
     return MarketModel(
       id: apiMarket.id,
@@ -1147,41 +1157,41 @@ class _ExploreScreenState extends State<ExploreScreen> {
       child: Scaffold(
         backgroundColor: AppColors.white,
         body: SafeArea(
-        child: GestureDetector(
-          onTap: () {
-            // 드롭다운 외부 클릭 시 닫기
-            if (showCountryDropdown || showAgeDropdown) {
-              setState(() {
-                showCountryDropdown = false;
-                showAgeDropdown = false;
-              });
-            }
-          },
-          child: SingleChildScrollView(
-            controller: _scrollController,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildNowTrendSection(responsive, textTheme),
-                ResponsivePadding(
-                  mobilePadding: 16,
-                  tabletPadding: 24,
-                  desktopPadding: 32,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: 16),
-                      _buildKoreanStreetFoodSection(responsive, textTheme),
-                      const SizedBox(height: 16),
-                      _buildDiscoverSijangSection(responsive, textTheme),
-                    ],
+          child: GestureDetector(
+            onTap: () {
+              // 드롭다운 외부 클릭 시 닫기
+              if (showCountryDropdown || showAgeDropdown) {
+                setState(() {
+                  showCountryDropdown = false;
+                  showAgeDropdown = false;
+                });
+              }
+            },
+            child: SingleChildScrollView(
+              controller: _scrollController,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildNowTrendSection(responsive, textTheme),
+                  ResponsivePadding(
+                    mobilePadding: 16,
+                    tabletPadding: 24,
+                    desktopPadding: 32,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 16),
+                        _buildKoreanStreetFoodSection(responsive, textTheme),
+                        const SizedBox(height: 16),
+                        _buildDiscoverSijangSection(responsive, textTheme),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
-      ),
       ),
     );
   }
@@ -1626,9 +1636,8 @@ class _ExploreScreenState extends State<ExploreScreen> {
                 style: textTheme.bodyMedium?.copyWith(
                   fontSize: responsive.responsiveFontSize(mobileSize: 13),
                   fontWeight: FontWeight.w500,
-                  color: isSelected
-                      ? AppColors.mainText
-                      : AppColors.inactiveText,
+                  color:
+                      isSelected ? AppColors.mainText : AppColors.inactiveText,
                 ),
               ),
             ),
@@ -1689,8 +1698,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
     List<FoodModel> foods,
   ) {
     final screenWidth = responsive.width;
-    final horizontalPadding =
-        responsive.responsivePadding(
+    final horizontalPadding = responsive.responsivePadding(
           mobilePadding: 16,
           tabletPadding: 24,
           desktopPadding: 32,
@@ -1895,9 +1903,8 @@ class _ExploreScreenState extends State<ExploreScreen> {
                 style: textTheme.bodyMedium?.copyWith(
                   fontSize: responsive.responsiveFontSize(mobileSize: 13),
                   fontWeight: FontWeight.w500,
-                  color: isSelected
-                      ? AppColors.mainText
-                      : AppColors.inactiveText,
+                  color:
+                      isSelected ? AppColors.mainText : AppColors.inactiveText,
                 ),
               ),
             ),
@@ -1913,8 +1920,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
     // 고정된 카드 너비 계산 (화면 너비에서 패딩과 간격을 제외한 후 2로 나눔)
     // ResponsivePadding의 mobilePadding이 16이므로 실제 패딩 값 계산
     final screenWidth = responsive.width;
-    final horizontalPadding =
-        responsive.responsivePadding(
+    final horizontalPadding = responsive.responsivePadding(
           mobilePadding: 16,
           tabletPadding: 24,
           desktopPadding: 32,

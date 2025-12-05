@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../../models/enums.dart';
 
 class OnboardingNameInputScreen extends StatefulWidget {
   const OnboardingNameInputScreen({super.key});
@@ -11,16 +10,16 @@ class OnboardingNameInputScreen extends StatefulWidget {
 
 class _OnboardingNameInputScreenState extends State<OnboardingNameInputScreen> {
   final _nameController = TextEditingController();
-  UserLocale? _locale;
+  // UserLocale? _locale; // TODO: 추후 사용 예정
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     // 이전 화면에서 전달된 locale 받기
-    final extra = GoRouterState.of(context).extra;
-    if (extra is UserLocale) {
-      _locale = extra;
-    }
+    // final extra = GoRouterState.of(context).extra;
+    // if (extra is UserLocale) {
+    //   _locale = extra; // TODO: 추후 사용 예정
+    // }
   }
 
   @override

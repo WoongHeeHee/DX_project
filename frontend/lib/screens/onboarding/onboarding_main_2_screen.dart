@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../models/enums.dart';
-import '../../services/api_service.dart';
+import '../../data/services/api_service.dart';
 import '../../models/user_model.dart';
 import '../../providers/auth_provider.dart';
 

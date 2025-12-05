@@ -3,7 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'dart:io';
-import '../../services/photo_service.dart';
+import '../../data/services/photo_service.dart';
 import '../../utils/permissions.dart';
 
 class ReportCameraScreen extends StatefulWidget {
@@ -43,12 +43,30 @@ class _ReportCameraScreenState extends State<ReportCameraScreen> {
         // 사진 업로드
         final photoService = Provider.of<PhotoService>(context, listen: false);
         try {
-          await photoService.uploadPhoto(
-            imageFile: File(image.path),
+          final imageBytes = await File(image.path).readAsBytes();
+          final now = DateTime.now();
+          
+          // 업로드 초기화
+          final uploadInit = await photoService.initPhotoUpload(
             lat: position.latitude,
             lng: position.longitude,
+            takenAt: now,
             isMember: false,
-            photoType: 'report',
+          );
+          
+          // S3에 업로드
+          await photoService.uploadPhotoToS3(
+            presignedUrl: uploadInit.presignedUrl,
+            imageBytes: imageBytes,
+          );
+          
+          // 업로드 완료 알림
+          await photoService.completePhotoUpload(
+            uploadToken: uploadInit.uploadToken,
+            s3Key: uploadInit.s3Key,
+            lat: position.latitude,
+            lng: position.longitude,
+            takenAt: now,
           );
 
           if (mounted) {

@@ -1,7 +1,8 @@
 import 'package:flutter/foundation.dart';
 import '../models/user_model.dart';
-import '../services/auth_service.dart';
-import '../services/api_service.dart';
+import '../data/services/auth_service.dart';
+import '../data/models/auth_models.dart';
+import '../models/enums.dart';
 
 class AuthProvider with ChangeNotifier {
   final AuthService _authService;
@@ -26,9 +27,22 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      final result = await _authService.signInWithGoogle();
-      _user = result['user'] as UserModel;
-      _accessToken = result['accessToken'] as String;
+      final tokenResponse = await _authService.googleLogin();
+      _accessToken = tokenResponse.accessToken;
+      final userResponse = await _authService.getCurrentUser();
+      // UserResponse를 UserModel로 변환
+      _user = UserModel(
+        id: userResponse.id,
+        email: userResponse.email,
+        displayName: userResponse.displayName,
+        koreanName: userResponse.koreanName,
+        country: userResponse.country,
+        birthYyyyMm: userResponse.birthYyyyMm,
+        spiceLevel: userResponse.spiceLevel,
+        locale: UserLocale.fromString(userResponse.locale),
+        createdAt: DateTime.now(), // TODO: 서버에서 받아오도록 수정 필요
+        onboardingCompleted: false, // TODO: 서버에서 받아오도록 수정 필요
+      );
       _isLoading = false;
       notifyListeners();
       return true;
@@ -46,7 +60,7 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      await _authService.signOut();
+      await _authService.logout();
       _user = null;
       _accessToken = null;
       _isLoading = false;
@@ -67,8 +81,20 @@ class AuthProvider with ChangeNotifier {
   // 현재 사용자 정보 새로고침
   Future<void> refreshUser() async {
     try {
-      final user = await _authService.getCurrentUser();
-      _user = user;
+      final userResponse = await _authService.getCurrentUser();
+      // UserResponse를 UserModel로 변환
+      _user = UserModel(
+        id: userResponse.id,
+        email: userResponse.email,
+        displayName: userResponse.displayName,
+        koreanName: userResponse.koreanName,
+        country: userResponse.country,
+        birthYyyyMm: userResponse.birthYyyyMm,
+        spiceLevel: userResponse.spiceLevel,
+        locale: UserLocale.fromString(userResponse.locale),
+        createdAt: DateTime.now(), // TODO: 서버에서 받아오도록 수정 필요
+        onboardingCompleted: false, // TODO: 서버에서 받아오도록 수정 필요
+      );
       notifyListeners();
     } catch (e) {
       _error = e.toString();

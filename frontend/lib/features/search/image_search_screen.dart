@@ -9,7 +9,6 @@ import "../../core/widgets/responsive_padding.dart";
 import "../../core/theme/app_colors.dart";
 import "../../core/widgets/loading_overlay.dart";
 import "../../data/repositories/api_repository.dart";
-import "../../data/services/user_service.dart";
 import "models/search_result_model.dart";
 import "search_result_screen.dart";
 import "search_error_screen.dart";
@@ -58,20 +57,20 @@ class _ImageSearchScreenState extends State<ImageSearchScreen> {
     }
   }
 
-  // 더미 검색 결과 생성 (서버 연결 전 임시)
-  SearchResultModel _createDummySearchResult(String query) {
-    // 쿼리에 따라 다른 더미 데이터 반환
-    // 실제로는 서버에서 받아올 데이터
-    return SearchResultModel(
-      id: "search_${DateTime.now().millisecondsSinceEpoch}",
-      menuName: "계란빵",
-      imageUrl: "https://placehold.co/343x220",
-      description:
-          "촉촉하고 따뜻한 계란이 가득 들어간 길거리 간식이에요. 출출할 때 하나만 먹어도 든든하고, 시장을 지나가다 향만 맡아도 한 번쯤은 꼭 먹고 싶은 메뉴죠.",
-      nearestMarketName: "광장시장",
-      nearestMarketId: "market_1",
-    );
-  }
+  // 더미 검색 결과 생성 (서버 연결 전 임시) - 현재 사용하지 않음
+  // SearchResultModel _createDummySearchResult(String query) {
+  //   // 쿼리에 따라 다른 더미 데이터 반환
+  //   // 실제로는 서버에서 받아올 데이터
+  //   return SearchResultModel(
+  //     id: "search_${DateTime.now().millisecondsSinceEpoch}",
+  //     menuName: "계란빵",
+  //     imageUrl: "https://placehold.co/343x220",
+  //     description:
+  //         "촉촉하고 따뜻한 계란이 가득 들어간 길거리 간식이에요. 출출할 때 하나만 먹어도 든든하고, 시장을 지나가다 향만 맡아도 한 번쯤은 꼭 먹고 싶은 메뉴죠.",
+  //     nearestMarketName: "광장시장",
+  //     nearestMarketId: "market_1",
+  //   );
+  // }
 
   void _showImageSourceDialog() {
     showModalBottomSheet(
@@ -158,26 +157,27 @@ class _ImageSearchScreenState extends State<ImageSearchScreen> {
           backgroundColor: AppColors.white,
           resizeToAvoidBottomInset: true,
           body: SafeArea(
-          child: Column(
-            children: [
-              Expanded(
-                child: SingleChildScrollView(
-                  child: Container(
-                    color: AppColors.white,
-                    child: Column(
-                      children: [
-                        _buildContent(responsive, textTheme),
-                        _buildSearchButton(
-                          responsive,
-                          textTheme,
-                          currentKeyboardHeight,
-                        ),
-                      ],
+            child: Column(
+              children: [
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Container(
+                      color: AppColors.white,
+                      child: Column(
+                        children: [
+                          _buildContent(responsive, textTheme),
+                          _buildSearchButton(
+                            responsive,
+                            textTheme,
+                            currentKeyboardHeight,
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -406,8 +406,8 @@ class _ImageSearchScreenState extends State<ImageSearchScreen> {
                 
                 // 업로드 초기화
                 final uploadInit = await _apiRepository.photoService.initPhotoUpload(
-                  lat: lat ?? 0.0,
-                  lng: lng ?? 0.0,
+                  lat: lat,
+                  lng: lng,
                   takenAt: now,
                   isMember: false,
                 );
@@ -422,8 +422,8 @@ class _ImageSearchScreenState extends State<ImageSearchScreen> {
                 await _apiRepository.photoService.completePhotoUpload(
                   uploadToken: uploadInit.uploadToken,
                   s3Key: uploadInit.s3Key,
-                  lat: lat ?? 0.0,
-                  lng: lng ?? 0.0,
+                  lat: lat,
+                  lng: lng,
                   takenAt: now,
                 );
                 
@@ -455,9 +455,9 @@ class _ImageSearchScreenState extends State<ImageSearchScreen> {
                     // 첫 번째 결과 사용
                     final result = searchResults.first;
                     final menuItem = result.menuItem;
-                    final nearestShop = result.shopsNearby.isNotEmpty 
-                        ? result.shopsNearby.first 
-                        : null;
+                    // final nearestShop = result.shopsNearby.isNotEmpty 
+                    //     ? result.shopsNearby.first 
+                    //     : null; // TODO: 추후 사용 예정
                     
                     // SearchResultModel로 변환
                     final searchResult = SearchResultModel(
@@ -466,7 +466,7 @@ class _ImageSearchScreenState extends State<ImageSearchScreen> {
                       imageUrl: menuItem.repImageUrl ?? '',
                       description: menuItem.getDescriptionByLocale(locale) ?? '',
                       nearestMarketName: null, // TODO: 시장 정보 추가 필요
-                      nearestMarketId: nearestShop?.marketId,
+                      nearestMarketId: null, // TODO: ShopWithDistance에 marketId 필드 추가 필요
                     );
                     
                     Navigator.push(
@@ -517,7 +517,6 @@ class _ImageSearchScreenState extends State<ImageSearchScreen> {
             ),
           ),
         ),
-      ),
       ),
     );
   }
