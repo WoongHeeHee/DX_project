@@ -182,19 +182,31 @@ def update_shop_status():
             # 각 가게별로 최근 사진 업로드 시간 확인
             shops = db.query(Shop).all()
             
+            from app.utils.geography import haversine_distance, get_bounding_box
+            
             for shop in shops:
                 # 해당 가게 근처(50m)의 최근 사진 확인
-                recent_photos = db.query(Photo).filter(
-                    func.ST_DWithin(
-                        func.ST_GeogFromText(f'POINT({shop.lng} {shop.lat})'),
-                        func.ST_GeogFromText(f'POINT({Photo.lng} {Photo.lat})'),
-                        50  # 50m 반경
-                    ),
-                    Photo.created_at >= datetime.utcnow() - timedelta(hours=12)
-                ).order_by(Photo.created_at.desc()).first()
+                # Bounding box로 먼저 필터링
+                min_lat, max_lat, min_lng, max_lng = get_bounding_box(
+                    shop.lat, shop.lng, 50  # 50m 반경
+                )
                 
-                if recent_photos:
-                    shop.last_reported_open_at = recent_photos.created_at
+                # 사각형 범위 내 사진 조회
+                candidate_photos = db.query(Photo).filter(
+                    Photo.lat.between(min_lat, max_lat),
+                    Photo.lng.between(min_lng, max_lng),
+                    Photo.created_at >= datetime.utcnow() - timedelta(hours=12)
+                ).order_by(Photo.created_at.desc()).all()
+                
+                # 정확한 거리 계산으로 50m 내 사진 찾기
+                for photo in candidate_photos:
+                    distance = haversine_distance(
+                        shop.lat, shop.lng,
+                        photo.lat, photo.lng
+                    )
+                    if distance <= 50:  # 50m 반경 내
+                        shop.last_reported_open_at = photo.created_at
+                        break
             
             db.commit()
             logger.info("가게 영업 상태 업데이트 완료")

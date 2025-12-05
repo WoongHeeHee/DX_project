@@ -99,8 +99,8 @@ class Token(BaseModel):
 
 class GoogleAuthRequest(BaseModel):
     """Google 인증 요청"""
-    code: str
-    redirect_uri: str
+    id_token: str = Field(..., description="Google ID Token")
+    redirect_uri: Optional[str] = Field(None, description="리디렉션 URI (선택사항)")
 
 
 # 한국 이름 생성 관련 모델
@@ -122,8 +122,13 @@ class MarketBase(BaseModel):
     name_en: Optional[str] = Field(None, max_length=100)
     name_zh: Optional[str] = Field(None, max_length=100)
     name_ja: Optional[str] = Field(None, max_length=100)
-    description: Optional[str] = None
+    description: Optional[str] = None  # 한국어 설명
+    description_en: Optional[str] = None  # 영어 설명
+    description_zh: Optional[str] = None  # 중국어 설명
+    description_ja: Optional[str] = None  # 일본어 설명
     silhouette_url: Optional[str] = None
+    lat: Optional[float] = Field(None, ge=-90, le=90, description="시장 중심 위도")
+    lng: Optional[float] = Field(None, ge=-180, le=180, description="시장 중심 경도")
 
 
 class Market(MarketBase):
@@ -135,6 +140,48 @@ class Market(MarketBase):
         from_attributes = True
 
 
+# 시장 부가정보 관련 모델
+class MarketInfoBase(BaseModel):
+    """시장 부가정보 기본 모델"""
+    address: Optional[str] = None
+    address_en: Optional[str] = None
+    address_zh: Optional[str] = None
+    address_ja: Optional[str] = None
+    transport: Optional[str] = None
+    transport_en: Optional[str] = None
+    transport_zh: Optional[str] = None
+    transport_ja: Optional[str] = None
+    parking: Optional[str] = None
+    parking_en: Optional[str] = None
+    parking_zh: Optional[str] = None
+    parking_ja: Optional[str] = None
+    restroom: Optional[str] = None
+    restroom_en: Optional[str] = None
+    restroom_zh: Optional[str] = None
+    restroom_ja: Optional[str] = None
+    open_time: Optional[str] = None  # 운영 시작 시간 (HH:MM 형식)
+    close_time: Optional[str] = None  # 운영 종료 시간 (HH:MM 형식)
+    closed_days: Optional[str] = None  # 휴무일 (한국어)
+    closed_days_en: Optional[str] = None  # 휴무일 (영어)
+    closed_days_zh: Optional[str] = None  # 휴무일 (중국어)
+    closed_days_ja: Optional[str] = None  # 휴무일 (일본어)
+
+
+class MarketInfo(MarketInfoBase):
+    """시장 부가정보 응답 모델"""
+    market_info_id: UUID
+    market_id: UUID
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class MarketInfoCreate(MarketInfoBase):
+    """시장 부가정보 생성 모델"""
+    market_id: UUID
+
+
 # 가게 관련 모델
 class ShopBase(BaseModel):
     """가게 기본 모델"""
@@ -144,7 +191,10 @@ class ShopBase(BaseModel):
     name_ja: Optional[str] = Field(None, max_length=100)
     lat: float = Field(..., ge=-90, le=90)
     lng: float = Field(..., ge=-180, le=180)
-    address: Optional[str] = Field(None, max_length=200)
+    closed_days: Optional[str] = Field(None, max_length=200)  # 휴무일 (한국어)
+    closed_days_en: Optional[str] = Field(None, max_length=200)  # 휴무일 (영어)
+    closed_days_zh: Optional[str] = Field(None, max_length=200)  # 휴무일 (중국어)
+    closed_days_ja: Optional[str] = Field(None, max_length=200)  # 휴무일 (일본어)
 
 
 class Shop(ShopBase):
@@ -170,16 +220,31 @@ class MenuItemBase(BaseModel):
     name_en: Optional[str] = Field(None, max_length=100)
     name_zh: Optional[str] = Field(None, max_length=100)
     name_ja: Optional[str] = Field(None, max_length=100)
-    description: Optional[str] = None
+    description: Optional[str] = None  # 한국어 설명
+    description_en: Optional[str] = None  # 영어 설명
+    description_zh: Optional[str] = None  # 중국어 설명
+    description_ja: Optional[str] = None  # 일본어 설명
+    similar_food: Optional[str] = Field(None, max_length=200)  # 비슷한 메뉴(한국어)
+    similar_food_en: Optional[str] = Field(None, max_length=200)  # 비슷한 메뉴(영어)
+    similar_food_zh: Optional[str] = Field(None, max_length=200)  # 비슷한 메뉴(중국어)
+    similar_food_ja: Optional[str] = Field(None, max_length=200)  # 비슷한 메뉴(일본어)
     rep_image_url: Optional[str] = None
-    tags: Optional[Dict[str, Any]] = None
+    price: Optional[str] = Field(None, max_length=100, description="가격 범위 (예: ₩3,000~₩4,000)")
+    contains: Optional[str] = Field(None, max_length=200)  # 알레르기(한국어)
+    contains_en: Optional[str] = Field(None, max_length=200)  # 알레르기(영어)
+    contains_zh: Optional[str] = Field(None, max_length=200)  # 알레르기(중국어)
+    contains_ja: Optional[str] = Field(None, max_length=200)  # 알레르기(일본어)
+    may_contains: Optional[str] = Field(None, max_length=200)  # 들어있을 수도 있는 알레르기(한국어)
+    may_contains_en: Optional[str] = Field(None, max_length=200)  # 들어있을 수도 있는 알레르기(영어)
+    may_contains_zh: Optional[str] = Field(None, max_length=200)  # 들어있을 수도 있는 알레르기(중국어)
+    may_contains_ja: Optional[str] = Field(None, max_length=200)  # 들어있을 수도 있는 알레르기(일본어)
+    category: Optional[str] = Field(None, max_length=50)
     spice_level: int = Field(1, ge=1, le=5)
 
 
 class MenuItem(MenuItemBase):
     """메뉴 아이템 응답 모델"""
     id: UUID
-    market_id: UUID
     created_at: datetime
 
     class Config:
@@ -220,7 +285,7 @@ class PhotoReportComplete(BaseModel):
 
 
 class Photo(BaseModel):
-    """사진 응답 모델"""
+    """사진 응답 모델 (음식 사진만 저장)"""
     id: UUID
     s3_key: str
     thumbnail_s3_key: Optional[str] = None
@@ -228,7 +293,7 @@ class Photo(BaseModel):
     lng: float
     taken_at: datetime
     processed: bool
-    parsed_items: Optional[Dict[str, Any]] = None
+    menu_item_id: Optional[UUID] = None  # 음식 메뉴 ID (FK) - 처리 후 설정
     created_at: datetime
 
     class Config:
@@ -256,16 +321,44 @@ class ImageSearchResponse(BaseResponse):
     results: List[SearchResult]
 
 
-# 좋아요/핀 관련 모델
+# 좋아요 관련 모델
 class LikeCreate(BaseModel):
     """좋아요 생성 요청"""
     menu_item_id: UUID
 
 
-class PinCreate(BaseModel):
-    """핀 생성 요청"""
-    shop_id: Optional[UUID] = None
-    menu_item_id: Optional[UUID] = None
+# 핀한 가게 관련 모델
+class ShopPinCreate(BaseModel):
+    """핀한 가게 생성 요청"""
+    shop_id: UUID
+
+
+class ShopPin(BaseModel):
+    """핀한 가게 응답 모델"""
+    id: UUID
+    user_id: UUID
+    shop_id: UUID
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+
+# 찜한 메뉴 관련 모델
+class SavedMenuCreate(BaseModel):
+    """찜한 메뉴 생성 요청"""
+    menu_item_id: UUID
+
+
+class SavedMenu(BaseModel):
+    """찜한 메뉴 응답 모델"""
+    id: UUID
+    user_id: UUID
+    menu_item_id: UUID
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
 
 
 # 다이어리 관련 모델

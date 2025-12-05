@@ -7,12 +7,11 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db
-from app.db.models import User, Diary, Like, Pin, Photo, Market
+from app.db.models import User, Diary, Like, Photo, Market
 from app.models.schemas import (
     DiaryCreate,
     Diary as DiarySchema,
     LikeCreate,
-    PinCreate,
     BaseResponse
 )
 from app.api.auth import get_current_user
@@ -313,64 +312,6 @@ async def remove_like(
         )
 
 
-@router.post("/pins", response_model=BaseResponse)
-async def create_pin(
-    pin_data: PinCreate,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """핀 추가 (북마크)"""
-    try:
-        # 이미 핀했는지 확인
-        existing_pin = db.query(Pin).filter(
-            Pin.user_id == current_user.id,
-            Pin.shop_id == pin_data.shop_id,
-            Pin.menu_item_id == pin_data.menu_item_id
-        ).first()
-        
-        if existing_pin:
-            return BaseResponse(
-                success=True,
-                message="이미 핀한 항목입니다"
-            )
-        
-        # 핀 생성
-        pin = Pin(
-            user_id=current_user.id,
-            shop_id=pin_data.shop_id,
-            menu_item_id=pin_data.menu_item_id
-        )
-        
-        db.add(pin)
-        
-        # 이벤트 기록
-        from app.db.models import Event, ActionType, TargetType
-        target_type = TargetType.SHOP if pin_data.shop_id else TargetType.MENU_ITEM
-        target_id = pin_data.shop_id or pin_data.menu_item_id
-        
-        event = Event(
-            user_id=current_user.id,
-            action_type=ActionType.PIN,
-            target_type=target_type,
-            target_id=target_id
-        )
-        db.add(event)
-        
-        db.commit()
-        
-        return BaseResponse(
-            success=True,
-            message="핀이 추가되었습니다"
-        )
-        
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"핀 추가 실패: {str(e)}"
-        )
-
-
 @router.get("/my-likes")
 async def get_my_likes(
     current_user: User = Depends(get_current_user),
@@ -388,16 +329,3 @@ async def get_my_likes(
     return likes
 
 
-@router.get("/my-pins")
-async def get_my_pins(
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-    limit: int = 20,
-    offset: int = 0
-):
-    """내 핀 목록"""
-    pins = db.query(Pin).filter(
-        Pin.user_id == current_user.id
-    ).order_by(Pin.created_at.desc()).offset(offset).limit(limit).all()
-    
-    return pins

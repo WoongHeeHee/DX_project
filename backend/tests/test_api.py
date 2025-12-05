@@ -64,8 +64,7 @@ def test_data():
         name="테스트 가게",
         name_en="Test Shop",
         lat=37.5703,
-        lng=126.9998,
-        geom="POINT(126.9998 37.5703)"
+        lng=126.9998
     )
     db.add(shop)
     

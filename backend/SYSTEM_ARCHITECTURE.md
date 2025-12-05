@@ -11,47 +11,120 @@ graph TB
     end
 
     subgraph "API Gateway 레이어"
-        FastAPI[FastAPI 서버<br/>:8000<br/>- CORS 미들웨어<br/>- JWT 인증<br/>- 요청 라우팅<br/>- Swagger UI]
+        FastAPI["FastAPI 서버 :8000
+        CORS 미들웨어
+        JWT 인증
+        요청 라우팅
+        Swagger UI"]
     end
 
     subgraph "인증 시스템"
         GoogleOAuth[Google OAuth 2.0]
-        JWTService[JWT 토큰 서비스<br/>- Access Token 생성<br/>- 토큰 검증<br/>- 토큰 갱신]
+        JWTService["JWT 토큰 서비스
+        Access Token 생성
+        토큰 검증
+        토큰 갱신"]
     end
 
     subgraph "API 라우터 레이어"
-        AuthRouter[/auth<br/>- POST /google<br/>- GET /me<br/>- POST /refresh]
-        UserRouter[/users<br/>- GET /profile<br/>- PUT /profile<br/>- POST /onboarding]
-        MarketRouter[/markets<br/>- GET /<br/>- GET /{id}<br/>- GET /{id}/stats]
-        ShopRouter[/shops<br/>- POST /nearby<br/>- GET /{id}<br/>- GET /{id}/menu]
-        PhotoRouter[/uploads<br/>- POST /photo-init<br/>- POST /photo-complete<br/>- GET /my-photos]
-        SearchRouter[/search<br/>- POST /image<br/>- GET /menu-items<br/>- GET /popular-menus]
-        RecRouter[/recommendations<br/>- GET /<br/>- GET /trending<br/>- POST /feedback]
-        DiaryRouter[/diary<br/>- POST /<br/>- GET /my<br/>- POST /likes]
+        AuthRouter["/auth
+        POST /google
+        GET /me
+        POST /refresh"]
+        UserRouter["/users
+        GET /profile
+        PUT /profile
+        POST /onboarding"]
+        MarketRouter["/markets
+        GET /
+        GET /{id}
+        GET /{id}/stats
+        GET /{id}/info
+        POST /{id}/info
+        PUT /{id}/info"]
+        ShopRouter["/shops
+        POST /nearby
+        GET /{id}
+        GET /{id}/menu"]
+        PhotoRouter["/uploads
+        POST /photo-init
+        POST /photo-complete
+        GET /my-photos"]
+        SearchRouter["/search
+        POST /image
+        GET /menu-items
+        GET /popular-menus"]
+        RecRouter["/recommendations
+        GET /
+        GET /trending
+        POST /feedback"]
+        DiaryRouter["/diary
+        POST /
+        GET /my
+        POST /likes"]
     end
 
     subgraph "서비스 레이어"
-        OpenAIService[OpenAI Service<br/>- 이미지 분석 GPT-4V<br/>- 임베딩 생성<br/>- 메뉴 매칭]
-        PineconeService[Pinecone Service<br/>- 벡터 검색<br/>- 임베딩 저장<br/>- 유사도 검색]
-        S3Service[S3 Service<br/>- Presigned URL 생성<br/>- 파일 업로드/다운로드<br/>- 객체 삭제]
-        RecService[Recommendation Service<br/>- 협업 필터링<br/>- 인기도 기반<br/>- 콜드 스타트]
+        OpenAIService["OpenAI Service
+        이미지 분석 GPT-4V
+        임베딩 생성
+        메뉴 매칭"]
+        PineconeService["Pinecone Service
+        벡터 검색
+        임베딩 저장
+        유사도 검색"]
+        S3Service["S3 Service
+        Presigned URL 생성
+        파일 업로드/다운로드
+        객체 삭제"]
+        RecService["Recommendation Service
+        협업 필터링
+        인기도 기반
+        콜드 스타트"]
     end
 
     subgraph "비동기 작업 큐"
-        CeleryWorker[Celery Worker<br/>- 사진 처리<br/>- 이미지 분석<br/>- 썸네일 생성<br/>- 메뉴 매칭]
-        CeleryBeat[Celery Beat<br/>- 추천 업데이트 매일<br/>- 키워드 집계 매시간<br/>- 사진 정리 매일]
-        RedisQueue[(Redis<br/>- 작업 큐 Broker<br/>- 결과 Backend<br/>- 캐시 저장소<br/>- 세션 저장)]
+        CeleryWorker["Celery Worker
+        사진 처리
+        이미지 분석
+        썸네일 생성
+        메뉴 매칭"]
+        CeleryBeat["Celery Beat
+        추천 업데이트 매일
+        키워드 집계 매시간
+        사진 정리 매일"]
+        RedisQueue[("Redis
+        작업 큐 Broker
+        결과 Backend
+        캐시 저장소
+        세션 저장")]
     end
 
     subgraph "데이터 저장소"
-        PostgreSQL[(PostgreSQL 15+<br/>PostGIS 확장<br/>- users<br/>- markets<br/>- shops<br/>- menu_items<br/>- photos<br/>- likes/pins<br/>- diaries<br/>- events)]
-        MinIO[(MinIO/S3<br/>객체 스토리지<br/>- photos/<br/>- thumbnails/<br/>이미지 파일)]
-        PineconeDB[(Pinecone<br/>벡터 데이터베이스<br/>- 메뉴 임베딩<br/>- 사진 임베딩<br/>- 유사도 검색)]
+        PostgreSQL[("PostgreSQL 15+
+        PostGIS 확장
+        users, markets, market_info
+        shops, menu_items, photos
+        likes, shop_pins, saved_menus
+        diaries, events")]
+        MinIO[("MinIO/S3
+        객체 스토리지
+        photos/, thumbnails/
+        이미지 파일")]
+        PineconeDB[("Pinecone
+        벡터 데이터베이스
+        메뉴 임베딩
+        사진 임베딩
+        유사도 검색")]
     end
 
     subgraph "외부 API"
-        OpenAIAPI[OpenAI API<br/>GPT-4V<br/>text-embedding-ada-002]
-        PineconeAPI[Pinecone API<br/>벡터 업로드<br/>유사도 검색]
+        OpenAIAPI["OpenAI API
+        GPT-4V
+        text-embedding-ada-002"]
+        PineconeAPI["Pinecone API
+        벡터 업로드
+        유사도 검색"]
     end
 
     %% 클라이언트 → API Gateway
@@ -133,17 +206,20 @@ sequenceDiagram
     participant JWT
     participant DB
 
-    Client->>FastAPI: POST /auth/google<br/>{code: "Google ID Token"}
+    Client->>FastAPI: POST /auth/google
+    Note right of Client: {code: "Google ID Token"}
     FastAPI->>GoogleOAuth: 토큰 검증
-    GoogleOAuth-->>FastAPI: 사용자 정보<br/>{sub, email, name}
-    FastAPI->>DB: 사용자 조회<br/>(google_id)
+    GoogleOAuth-->>FastAPI: 사용자 정보
+    Note left of GoogleOAuth: {sub, email, name}
+    FastAPI->>DB: 사용자 조회 (google_id)
     
     alt 신규 사용자
         FastAPI->>DB: 사용자 생성
     end
     
     DB-->>FastAPI: User 객체
-    FastAPI->>JWT: Access Token 생성<br/>{sub: user_id, exp: ...}
+    FastAPI->>JWT: Access Token 생성
+    Note right of FastAPI: {sub: user_id, exp: ...}
     JWT-->>FastAPI: JWT 토큰
     FastAPI-->>Client: {access_token, token_type, expires_in}
     
@@ -163,25 +239,29 @@ sequenceDiagram
     participant Pinecone
 
     Note over Client,Pinecone: 1단계: 업로드 초기화
-    Client->>FastAPI: POST /uploads/photo-init<br/>{is_member, lat, lng}
-    FastAPI->>S3: Presigned URL 생성<br/>(1시간 유효)
+    Client->>FastAPI: POST /uploads/photo-init
+    Note right of Client: {is_member, lat, lng}
+    FastAPI->>S3: Presigned URL 생성 (1시간 유효)
     S3-->>FastAPI: Presigned URL
     FastAPI-->>Client: {presigned_url, s3_key, upload_token}
     
     Note over Client,Pinecone: 2단계: S3 직접 업로드
-    Client->>S3: PUT {presigned_url}<br/>(이미지 바이너리)
+    Client->>S3: PUT {presigned_url}
+    Note right of Client: 이미지 바이너리
     S3-->>Client: 업로드 성공 (200)
     
     Note over Client,Pinecone: 3단계: 업로드 완료 처리
-    Client->>FastAPI: POST /uploads/photo-complete<br/>{s3_key, upload_token, ...}
-    FastAPI->>DB: Photo 레코드 생성<br/>(processed=False)
+    Client->>FastAPI: POST /uploads/photo-complete
+    Note right of Client: {s3_key, upload_token, ...}
+    FastAPI->>DB: Photo 레코드 생성 (processed=False)
     DB-->>FastAPI: Photo 객체
     FastAPI->>Celery: process_photo.delay(photo_id)
     FastAPI-->>Client: {success: true, message: "처리 중"}
     
     Note over Client,Pinecone: 4단계: 백그라운드 처리
     Celery->>S3: Presigned Download URL 조회
-    Celery->>OpenAI: 이미지 분석 (GPT-4V)<br/>analyze_food_image()
+    Celery->>OpenAI: 이미지 분석 (GPT-4V)
+    Note right of Celery: analyze_food_image()
     OpenAI-->>Celery: {is_food, detected_foods, ...}
     
     par 썸네일 생성과 이미지 분석 병렬
@@ -189,12 +269,15 @@ sequenceDiagram
     and
         Celery->>OpenAI: 이미지 임베딩 생성
         OpenAI-->>Celery: 임베딩 벡터 (1536차원)
-        Celery->>Pinecone: 벡터 저장<br/>upsert_photo_embedding()
+        Celery->>Pinecone: 벡터 저장
+        Note right of Celery: upsert_photo_embedding()
     end
     
-    Celery->>OpenAI: 메뉴 매칭<br/>match_menu_item()
+    Celery->>OpenAI: 메뉴 매칭
+    Note right of Celery: match_menu_item()
     OpenAI-->>Celery: {matched_menu, confidence}
-    Celery->>DB: 분석 결과 업데이트<br/>{parsed_items, processed=True}
+    Celery->>DB: 분석 결과 업데이트
+    Note right of Celery: {parsed_items, processed=True}
 ```
 
 ### 3. 이미지 검색 플로우
@@ -222,7 +305,8 @@ sequenceDiagram
         
         Note over FastAPI,Pinecone: 벡터 검색
         FastAPI->>Pinecone: search_similar_menus(embedding, top_k=10)
-        Pinecone-->>FastAPI: 유사 메뉴 리스트<br/>[{menu_item_id, score}, ...]
+        Pinecone-->>FastAPI: 유사 메뉴 리스트
+        Note left of Pinecone: [{menu_item_id, score}, ...]
         
         Note over FastAPI,DB: 메뉴 정보 조회
         loop 각 메뉴 아이템
@@ -232,11 +316,13 @@ sequenceDiagram
         
         Note over FastAPI,DB: 근처 가게 검색 (PostGIS)
         opt 위치 정보가 있는 경우
-            FastAPI->>DB: PostGIS ST_DWithin 쿼리<br/>반경 1km 내 가게
+            FastAPI->>DB: PostGIS ST_DWithin 쿼리
+            Note right of FastAPI: 반경 1km 내 가게
             DB-->>FastAPI: 가게 리스트 + 거리
         end
         
-        FastAPI-->>Client: ImageSearchResponse<br/>{results: [{menu_item, confidence, shops_nearby}]}
+        FastAPI-->>Client: ImageSearchResponse
+        Note left of FastAPI: {results: [{menu_item, confidence, shops_nearby}]}
     end
 ```
 
@@ -250,7 +336,8 @@ sequenceDiagram
     participant DB
 
     Client->>FastAPI: GET /recommendations?limit=10
-    FastAPI->>DB: 사용자 활동 확인<br/>COUNT(likes), COUNT(pins)
+    FastAPI->>DB: 사용자 활동 확인
+    Note right of FastAPI: COUNT(likes), COUNT(pins)
     DB-->>FastAPI: {likes_count: 5, pins_count: 2}
     
     alt 활동 데이터 충분 (likes >= 3 OR pins >= 2)
@@ -290,13 +377,15 @@ sequenceDiagram
     participant FastAPI
     participant DB
 
-    Client->>FastAPI: POST /shops/nearby<br/>{lat: 37.5703, lng: 126.9998, radius_meters: 100}
+    Client->>FastAPI: POST /shops/nearby
+    Note right of Client: {lat: 37.5703, lng: 126.9998, radius_meters: 100}
     
     Note over FastAPI,DB: PostGIS 공간 쿼리
-    FastAPI->>DB: SELECT shops.*,<br/>ST_Distance(<br/>  geom,<br/>  ST_GeogFromText('POINT(126.9998 37.5703)')<br/>) as distance<br/>FROM shops<br/>WHERE ST_DWithin(<br/>  geom,<br/>  ST_GeogFromText('POINT(126.9998 37.5703)'),<br/>  100<br/>)<br/>ORDER BY distance
+    FastAPI->>DB: SELECT shops.*, ST_Distance(geom, ST_GeogFromText('POINT(126.9998 37.5703)')) as distance FROM shops WHERE ST_DWithin(geom, ST_GeogFromText('POINT(126.9998 37.5703)'), 100) ORDER BY distance
     
     DB-->>FastAPI: 가게 리스트 + 거리 (미터)
-    FastAPI-->>Client: NearbyShopsResponse<br/>{shops: [{shop, distance_meters}, ...]}
+    FastAPI-->>Client: NearbyShopsResponse
+    Note left of FastAPI: {shops: [{shop, distance_meters}, ...]}
 ```
 
 ## 🗂️ 컴포넌트별 상세 구조
@@ -323,9 +412,9 @@ backend/app/
 │   │   └── get_db() 의존성 함수
 │   │
 │   └── models.py (DB 모델)
-│       ├── User, Market, Shop
-│       ├── MenuItem, ShopMenu
-│       ├── Photo, Like, Pin
+│       ├── User, Market, MarketInfo, Shop
+│       ├── MenuItem, ShopMenu, MarketMenuItem
+│       ├── Photo, Like, ShopPin, SavedMenu
 │       ├── Diary, Event
 │       └── KeywordReview
 │
@@ -383,6 +472,9 @@ backend/app/
 | GET | `/markets/{id}` | 시장 상세 | ❌ |
 | GET | `/markets/{id}/menu-items` | 시장 메뉴 목록 | ❌ |
 | GET | `/markets/{id}/stats` | 시장 통계 | ❌ |
+| GET | `/markets/{id}/info` | 시장 부가정보 조회 | ❌ |
+| POST | `/markets/{id}/info` | 시장 부가정보 생성 | ✅ |
+| PUT | `/markets/{id}/info` | 시장 부가정보 업데이트 | ✅ |
 
 #### 가게 API (`/shops`)
 
@@ -649,28 +741,36 @@ erDiagram
     USERS ||--o{ DIARIES : writes
     USERS ||--o{ EVENTS : generates
     
+    MARKETS ||--o| MARKET_INFO : has
     MARKETS ||--o{ SHOPS : contains
-    MARKETS ||--o{ MENU_ITEMS : has
+    MARKETS ||--o{ MARKET_MENU_ITEMS : has
     MARKETS ||--o{ DIARIES : visited_at
     MARKETS ||--o{ KEYWORD_REVIEWS : aggregated_for
     
-    SHOPS ||--o{ SHOP_MENU : sells
-    SHOPS ||--o{ PINS : pinned_at
+    MARKET_MENU_ITEMS }o--|| MENU_ITEMS : links_to
     
+    SHOPS ||--o{ SHOP_MENU : sells
+    SHOPS ||--o{ SHOP_PINS : pinned_at
+    SHOPS ||--o{ PHOTOS : has_photos
+    
+    MENU_ITEMS ||--o{ MARKET_MENU_ITEMS : linked_to
     MENU_ITEMS ||--o{ SHOP_MENU : sold_at
     MENU_ITEMS ||--o{ LIKES : liked
-    MENU_ITEMS ||--o{ PINS : pinned
+    MENU_ITEMS ||--o{ SAVED_MENUS : saved
+    
+    SHOP_MENU }o--|| PHOTOS : has_photo
 ```
 
 ### 테이블별 주요 컬럼
 
 #### users
 - `id` (UUID, PK)
-- `google_id` (String, UNIQUE)
+- `google_id` (String, UNIQUE, nullable)
 - `display_name`, `korean_name`, `email`
 - `country`, `birth_yyyy_mm`
 - `spice_level` (1-5), `adventure` (enum), `korean_experience` (enum)
 - `locale` (ko, en, zh, ja)
+- `onboarding_completed` (Boolean)
 
 #### shops (PostGIS)
 - `id` (UUID, PK)
@@ -680,13 +780,42 @@ erDiagram
 - `geom` (Geography('POINT')) ← PostGIS
 - `last_reported_open_at` (Timestamp)
 
+#### markets
+- `id` (UUID, PK)
+- `name`, `name_en`, `name_zh`, `name_ja`
+- `description`, `description_en`, `description_zh`, `description_ja` (Text) ← 다국어 설명
+- `silhouette_url` (String)
+- `lat`, `lng` (Float, nullable) ← 시장 중심 좌표 (Kakao Maps용)
+- `geom` (Geography('POINT'), nullable) ← PostGIS 좌표
+
+#### market_info
+- `market_info_id` (UUID, PK)
+- `market_id` (UUID, FK, UNIQUE) ← 1:1 관계
+- `address`, `address_en`, `address_zh`, `address_ja` (String) ← 다국어 주소
+- `transport`, `transport_en`, `transport_zh`, `transport_ja` (Text) ← 다국어 교통 정보
+- `parking`, `parking_en`, `parking_zh`, `parking_ja` (Text) ← 다국어 주차 정보
+- `restroom`, `restroom_en`, `restroom_zh`, `restroom_ja` (Text) ← 다국어 화장실 정보
+
 #### menu_items
 - `id` (UUID, PK)
-- `market_id` (UUID, FK)
 - `name`, `name_en`, `name_zh`, `name_ja`
-- `description` (Text)
-- `tags` (JSONB) ← 유연한 메타데이터
+- `description`, `description_en`, `description_zh`, `description_ja` (Text) ← 다국어 설명
+- `similar_food`, `similar_food_en`, `similar_food_zh`, `similar_food_ja` (String) ← 비슷한 음식
+- `price` (String) ← 가격 범위 (예: "₩3,000~₩4,000")
+- `contains`, `contains_en`, `contains_zh`, `contains_ja` (String) ← 알레르기 정보
+- `may_contains`, `may_contains_en`, `may_contains_zh`, `may_contains_ja` (String) ← 가능한 알레르기
+- `category` (String) ← Meals, Snacks, Sweets, Drink
+- `tags` (JSONB) ← 유연한 메타데이터 (향후 확장성)
 - `spice_level` (1-5)
+- `rep_image_url` (String)
+
+#### shop_menu
+- `id` (UUID, PK)
+- `shop_id` (UUID, FK)
+- `menu_item_id` (UUID, FK)
+- `price` (Integer) ← 원 단위
+- `available` (Boolean)
+- `photo_id` (UUID, FK, nullable) ← 가게별 메뉴 사진
 
 #### photos
 - `id` (UUID, PK)
@@ -825,7 +954,80 @@ volumes:
 
 ---
 
-**최종 업데이트**: 2025-11-30  
-**버전**: 1.0.0  
+## 🌐 다국어 지원 아키텍처
+
+### 다국어 필드 구조
+
+시스템은 한국어(ko), 영어(en), 중국어(zh), 일본어(ja) 4개 언어를 지원합니다.
+
+#### 지원 언어
+- **한국어 (ko)**: 기본 언어
+- **영어 (en)**: English
+- **중국어 (zh)**: 中文
+- **일본어 (ja)**: 日本語
+
+#### 다국어 필드가 있는 테이블
+
+1. **markets**
+   - `description`, `description_en`, `description_zh`, `description_ja`
+
+2. **market_info**
+   - `address`, `address_en`, `address_zh`, `address_ja`
+   - `transport`, `transport_en`, `transport_zh`, `transport_ja`
+   - `parking`, `parking_en`, `parking_zh`, `parking_ja`
+   - `restroom`, `restroom_en`, `restroom_zh`, `restroom_ja`
+
+3. **menu_items**
+   - `description`, `description_en`, `description_zh`, `description_ja`
+   - `similar_food`, `similar_food_en`, `similar_food_zh`, `similar_food_ja`
+   - `contains`, `contains_en`, `contains_zh`, `contains_ja`
+   - `may_contains`, `may_contains_en`, `may_contains_zh`, `may_contains_ja`
+
+4. **shops, menu_items (이름)**
+   - `name`, `name_en`, `name_zh`, `name_ja`
+
+### 다국어 데이터 조회 전략
+
+```python
+# 사용자 locale에 따라 적절한 필드 반환
+def get_localized_field(obj, field_base: str, locale: str = "ko") -> str:
+    """
+    locale에 따라 적절한 다국어 필드 반환
+    예: get_localized_field(market, "description", "en") 
+        → market.description_en 반환
+    """
+    locale_suffix = f"_{locale}" if locale != "ko" else ""
+    field_name = f"{field_base}{locale_suffix}"
+    return getattr(obj, field_name, None) or getattr(obj, field_base, "")
+```
+
+## 📋 주요 변경사항 (CSV 스키마 반영)
+
+### 1. MarketInfo 테이블 추가
+- 시장의 부가정보(주소, 교통, 주차, 화장실)를 별도 테이블로 분리
+- 1:1 관계로 `markets` 테이블과 연결
+- 모든 필드가 4개 언어로 지원
+
+### 2. 다국어 설명 필드 확장
+- `markets.description`: 다국어 필드 추가 (`description_en`, `description_zh`, `description_ja`)
+- `menu_items.description`: 다국어 필드 추가
+
+### 3. 메뉴 아이템 필드 확장
+- **비슷한 음식**: `similar_food` (4개 언어)
+- **가격 범위**: `price` (String, 예: "₩3,000~₩4,000")
+- **알레르기 정보**: `contains`, `may_contains` (4개 언어)
+
+### 4. shop_menu 테이블 확장
+- `photo_id` 필드 추가: 가게별 메뉴에 사진 연결 가능
+
+### 5. API 엔드포인트 추가
+- `GET /markets/{id}/info`: 시장 부가정보 조회
+- `POST /markets/{id}/info`: 시장 부가정보 생성
+- `PUT /markets/{id}/info`: 시장 부가정보 업데이트
+
+---
+
+**최종 업데이트**: 2025-01-XX  
+**버전**: 1.1.0  
 **저장소**: https://github.com/WoongHeeHee/DX_project/
 

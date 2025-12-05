@@ -5,7 +5,6 @@
 import uuid
 from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
-from geoalchemy2 import func as geo_func
 
 from app.db.database import SessionLocal, engine
 from app.db.models import *
@@ -37,7 +36,6 @@ def create_seed_data():
             {
                 "name": "빈대떡", "name_en": "Mung Bean Pancake", "name_zh": "绿豆煎饼", "name_ja": "緑豆チヂミ",
                 "description": "녹두를 갈아 만든 전통 한국 팬케이크", "spice_level": 1,
-                "tags": {"categories": ["전통음식", "팬케이크", "채식"], "allergens": ["글루텐"]}
             },
             {
                 "name": "김치전", "name_en": "Kimchi Pancake", "name_zh": "泡菜煎饼", "name_ja": "キムチチヂミ",
@@ -88,10 +86,11 @@ def create_seed_data():
         
         menu_items = []
         for item_data in menu_items_data:
+            # tags 필드 제거
+            item_data_clean = {k: v for k, v in item_data.items() if k != "tags"}
             menu_item = MenuItem(
                 id=uuid.uuid4(),
-                market_id=market.id,
-                **item_data
+                **item_data_clean
             )
             menu_items.append(menu_item)
             db.add(menu_item)
@@ -101,16 +100,16 @@ def create_seed_data():
         # 3. 가게 생성
         print("🏪 가게 데이터 생성 중...")
         shops_data = [
-            {"name": "할머니 빈대떡", "name_en": "Grandma's Bindaetteok", "lat": 37.5703, "lng": 126.9998, "address": "서울 종로구 창경궁로 88"},
-            {"name": "김치전 명가", "name_en": "Kimchi Jeon Master", "lat": 37.5705, "lng": 126.9995, "address": "서울 종로구 창경궁로 90"},
-            {"name": "떡볶이 천국", "name_en": "Tteokbokki Heaven", "lat": 37.5701, "lng": 127.0001, "address": "서울 종로구 창경궁로 85"},
-            {"name": "순대 맛집", "name_en": "Sundae Restaurant", "lat": 37.5707, "lng": 126.9993, "address": "서울 종로구 창경궁로 92"},
-            {"name": "김밥 나라", "name_en": "Kimbap Kingdom", "lat": 37.5699, "lng": 127.0003, "address": "서울 종로구 창경궁로 83"},
-            {"name": "붕어빵 아저씨", "name_en": "Fish Bread Uncle", "lat": 37.5704, "lng": 126.9997, "address": "서울 종로구 창경궁로 89"},
-            {"name": "호떡 할머니", "name_en": "Hotteok Grandma", "lat": 37.5702, "lng": 126.9999, "address": "서울 종로구 창경궁로 87"},
-            {"name": "만두 전문점", "name_en": "Dumpling Specialist", "lat": 37.5706, "lng": 126.9994, "address": "서울 종로구 창경궁로 91"},
-            {"name": "튀김 마을", "name_en": "Tempura Village", "lat": 37.5700, "lng": 127.0002, "address": "서울 종로구 창경궁로 84"},
-            {"name": "국수 한 그릇", "name_en": "One Bowl Noodles", "lat": 37.5708, "lng": 126.9992, "address": "서울 종로구 창경궁로 93"}
+            {"name": "할머니 빈대떡", "name_en": "Grandma's Bindaetteok", "lat": 37.5703, "lng": 126.9998},
+            {"name": "김치전 명가", "name_en": "Kimchi Jeon Master", "lat": 37.5705, "lng": 126.9995},
+            {"name": "떡볶이 천국", "name_en": "Tteokbokki Heaven", "lat": 37.5701, "lng": 127.0001},
+            {"name": "순대 맛집", "name_en": "Sundae Restaurant", "lat": 37.5707, "lng": 126.9993},
+            {"name": "김밥 나라", "name_en": "Kimbap Kingdom", "lat": 37.5699, "lng": 127.0003},
+            {"name": "붕어빵 아저씨", "name_en": "Fish Bread Uncle", "lat": 37.5704, "lng": 126.9997},
+            {"name": "호떡 할머니", "name_en": "Hotteok Grandma", "lat": 37.5702, "lng": 126.9999},
+            {"name": "만두 전문점", "name_en": "Dumpling Specialist", "lat": 37.5706, "lng": 126.9994},
+            {"name": "튀김 마을", "name_en": "Tempura Village", "lat": 37.5700, "lng": 127.0002},
+            {"name": "국수 한 그릇", "name_en": "One Bowl Noodles", "lat": 37.5708, "lng": 126.9992}
         ]
         
         shops = []
@@ -118,8 +117,7 @@ def create_seed_data():
             shop = Shop(
                 id=uuid.uuid4(),
                 market_id=market.id,
-                **shop_data,
-                geom=geo_func.ST_GeogFromText(f'POINT({shop_data["lng"]} {shop_data["lat"]})')
+                **shop_data
             )
             shops.append(shop)
             db.add(shop)
@@ -140,7 +138,6 @@ def create_seed_data():
                     id=uuid.uuid4(),
                     shop_id=shop.id,
                     menu_item_id=menu_item.id,
-                    price=random.randint(3000, 15000),  # 3,000원 ~ 15,000원
                     available=True
                 )
                 db.add(shop_menu)
@@ -236,38 +233,35 @@ def create_seed_data():
         # 7. 샘플 사진 데이터
         print("📸 샘플 사진 데이터 생성 중...")
         
+        # 샘플 사진은 menu_item_id가 필요하므로 메뉴 아이템을 찾아서 설정
         sample_photos = [
             {
                 "s3_key": "photos/sample_bindaetteok.jpg",
                 "lat": 37.5703, "lng": 126.9998,
                 "taken_at": datetime.utcnow() - timedelta(hours=2),
                 "processed": True,
-                "parsed_items": {
-                    "is_food": True,
-                    "food_coverage": 0.8,
-                    "detected_foods": [{"name": "빈대떡", "confidence": 0.95}]
-                }
+                "menu_name": "빈대떡"  # 메뉴 이름으로 찾기
             },
             {
                 "s3_key": "photos/sample_kimchi_jeon.jpg",
                 "lat": 37.5705, "lng": 126.9995,
                 "taken_at": datetime.utcnow() - timedelta(hours=1),
                 "processed": True,
-                "parsed_items": {
-                    "is_food": True,
-                    "food_coverage": 0.9,
-                    "detected_foods": [{"name": "김치전", "confidence": 0.92}]
-                }
+                "menu_name": "김치전"  # 메뉴 이름으로 찾기
             }
         ]
         
         for i, photo_data in enumerate(sample_photos):
-            photo = Photo(
-                id=uuid.uuid4(),
-                uploader_user_id=users[i % len(users)].id,
-                **photo_data
-            )
-            db.add(photo)
+            menu_name = photo_data.pop("menu_name")
+            menu_item = db.query(MenuItem).filter(MenuItem.name == menu_name).first()
+            if menu_item:
+                photo = Photo(
+                    id=uuid.uuid4(),
+                    uploader_user_id=users[i % len(users)].id,
+                    menu_item_id=menu_item.id,
+                    **photo_data
+                )
+                db.add(photo)
         
         # 8. 샘플 다이어리
         print("📔 샘플 다이어리 생성 중...")

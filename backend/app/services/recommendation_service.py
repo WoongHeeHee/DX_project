@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from datetime import datetime
 import logging
 
-from app.db.models import User, MenuItem, Like, Pin
+from app.db.models import User, MenuItem, Like
 from app.models.schemas import MenuItem as MenuItemSchema
 
 logger = logging.getLogger(__name__)
@@ -99,7 +99,7 @@ class RecommendationService:
     ) -> List[MenuItemSchema]:
         """
         개인 맞춤 추천
-        찜한 메뉴를 토대로 같은 메뉴를 좋아요를 누른 사람 중 좋아요를 많이 받은 다른 메뉴
+        사용자가 좋아요한 메뉴를 토대로 같은 메뉴를 좋아요를 누른 사람 중 좋아요를 많이 받은 다른 메뉴
         
         Args:
             user_id: 사용자 ID
@@ -109,33 +109,32 @@ class RecommendationService:
             추천 메뉴 리스트
         """
         try:
-            # 사용자가 찜한 메뉴 조회
-            user_pins = self.db.query(Pin.menu_item_id).filter(
-                Pin.user_id == user_id,
-                Pin.menu_item_id.isnot(None)
+            # 사용자가 좋아요한 메뉴 조회
+            user_likes = self.db.query(Like.menu_item_id).filter(
+                Like.user_id == user_id
             ).all()
             
-            if not user_pins:
-                # 찜한 메뉴가 없으면 전체 인기 메뉴 반환
+            if not user_likes:
+                # 좋아요한 메뉴가 없으면 전체 인기 메뉴 반환
                 return self._get_popular_menus(limit)
             
-            pinned_menu_ids = [pin.menu_item_id for pin in user_pins]
+            liked_menu_ids = [like.menu_item_id for like in user_likes]
             
-            # 찜한 메뉴들을 좋아요한 다른 사용자들 찾기
-            users_who_liked_pinned = self.db.query(
+            # 좋아요한 메뉴들을 좋아요한 다른 사용자들 찾기
+            users_who_liked_same = self.db.query(
                 Like.user_id
             ).filter(
-                Like.menu_item_id.in_(pinned_menu_ids),
+                Like.menu_item_id.in_(liked_menu_ids),
                 Like.user_id != user_id
             ).distinct().all()
             
-            similar_user_ids = [user.user_id for user in users_who_liked_pinned]
+            similar_user_ids = [user.user_id for user in users_who_liked_same]
             
             if not similar_user_ids:
                 return self._get_popular_menus(limit)
             
             # 현재 사용자가 이미 좋아요한 메뉴 제외
-            user_likes = self.db.query(Like.menu_item_id).filter(
+            user_likes_subquery = self.db.query(Like.menu_item_id).filter(
                 Like.user_id == user_id
             ).subquery()
             
@@ -145,8 +144,7 @@ class RecommendationService:
                 func.count(Like.id).label('like_count')
             ).join(Like).filter(
                 Like.user_id.in_(similar_user_ids),
-                ~MenuItem.id.in_(user_likes),
-                ~MenuItem.id.in_(pinned_menu_ids)  # 찜한 메뉴도 제외
+                ~MenuItem.id.in_(user_likes_subquery)
             ).group_by(
                 MenuItem.id
             ).order_by(

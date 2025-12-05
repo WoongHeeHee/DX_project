@@ -9,7 +9,7 @@ import uvicorn
 import logging
 
 from app.config import settings
-from app.api import auth, users, markets, shops, photos, search, recommendations, diary, market_photos
+from app.api import auth, users, markets, shops, photos, search, recommendations, diary, market_photos, menus
 from app.db.database import engine, Base
 
 # 로깅 설정
@@ -37,14 +37,43 @@ app.add_middleware(
 # 보안 스키마
 security = HTTPBearer()
 
-# 데이터베이스 테이블 생성
+# 데이터베이스 테이블 생성 및 마이그레이션
 @app.on_event("startup")
 async def startup_event():
     """애플리케이션 시작 시 실행"""
     logger.info("시장 탐방 API 서버 시작")
-    # 개발 환경에서만 테이블 자동 생성 (운영에서는 Alembic 사용)
-    if settings.ENVIRONMENT == "development":
-        Base.metadata.create_all(bind=engine)
+    
+    # Alembic 마이그레이션 자동 실행
+    try:
+        from alembic.config import Config
+        from alembic import command
+        import os
+        from pathlib import Path
+        
+        # alembic.ini 파일 경로 찾기
+        current_dir = Path(__file__).parent
+        alembic_ini_path = current_dir.parent / "alembic.ini"
+        
+        if not alembic_ini_path.exists():
+            logger.warning(f"alembic.ini 파일을 찾을 수 없습니다: {alembic_ini_path}")
+            raise FileNotFoundError(f"alembic.ini not found at {alembic_ini_path}")
+        
+        alembic_cfg = Config(str(alembic_ini_path))
+        alembic_cfg.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
+        
+        logger.info("데이터베이스 마이그레이션 실행 중...")
+        command.upgrade(alembic_cfg, "head")
+        logger.info("데이터베이스 마이그레이션 완료")
+    except Exception as e:
+        logger.error(f"마이그레이션 실행 중 오류 발생: {e}", exc_info=True)
+        # 개발 환경에서만 테이블 자동 생성 (fallback)
+        if settings.ENVIRONMENT == "development":
+            logger.warning("마이그레이션 실패, 테이블 자동 생성 시도...")
+            try:
+                Base.metadata.create_all(bind=engine)
+                logger.info("테이블 자동 생성 완료")
+            except Exception as e2:
+                logger.error(f"테이블 자동 생성 실패: {e2}", exc_info=True)
 
 @app.on_event("shutdown")
 async def shutdown_event():
@@ -71,6 +100,7 @@ app.include_router(search.router, prefix="/search", tags=["검색"])
 app.include_router(recommendations.router, prefix="/recommendations", tags=["추천"])
 app.include_router(diary.router, prefix="/diary", tags=["다이어리"])
 app.include_router(market_photos.router, prefix="/markets", tags=["지도-시장"])
+app.include_router(menus.router, prefix="/menus", tags=["메뉴"])
 
 if __name__ == "__main__":
     uvicorn.run(

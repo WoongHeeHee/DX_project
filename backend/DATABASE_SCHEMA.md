@@ -12,13 +12,15 @@
 2. **markets** - 시장
 3. **shops** - 가게
 4. **menu_items** - 메뉴 아이템
+4-1. **market_menu_items** - 시장-메뉴 조인 테이블 (다대다 관계)
 5. **shop_menu** - 가게별 메뉴 (조인 테이블)
 6. **photos** - 사진
 7. **likes** - 좋아요
-8. **pins** - 핀 (북마크)
-9. **diaries** - 다이어리
-10. **keyword_reviews** - 키워드 리뷰 집계
-11. **events** - 사용자 이벤트 (추천 시스템용)
+8. **shop_pins** - 핀한 가게
+9. **saved_menus** - 찜한 메뉴 (저장한 메뉴)
+10. **diaries** - 다이어리
+11. **keyword_reviews** - 키워드 리뷰 집계
+12. **events** - 사용자 이벤트 (추천 시스템용)
 
 ---
 
@@ -46,7 +48,8 @@
 **관계:**
 - `photos` (1:N) - 사용자가 업로드한 사진
 - `likes` (1:N) - 사용자가 좋아요한 메뉴
-- `pins` (1:N) - 사용자가 핀한 가게/메뉴
+- `shop_pins` (1:N) - 사용자가 핀한 가게
+- `saved_menus` (1:N) - 사용자가 찜한 메뉴
 - `diaries` (1:N) - 사용자가 작성한 다이어리
 - `events` (1:N) - 사용자 이벤트
 
@@ -66,12 +69,18 @@
 | name_zh | VARCHAR(100) | NULL | 시장 이름 (중국어) |
 | name_ja | VARCHAR(100) | NULL | 시장 이름 (일본어) |
 | description | TEXT | NULL | 시장 설명 |
+| description_en | TEXT | NULL | 시장 설명 (영어) |
+| description_zh | TEXT | NULL | 시장 설명 (중국어) |
+| description_ja | TEXT | NULL | 시장 설명 (일본어) |
 | silhouette_url | VARCHAR(500) | NULL | 실루엣 이미지 URL |
+| lat | FLOAT | NULL | 시장 중심 위도 (Kakao Maps용) |
+| lng | FLOAT | NULL | 시장 중심 경도 (Kakao Maps용) |
+| geom | GEOGRAPHY(POINT) | NULL | PostGIS 지리 좌표 |
 | created_at | TIMESTAMP WITH TIME ZONE | NOT NULL | 생성 시간 |
 
 **관계:**
 - `shops` (1:N) - 시장에 속한 가게들
-- `menu_items` (1:N) - 시장에서 판매하는 메뉴 아이템들
+- `market_menu_items` (1:N) - 시장-메뉴 조인 테이블 (다대다 관계)
 - `diaries` (1:N) - 시장에 대한 다이어리
 - `keyword_reviews` (1:N) - 시장별 키워드 리뷰
 
@@ -101,7 +110,7 @@
 **관계:**
 - `market` (N:1) - 소속 시장
 - `shop_menus` (1:N) - 가게에서 판매하는 메뉴
-- `pins` (1:N) - 가게를 핀한 사용자들
+- `shop_pins` (1:N) - 가게를 핀한 사용자들
 - `photos` (1:N) - 가게에 대한 사진
 
 **인덱스:**
@@ -120,7 +129,6 @@
 | 컬럼명 | 타입 | 제약 | 설명 |
 |--------|------|------|------|
 | id | UUID | PK | 메뉴 아이템 고유 ID |
-| market_id | UUID | FK → markets.id, NOT NULL | 소속 시장 ID |
 | name | VARCHAR(100) | NOT NULL | 메뉴 이름 (한국어) |
 | name_en | VARCHAR(100) | NULL | 메뉴 이름 (영어) |
 | name_zh | VARCHAR(100) | NULL | 메뉴 이름 (중국어) |
@@ -133,15 +141,43 @@
 | created_at | TIMESTAMP WITH TIME ZONE | NOT NULL | 생성 시간 |
 
 **관계:**
-- `market` (N:1) - 소속 시장
+- `market_menu_items` (1:N) - 시장-메뉴 조인 테이블 (다대다 관계)
 - `shop_menus` (1:N) - 해당 메뉴를 판매하는 가게들
 - `likes` (1:N) - 메뉴를 좋아요한 사용자들
-- `pins` (1:N) - 메뉴를 핀한 사용자들
+- `saved_menus` (1:N) - 메뉴를 찜한 사용자들
 
 **인덱스:**
-- `market_id` (FK)
 - `category` (카테고리 필터링용)
 - `spice_level` (매운맛 수준 필터링용)
+
+**비고:**
+- 시장과 독립적인 메뉴 카탈로그
+- 하나의 메뉴가 여러 시장에서 판매될 수 있음 (다대다 관계)
+- 시장과의 관계는 `market_menu_items` 조인 테이블을 통해 관리
+
+---
+
+### 4-1. market_menu_items (시장-메뉴 조인 테이블)
+
+| 컬럼명 | 타입 | 제약 | 설명 |
+|--------|------|------|------|
+| id | UUID | PK | 고유 ID |
+| market_id | UUID | FK → markets.id, NOT NULL | 시장 ID |
+| menu_item_id | UUID | FK → menu_items.id, NOT NULL | 메뉴 아이템 ID |
+| created_at | TIMESTAMP WITH TIME ZONE | NOT NULL | 생성 시간 |
+
+**관계:**
+- `market` (N:1) - 소속 시장
+- `menu_item` (N:1) - 메뉴 아이템
+
+**인덱스:**
+- `(market_id, menu_item_id)` (UNIQUE - 중복 방지)
+- `market_id` (FK)
+- `menu_item_id` (FK)
+
+**비고:**
+- 시장과 메뉴의 다대다 관계를 표현하는 조인 테이블
+- 같은 메뉴가 여러 시장에서 판매될 수 있음
 
 ---
 
@@ -232,33 +268,58 @@
 
 ---
 
-### 8. pins (핀)
+### 8. shop_pins (핀한 가게)
 
 | 컬럼명 | 타입 | 제약 | 설명 |
 |--------|------|------|------|
 | id | UUID | PK | 핀 고유 ID |
 | user_id | UUID | FK → users.id, NOT NULL | 사용자 ID |
-| shop_id | UUID | FK → shops.id, NULL | 핀한 가게 ID |
-| menu_item_id | UUID | FK → menu_items.id, NULL | 핀한 메뉴 아이템 ID |
+| shop_id | UUID | FK → shops.id, NOT NULL | 핀한 가게 ID |
 | created_at | TIMESTAMP WITH TIME ZONE | NOT NULL | 생성 시간 |
 
 **관계:**
 - `user` (N:1) - 핀한 사용자
-- `shop` (N:1) - 핀한 가게 (NULL 가능)
-- `menu_item` (N:1) - 핀한 메뉴 (NULL 가능)
+- `shop` (N:1) - 핀한 가게
 
 **인덱스:**
+- `(user_id, shop_id)` (UNIQUE - 중복 방지)
 - `user_id` (FK)
-- `shop_id` (FK, NULL 가능)
-- `menu_item_id` (FK, NULL 가능)
+- `shop_id` (FK)
 - `created_at` (최신 핀 조회용)
 
 **비고:**
-- `shop_id`와 `menu_item_id` 중 하나는 반드시 있어야 함 (체크 제약 필요할 수 있음)
+- 사용자-가게별로 하나의 핀만 가능 (UNIQUE 제약)
+- "지도 - 시장 화면"에서 시장-메뉴-가게 순으로 고른 뒤 가게를 핀하는 용도
 
 ---
 
-### 9. diaries (다이어리)
+### 9. saved_menus (찜한 메뉴)
+
+| 컬럼명 | 타입 | 제약 | 설명 |
+|--------|------|------|------|
+| id | UUID | PK | 찜한 메뉴 고유 ID |
+| user_id | UUID | FK → users.id, NOT NULL | 사용자 ID |
+| menu_item_id | UUID | FK → menu_items.id, NOT NULL | 찜한 메뉴 아이템 ID |
+| created_at | TIMESTAMP WITH TIME ZONE | NOT NULL | 생성 시간 |
+
+**관계:**
+- `user` (N:1) - 찜한 사용자
+- `menu_item` (N:1) - 찜한 메뉴
+
+**인덱스:**
+- `(user_id, menu_item_id)` (UNIQUE - 중복 방지)
+- `user_id` (FK)
+- `menu_item_id` (FK)
+- `created_at` (최신 찜한 메뉴 조회용)
+
+**비고:**
+- 사용자-메뉴별로 하나의 찜만 가능 (UNIQUE 제약)
+- "메뉴 설명 페이지"에서 추가될 수 있고, 마이>저장한 메뉴에서 확인하는 용도
+- 추천 알고리즘에서는 사용하지 않음
+
+---
+
+### 10. diaries (다이어리)
 
 | 컬럼명 | 타입 | 제약 | 설명 |
 |--------|------|------|------|
@@ -352,7 +413,7 @@
 ### ActionType (행동 타입)
 - `photo_upload` - 사진 업로드
 - `like` - 좋아요
-- `pin` - 핀
+- `pin` - 핀 (가게 핀하기)
 - `diary_create` - 다이어리 생성
 - `shop_visit` - 가게 방문
 
@@ -369,11 +430,12 @@
 ### 1. 외래 키 제약
 - 모든 FK는 `ON DELETE CASCADE` 또는 `ON DELETE SET NULL` 처리 필요
 - `photos.uploader_user_id`는 NULL 가능 (비회원)
-- `pins`에서 `shop_id`와 `menu_item_id` 중 하나는 필수 (애플리케이션 레벨 검증)
+- `shop_pins`와 `saved_menus`는 별도 테이블로 분리되어 있음
 
 ### 2. 유니크 제약
 - `users.google_id` (UNIQUE)
 - `likes(user_id, menu_item_id)` (UNIQUE)
+- `market_menu_items(market_id, menu_item_id)` (UNIQUE)
 - `keyword_reviews(market_id, keyword)` (PRIMARY KEY)
 
 ### 3. 공간 데이터
@@ -397,8 +459,8 @@
 ### 고성능 쿼리를 위한 인덱스
 1. **공간 검색**: `shops.geom` (GIST 인덱스)
 2. **시간 기반 조회**: `photos.created_at`, `shops.last_reported_open_at`
-3. **사용자별 조회**: `photos.uploader_user_id`, `likes.user_id`, `pins.user_id`
-4. **시장/가게별 조회**: `shops.market_id`, `menu_items.market_id`
+3. **사용자별 조회**: `photos.uploader_user_id`, `likes.user_id`, `shop_pins.user_id`, `saved_menus.user_id`
+4. **시장/가게별 조회**: `shops.market_id`, `market_menu_items.market_id`
 5. **카테고리 필터링**: `menu_items.category`
 6. **매운맛 수준 필터링**: `menu_items.spice_level`
 

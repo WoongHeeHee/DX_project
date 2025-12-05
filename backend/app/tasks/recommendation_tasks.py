@@ -240,7 +240,7 @@ def update_popularity_scores():
         logger.info("인기도 점수 업데이트 시작")
         
         from app.db.database import SessionLocal
-        from app.db.models import MenuItem, Like, Pin
+        from app.db.models import MenuItem, Like
         from datetime import datetime, timedelta
         from app.config import settings
         import redis
@@ -278,17 +278,11 @@ def update_popularity_scores():
                     Like.created_at < month_ago
                 ).count()
                 
-                # 핀 수 (가중치 0.3)
-                pin_count = db.query(Pin).filter(
-                    Pin.menu_item_id == item.id
-                ).count()
-                
-                # 인기도 점수 계산
+                # 인기도 점수 계산 (좋아요만 사용)
                 popularity_score = (
                     recent_likes * 1.0 +
                     month_likes * 0.5 +
-                    total_likes * 0.2 +
-                    pin_count * 0.3
+                    total_likes * 0.2
                 )
                 
                 # 스무딩 적용
@@ -297,8 +291,7 @@ def update_popularity_scores():
                 popularity_scores[str(item.id)] = {
                     'score': smoothed_score,
                     'recent_likes': recent_likes,
-                    'total_likes': recent_likes + month_likes + total_likes,
-                    'pin_count': pin_count
+                    'total_likes': recent_likes + month_likes + total_likes
                 }
             
             # Redis에 저장

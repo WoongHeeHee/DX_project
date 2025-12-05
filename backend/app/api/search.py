@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db
-from app.db.models import MenuItem, Shop, ShopMenu
+from app.db.models import MenuItem, Shop, ShopMenu, MarketMenuItem
 from app.models.schemas import (
     ImageSearchRequest, 
     ImageSearchResponse, 
@@ -76,16 +76,13 @@ async def search_by_image(
                 ShopMenu.available == True
             ).all()
             
-            # 거리 계산 (간단한 하버사인 공식 또는 PostGIS 사용)
-            from sqlalchemy import func
+            # 하버사인 공식으로 거리 계산
+            from app.utils.geography import haversine_distance
             for shop in shops_with_menu[:5]:  # 최대 5개
-                # PostGIS로 거리 계산
-                distance = db.query(
-                    func.ST_Distance(
-                        func.ST_GeogFromText(f'POINT({shop.lng} {shop.lat})'),
-                        func.ST_GeogFromText(f'POINT({request.lng} {request.lat})')
-                    )
-                ).scalar()
+                distance = haversine_distance(
+                    request.lat, request.lng,
+                    shop.lat, shop.lng
+                )
                 
                 shops_nearby.append(ShopWithDistance(
                     id=shop.id,
@@ -96,10 +93,9 @@ async def search_by_image(
                     name_ja=shop.name_ja,
                     lat=shop.lat,
                     lng=shop.lng,
-                    address=shop.address,
                     last_reported_open_at=shop.last_reported_open_at,
                     created_at=shop.created_at,
-                    distance_meters=round(distance, 2) if distance else 0.0
+                    distance_meters=round(distance, 2)
                 ))
             
             # 거리순 정렬
@@ -152,9 +148,9 @@ async def search_menu_items(
             MenuItem.description.ilike(f"%{q}%")
         )
     
-    # 시장 필터
+    # 시장 필터 (MarketMenuItem 조인 테이블을 통해)
     if market_id:
-        query = query.filter(MenuItem.market_id == market_id)
+        query = query.join(MarketMenuItem).filter(MarketMenuItem.market_id == market_id)
     
     # 매운맛 수준 필터
     query = query.filter(MenuItem.spice_level <= spice_level_max)
@@ -181,7 +177,7 @@ async def get_popular_menus(
     ).outerjoin(Like).group_by(MenuItem.id)
     
     if market_id:
-        query = query.filter(MenuItem.market_id == market_id)
+        query = query.join(MarketMenuItem).filter(MarketMenuItem.market_id == market_id)
     
     # 좋아요 수로 정렬
     popular_items = query.order_by(func.count(Like.id).desc()).limit(limit).all()
