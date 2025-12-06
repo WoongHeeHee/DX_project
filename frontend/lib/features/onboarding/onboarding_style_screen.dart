@@ -63,16 +63,16 @@ class _OnboardingStyleScreenState extends State<OnboardingStyleScreen> {
         backgroundColor: AppColors.white,
         body: SafeArea(
           child: Column(
-          children: [
-            // 상단 진행률 인디케이터
-            _buildProgressIndicator(responsive),
-            // 메인 컨텐츠
-            Expanded(
-              child: _buildContent(responsive, textTheme, userName),
-            ),
-            // 하단 버튼
-            _buildBottomButton(responsive, textTheme),
-          ],
+            children: [
+              // 상단 진행률 인디케이터
+              _buildProgressIndicator(responsive),
+              // 메인 컨텐츠
+              Expanded(
+                child: _buildContent(responsive, textTheme, userName),
+              ),
+              // 하단 버튼
+              _buildBottomButton(responsive, textTheme),
+            ],
           ),
         ),
       ),
@@ -85,9 +85,6 @@ class _OnboardingStyleScreenState extends State<OnboardingStyleScreen> {
     final double progress = currentStep / totalSteps;
 
     return ResponsivePadding(
-      mobilePadding: 16,
-      tabletPadding: 24,
-      desktopPadding: 32,
       child: LayoutBuilder(
         builder: (context, constraints) {
           final double containerWidth = constraints.maxWidth;
@@ -128,9 +125,12 @@ class _OnboardingStyleScreenState extends State<OnboardingStyleScreen> {
     String userName,
   ) {
     return ResponsivePadding(
-      mobilePadding: 16,
-      tabletPadding: 24,
-      desktopPadding: 32,
+      mobileEdgeInsets: EdgeInsets.only(
+        left: responsive.responsivePadding(mobilePadding: 20),
+        right: responsive.responsivePadding(mobilePadding: 20),
+        top: responsive.responsivePadding(mobilePadding: 8),
+        bottom: responsive.responsivePadding(mobilePadding: 20),
+      ),
       child: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -142,14 +142,14 @@ class _OnboardingStyleScreenState extends State<OnboardingStyleScreen> {
             Text(
               "STEP 8 · Style",
               style: textTheme.bodySmall?.copyWith(
-                fontSize: responsive.responsiveFontSize(mobileSize: 11),
-                fontWeight: FontWeight.w400,
+                fontSize: responsive.responsiveFontSize(mobileSize: 16),
+                fontWeight: FontWeight.w600,
                 color: AppColors.inactiveText,
                 letterSpacing: 0.22,
               ),
             ),
             SizedBox(
-              height: responsive.responsivePadding(mobilePadding: 4),
+              height: responsive.responsivePadding(mobilePadding: 40),
             ),
             // 타이틀 (headlineLarge)
             Text(
@@ -157,7 +157,7 @@ class _OnboardingStyleScreenState extends State<OnboardingStyleScreen> {
               style: textTheme.headlineLarge?.copyWith(
                 fontSize: responsive.responsiveFontSize(mobileSize: 26),
                 fontWeight: FontWeight.w600,
-                height: 1,
+                height: 1.3,
                 color: AppColors.mainText,
               ),
             ),
@@ -176,6 +176,8 @@ class _OnboardingStyleScreenState extends State<OnboardingStyleScreen> {
     ResponsiveHelper responsive,
     TextTheme textTheme,
   ) {
+    final textSize = responsive.responsiveFontSize(mobileSize: 16);
+
     return Column(
       children: _styles.map((style) {
         final isSelected = _selectedStyle == style;
@@ -191,20 +193,21 @@ class _OnboardingStyleScreenState extends State<OnboardingStyleScreen> {
             },
             child: Container(
               width: double.infinity,
-              height: 56,
-              padding: EdgeInsets.symmetric(
-                horizontal: responsive.responsivePadding(mobilePadding: 12),
-                vertical: responsive.responsivePadding(mobilePadding: 10),
+              padding: EdgeInsets.only(
+                left: responsive.responsivePadding(mobilePadding: 16),
+                right: responsive.responsivePadding(mobilePadding: 16),
+                top: responsive.responsivePadding(mobilePadding: 16),
+                bottom: responsive.responsivePadding(mobilePadding: 16),
               ),
               decoration: BoxDecoration(
-                color: isSelected ? AppColors.white : const Color(0xFFF7F7F8),
-                border: isSelected
-                    ? Border.all(
-                        color: AppColors.primary,
-                        width: 1,
-                      )
-                    : null,
-                borderRadius: BorderRadius.circular(999),
+                color: AppColors.white,
+                border: Border.all(
+                  color: isSelected
+                      ? AppColors.mainText.withOpacity(0.5)
+                      : const Color(0xFFF7F7F8),
+                  width: 1,
+                ),
+                borderRadius: BorderRadius.circular(12),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -213,11 +216,10 @@ class _OnboardingStyleScreenState extends State<OnboardingStyleScreen> {
                   Text(
                     style,
                     style: textTheme.bodyMedium?.copyWith(
-                      fontSize: responsive.responsiveFontSize(mobileSize: 14),
-                      fontWeight: FontWeight.w500,
-                      color: isSelected
-                          ? AppColors.primary
-                          : AppColors.mainText,
+                      fontSize: textSize,
+                      fontWeight:
+                          isSelected ? FontWeight.w600 : FontWeight.w500,
+                      color: AppColors.mainText,
                     ),
                   ),
                 ],
@@ -234,11 +236,11 @@ class _OnboardingStyleScreenState extends State<OnboardingStyleScreen> {
     TextTheme textTheme,
   ) {
     return ResponsivePadding(
-      mobilePadding: 16,
-      tabletPadding: 24,
-      desktopPadding: 32,
-        child: GestureDetector(
-          onTap: () async {
+      child: SizedBox(
+        width: double.infinity,
+        height: 60,
+        child: ElevatedButton(
+          onPressed: () async {
             if (_selectedStyle == null) return;
 
             setState(() {
@@ -250,7 +252,8 @@ class _OnboardingStyleScreenState extends State<OnboardingStyleScreen> {
               final countryCode = OnboardingData.getCountryCode(
                 widget.countryId ?? 'country_jp',
               );
-              final adventure = OnboardingData.getAdventureFromStyle(_selectedStyle!);
+              final adventure =
+                  OnboardingData.getAdventureFromStyle(_selectedStyle!);
               final koreanExperience = OnboardingData.getKoreanExperience();
 
               await _apiRepository.userService.completeOnboarding(
@@ -293,22 +296,21 @@ class _OnboardingStyleScreenState extends State<OnboardingStyleScreen> {
               }
             }
           },
-        child: Container(
-          width: double.infinity,
-          padding: EdgeInsets.symmetric(
-            horizontal: responsive.responsivePadding(mobilePadding: 16),
-            vertical: responsive.responsivePadding(mobilePadding: 12),
-          ),
-          decoration: BoxDecoration(
-            color: AppColors.primary,
-            borderRadius: BorderRadius.circular(8),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.primary,
+            foregroundColor: AppColors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            elevation: 0,
+            shadowColor: Colors.transparent,
+            splashFactory: NoSplash.splashFactory,
+            animationDuration: Duration.zero,
           ),
           child: Text(
             "Enter",
-            textAlign: TextAlign.center,
-            style: textTheme.labelLarge?.copyWith(
-              fontSize: responsive.responsiveFontSize(mobileSize: 15),
-              fontWeight: FontWeight.w500,
+            style: textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w600,
               color: AppColors.white,
             ),
           ),
@@ -317,4 +319,3 @@ class _OnboardingStyleScreenState extends State<OnboardingStyleScreen> {
     );
   }
 }
-

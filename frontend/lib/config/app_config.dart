@@ -21,8 +21,8 @@ class AppConfig {
       }
       
       // .env에 없으면 하드코딩된 IP 사용 (fallback)
-      debugPrint('모바일 환경 - 하드코딩된 서버 IP 사용: http://192.168.0.149:8000');
-      return 'http://192.168.0.149:8000';
+      debugPrint('모바일 환경 - 하드코딩된 서버 IP 사용: http://172.30.1.25:8000');
+      return 'http://172.30.1.25:8000';
     }
     
     // 데스크톱/웹에서는 API_BASE_URL 사용

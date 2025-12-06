@@ -56,9 +56,6 @@ class _OnboardingNameConfirmScreenState
     final double progress = currentStep / totalSteps;
 
     return ResponsivePadding(
-      mobilePadding: 16,
-      tabletPadding: 24,
-      desktopPadding: 32,
       child: LayoutBuilder(
         builder: (context, constraints) {
           final double containerWidth = constraints.maxWidth;
@@ -95,82 +92,54 @@ class _OnboardingNameConfirmScreenState
 
   Widget _buildContent(ResponsiveHelper responsive, TextTheme textTheme) {
     return ResponsivePadding(
-      mobilePadding: 16,
-      tabletPadding: 24,
-      desktopPadding: 32,
-      child: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(height: responsive.responsivePadding(mobilePadding: 20)),
-            // STEP 2 · Name
-            Text(
-              "STEP 2 · Name",
-              style: textTheme.bodySmall?.copyWith(
-                fontSize: responsive.responsiveFontSize(mobileSize: 11),
-                fontWeight: FontWeight.w400,
-                color: AppColors.inactiveText,
-                letterSpacing: 0.22,
-              ),
+      mobileEdgeInsets: EdgeInsets.only(
+        left: responsive.responsivePadding(mobilePadding: 20),
+        right: responsive.responsivePadding(mobilePadding: 20),
+        top: responsive.responsivePadding(mobilePadding: 8),
+        bottom: responsive.responsivePadding(mobilePadding: 20),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            height: responsive.responsivePadding(mobilePadding: 20),
+          ),
+          // STEP 2 · Name
+          Text(
+            "STEP 2 · Name",
+            style: textTheme.bodySmall?.copyWith(
+              fontSize: responsive.responsiveFontSize(mobileSize: 16),
+              fontWeight: FontWeight.w600,
+              color: AppColors.inactiveText,
+              letterSpacing: 0.22,
             ),
-            SizedBox(height: responsive.responsivePadding(mobilePadding: 4)),
-            // 타이틀 (headlineLarge)
-            Text(
-              "당신의 이름은 무엇인가요?",
-              style: textTheme.headlineLarge?.copyWith(
-                fontSize: responsive.responsiveFontSize(mobileSize: 26),
-                fontWeight: FontWeight.w500,
-                height: 1,
-                color: AppColors.mainText,
-              ),
+          ),
+          SizedBox(
+            height: responsive.responsivePadding(mobilePadding: 40),
+          ),
+          // 타이틀 (headlineLarge)
+          Text(
+            "당신의 이름은 무엇인가요?",
+            style: textTheme.headlineLarge?.copyWith(
+              fontSize: responsive.responsiveFontSize(mobileSize: 26),
+              fontWeight: FontWeight.w600,
+              height: 1.3,
+              color: AppColors.mainText,
             ),
-            SizedBox(height: responsive.responsivePadding(mobilePadding: 20)),
-            // 이름 표시 영역 (중앙 정렬)
-            SizedBox(
-              height: 256,
+          ),
+          // 중앙: 이름 결과값 (전체 화면의 정 중앙)
+          Expanded(
+            child: Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  // 이모지들
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        "🎉",
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: responsive.responsiveFontSize(
-                            mobileSize: 18,
-                          ),
-                          fontWeight: FontWeight.w400,
-                        ),
-                      ),
-                      SizedBox(
-                        width: responsive.responsivePadding(mobilePadding: 40),
-                      ),
-                      Text(
-                        "🎉",
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: responsive.responsiveFontSize(
-                            mobileSize: 18,
-                          ),
-                          fontWeight: FontWeight.w400,
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(
-                    height: responsive.responsivePadding(mobilePadding: 12),
-                  ),
                   // 한글 이름
                   Text(
                     "$_koreanName 님",
                     textAlign: TextAlign.center,
                     style: textTheme.titleLarge?.copyWith(
-                      fontSize: responsive.responsiveFontSize(mobileSize: 24),
-                      fontWeight: FontWeight.w500,
+                      fontSize: responsive.responsiveFontSize(mobileSize: 28),
+                      fontWeight: FontWeight.w700,
                       color: AppColors.mainText,
                     ),
                   ),
@@ -182,7 +151,7 @@ class _OnboardingNameConfirmScreenState
                     _englishName,
                     textAlign: TextAlign.center,
                     style: textTheme.bodyMedium?.copyWith(
-                      fontSize: responsive.responsiveFontSize(mobileSize: 14),
+                      fontSize: responsive.responsiveFontSize(mobileSize: 18),
                       fontWeight: FontWeight.w500,
                       color: AppColors.inactiveText,
                     ),
@@ -190,42 +159,42 @@ class _OnboardingNameConfirmScreenState
                 ],
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildBottomButton(ResponsiveHelper responsive, TextTheme textTheme) {
     return ResponsivePadding(
-      mobilePadding: 16,
-      tabletPadding: 24,
-      desktopPadding: 32,
-      child: GestureDetector(
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) =>
-                  OnboardingCountryScreen(userName: _koreanName),
+      child: SizedBox(
+        width: double.infinity,
+        height: 60,
+        child: ElevatedButton(
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) =>
+                    OnboardingCountryScreen(userName: _koreanName),
+              ),
+            );
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.primary,
+            foregroundColor: AppColors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
             ),
-          );
-        },
-        child: Container(
-          width: double.infinity,
-          padding: EdgeInsets.symmetric(
-            vertical: responsive.responsivePadding(mobilePadding: 13),
-          ),
-          decoration: BoxDecoration(
-            color: AppColors.primary,
-            borderRadius: BorderRadius.circular(8),
+            elevation: 0,
+            shadowColor: Colors.transparent,
+            splashFactory: NoSplash.splashFactory,
+            animationDuration: Duration.zero,
           ),
           child: Text(
             "enter",
-            textAlign: TextAlign.center,
-            style: textTheme.labelLarge?.copyWith(
-              fontSize: responsive.responsiveFontSize(mobileSize: 15),
-              fontWeight: FontWeight.w500,
+            style: textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w600,
               color: AppColors.white,
             ),
           ),

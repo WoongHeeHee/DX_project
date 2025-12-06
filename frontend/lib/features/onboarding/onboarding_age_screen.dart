@@ -23,12 +23,39 @@ class OnboardingAgeScreen extends StatefulWidget {
 }
 
 class _OnboardingAgeScreenState extends State<OnboardingAgeScreen> {
-  DateTime? _selectedDate;
+  int? _selectedYear;
+  int? _selectedMonth;
+  bool _isFocused = false;
 
-  String _formatDate(DateTime date) {
-    final year = date.year;
-    final month = date.month.toString().padLeft(2, '0');
-    return "$year-$month";
+  String _formatDate() {
+    if (_selectedYear != null && _selectedMonth != null) {
+      final month = _selectedMonth!.toString().padLeft(2, '0');
+      return "$_selectedYear-$month";
+    }
+    return "";
+  }
+
+  void _showYearMonthPicker() {
+    final now = DateTime.now();
+    final currentYear = now.year;
+    final currentMonth = now.month;
+    
+    showDialog(
+      context: context,
+      builder: (context) => _YearMonthPickerDialog(
+        initialYear: _selectedYear ?? currentYear,
+        initialMonth: _selectedMonth ?? currentMonth,
+        maxYear: currentYear,
+        maxMonth: currentMonth,
+        onSelected: (year, month) {
+          setState(() {
+            _selectedYear = year;
+            _selectedMonth = month;
+            _isFocused = false;
+          });
+        },
+      ),
+    );
   }
 
   @override
@@ -62,9 +89,6 @@ class _OnboardingAgeScreenState extends State<OnboardingAgeScreen> {
     final double progress = currentStep / totalSteps;
 
     return ResponsivePadding(
-      mobilePadding: 16,
-      tabletPadding: 24,
-      desktopPadding: 32,
       child: LayoutBuilder(
         builder: (context, constraints) {
           final double containerWidth = constraints.maxWidth;
@@ -105,9 +129,12 @@ class _OnboardingAgeScreenState extends State<OnboardingAgeScreen> {
     String userName,
   ) {
     return ResponsivePadding(
-      mobilePadding: 16,
-      tabletPadding: 24,
-      desktopPadding: 32,
+      mobileEdgeInsets: EdgeInsets.only(
+        left: responsive.responsivePadding(mobilePadding: 20),
+        right: responsive.responsivePadding(mobilePadding: 20),
+        top: responsive.responsivePadding(mobilePadding: 8),
+        bottom: responsive.responsivePadding(mobilePadding: 20),
+      ),
       child: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -119,27 +146,27 @@ class _OnboardingAgeScreenState extends State<OnboardingAgeScreen> {
             Text(
               "STEP 4 · Age",
               style: textTheme.bodySmall?.copyWith(
-                fontSize: responsive.responsiveFontSize(mobileSize: 11),
-                fontWeight: FontWeight.w400,
+                fontSize: responsive.responsiveFontSize(mobileSize: 16),
+                fontWeight: FontWeight.w600,
                 color: AppColors.inactiveText,
                 letterSpacing: 0.22,
               ),
             ),
             SizedBox(
-              height: responsive.responsivePadding(mobilePadding: 4),
+              height: responsive.responsivePadding(mobilePadding: 40),
             ),
             // 타이틀 (headlineLarge)
             Text(
               "$userName님,\n몇 년생이신가요?",
               style: textTheme.headlineLarge?.copyWith(
                 fontSize: responsive.responsiveFontSize(mobileSize: 26),
-                fontWeight: FontWeight.w500,
-                height: 1,
+                fontWeight: FontWeight.w600,
+                height: 1.3,
                 color: AppColors.mainText,
               ),
             ),
             SizedBox(
-              height: responsive.responsivePadding(mobilePadding: 20),
+              height: responsive.responsivePadding(mobilePadding: 30),
             ),
             // 출생 연도 선택
             _buildDatePickerField(responsive, textTheme),
@@ -153,84 +180,75 @@ class _OnboardingAgeScreenState extends State<OnboardingAgeScreen> {
     ResponsiveHelper responsive,
     TextTheme textTheme,
   ) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // 라벨
-        Padding(
-          padding: EdgeInsets.only(
-            bottom: responsive.responsivePadding(mobilePadding: 2),
-          ),
-          child: Text(
-            "출생 연도",
-            style: textTheme.bodyMedium?.copyWith(
-              fontSize: responsive.responsiveFontSize(mobileSize: 13),
-              fontWeight: FontWeight.w500,
-              color: AppColors.inactiveText,
-            ),
-          ),
-        ),
-        SizedBox(
-          height: responsive.responsivePadding(mobilePadding: 12),
-        ),
-        // 날짜 선택 필드
-        GestureDetector(
-          onTap: () async {
-            final now = DateTime.now();
-            final firstDate = DateTime(1925, 1, 1);
-            final lastDate = DateTime(now.year, now.month, now.day);
+    final hasSelection = _selectedYear != null && _selectedMonth != null;
+    final textSize = responsive.responsiveFontSize(mobileSize: 16);
 
-            final pickedDate = await showDatePicker(
-              context: context,
-              initialDate: _selectedDate ?? lastDate,
-              firstDate: firstDate,
-              lastDate: lastDate,
-              initialDatePickerMode: DatePickerMode.year,
-              helpText: "출생 연도 선택",
-              locale: const Locale('ko', 'KR'),
-            );
-
-            if (pickedDate != null) {
-              setState(() {
-                _selectedDate = pickedDate;
-              });
-            }
-          },
-          child: Container(
-            width: double.infinity,
-            padding: EdgeInsets.all(
-              responsive.responsivePadding(mobilePadding: 12),
-            ),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF2F2F4),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Text(
-                  _selectedDate != null
-                      ? _formatDate(_selectedDate!)
-                      : "yyyy-mm",
-                  style: textTheme.bodyMedium?.copyWith(
-                    fontSize: responsive.responsiveFontSize(mobileSize: 14),
-                    fontWeight: FontWeight.w500,
-                    color: _selectedDate != null
-                        ? AppColors.mainText
-                        : AppColors.inactiveText,
-                  ),
-                ),
-                Icon(
-                  Icons.keyboard_arrow_down,
-                  size: responsive.responsiveIconSize(mobileSize: 16),
-                  color: AppColors.inactiveText,
-                ),
-              ],
-            ),
-          ),
+    return GestureDetector(
+      onTapDown: (_) {
+        setState(() {
+          _isFocused = true;
+        });
+      },
+      onTapUp: (_) {
+        setState(() {
+          _isFocused = false;
+        });
+      },
+      onTapCancel: () {
+        setState(() {
+          _isFocused = false;
+        });
+      },
+      onTap: () {
+        setState(() {
+          _isFocused = true;
+        });
+        _showYearMonthPicker();
+      },
+      child: Container(
+        width: double.infinity,
+        padding: EdgeInsets.only(
+          left: responsive.responsivePadding(mobilePadding: 16),
+          right: responsive.responsivePadding(mobilePadding: 16),
+          top: responsive.responsivePadding(mobilePadding: 12),
+          bottom: responsive.responsivePadding(mobilePadding: 12),
         ),
-      ],
+        decoration: BoxDecoration(
+          color: AppColors.white,
+          border: Border.all(
+            color: _isFocused
+                ? AppColors.mainText.withOpacity(0.5)
+                : const Color(0xFFF7F7F8),
+            width: 1,
+          ),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                hasSelection
+                    ? _formatDate()
+                    : "출생연도·월 선택하기",
+                style: textTheme.bodyMedium?.copyWith(
+                  fontSize: textSize,
+                  fontWeight: hasSelection ? FontWeight.w600 : FontWeight.w500,
+                  color: hasSelection
+                      ? AppColors.mainText
+                      : AppColors.inactiveText,
+                  letterSpacing: hasSelection ? 0 : 0.5,
+                ),
+              ),
+            ),
+            SizedBox(width: responsive.responsivePadding(mobilePadding: 8)),
+            Icon(
+              Icons.keyboard_arrow_down,
+              size: responsive.responsiveIconSize(mobileSize: 16),
+              color: AppColors.mainText,
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -239,12 +257,12 @@ class _OnboardingAgeScreenState extends State<OnboardingAgeScreen> {
     TextTheme textTheme,
   ) {
     return ResponsivePadding(
-      mobilePadding: 16,
-      tabletPadding: 24,
-      desktopPadding: 32,
-        child: GestureDetector(
-          onTap: () {
-            if (_selectedDate != null) {
+      child: SizedBox(
+        width: double.infinity,
+        height: 60,
+        child: ElevatedButton(
+          onPressed: () {
+            if (_selectedYear != null && _selectedMonth != null) {
               Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -252,31 +270,336 @@ class _OnboardingAgeScreenState extends State<OnboardingAgeScreen> {
                     userName: widget.userName,
                     countryName: widget.countryName,
                     countryId: widget.countryId,
-                    birthYyyyMm: _formatDate(_selectedDate!),
+                    birthYyyyMm: _formatDate(),
                   ),
                 ),
               );
             }
           },
-        child: Container(
-          width: double.infinity,
-          padding: EdgeInsets.symmetric(
-            horizontal: responsive.responsivePadding(mobilePadding: 16),
-            vertical: responsive.responsivePadding(mobilePadding: 12),
-          ),
-          decoration: BoxDecoration(
-            color: AppColors.primary,
-            borderRadius: BorderRadius.circular(8),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.primary,
+            foregroundColor: AppColors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            elevation: 0,
+            shadowColor: Colors.transparent,
+            splashFactory: NoSplash.splashFactory,
+            animationDuration: Duration.zero,
           ),
           child: Text(
             "Enter",
-            textAlign: TextAlign.center,
-            style: textTheme.labelLarge?.copyWith(
-              fontSize: responsive.responsiveFontSize(mobileSize: 15),
-              fontWeight: FontWeight.w500,
+            style: textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w600,
               color: AppColors.white,
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+// 년도와 월만 선택하는 커스텀 다이얼로그
+class _YearMonthPickerDialog extends StatefulWidget {
+  final int initialYear;
+  final int initialMonth;
+  final int maxYear;
+  final int maxMonth;
+  final void Function(int year, int month) onSelected;
+
+  const _YearMonthPickerDialog({
+    required this.initialYear,
+    required this.initialMonth,
+    required this.maxYear,
+    required this.maxMonth,
+    required this.onSelected,
+  });
+
+  @override
+  State<_YearMonthPickerDialog> createState() => _YearMonthPickerDialogState();
+}
+
+class _YearMonthPickerDialogState extends State<_YearMonthPickerDialog> {
+  late int _selectedYear;
+  late int _selectedMonth;
+  late FixedExtentScrollController _yearController;
+  late FixedExtentScrollController _monthController;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedYear = widget.initialYear;
+    _selectedMonth = widget.initialMonth;
+    
+    // 년도 리스트 생성 (1925년부터 현재 년도까지)
+    final years = List.generate(
+      widget.maxYear - 1925 + 1,
+      (index) => 1925 + index,
+    ).reversed.toList();
+    
+    final yearIndex = years.indexOf(_selectedYear);
+    _yearController = FixedExtentScrollController(initialItem: yearIndex >= 0 ? yearIndex : 0);
+    
+    final monthIndex = _selectedMonth - 1;
+    _monthController = FixedExtentScrollController(initialItem: monthIndex);
+  }
+
+  @override
+  void dispose() {
+    _yearController.dispose();
+    _monthController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final responsive = context.responsive;
+    final textTheme = Theme.of(context).textTheme;
+    
+    // 년도 리스트 생성 (1925년부터 현재 년도까지)
+    final years = List.generate(
+      widget.maxYear - 1925 + 1,
+      (index) => 1925 + index,
+    ).reversed.toList();
+    
+    // 월 리스트 생성
+    final months = List.generate(12, (index) => index + 1);
+    
+    // 현재 선택된 년도가 최대 년도인 경우, 최대 월까지만 표시
+    final availableMonths = _selectedYear == widget.maxYear
+        ? months.where((m) => m <= widget.maxMonth).toList()
+        : months;
+
+    return Dialog(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Container(
+        padding: EdgeInsets.all(
+          responsive.responsivePadding(mobilePadding: 24),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              "출생 연도·월 선택",
+              style: textTheme.titleLarge?.copyWith(
+                fontSize: responsive.responsiveFontSize(mobileSize: 20),
+                fontWeight: FontWeight.w600,
+                color: AppColors.mainText,
+              ),
+            ),
+            SizedBox(
+              height: responsive.responsivePadding(mobilePadding: 24),
+            ),
+            Row(
+              children: [
+                // 년도 선택
+                Expanded(
+                  child: Column(
+                    children: [
+                      Text(
+                        "년도",
+                        style: textTheme.bodyMedium?.copyWith(
+                          fontSize: responsive.responsiveFontSize(mobileSize: 14),
+                          fontWeight: FontWeight.w500,
+                          color: AppColors.inactiveText,
+                        ),
+                      ),
+                      SizedBox(
+                        height: responsive.responsivePadding(mobilePadding: 8),
+                      ),
+                      Container(
+                        height: 200,
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                            color: const Color(0xFFF7F7F8),
+                            width: 1,
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: ListWheelScrollView.useDelegate(
+                          controller: _yearController,
+                          itemExtent: 50,
+                          physics: const FixedExtentScrollPhysics(),
+                          onSelectedItemChanged: (index) {
+                            setState(() {
+                              _selectedYear = years[index];
+                              // 년도가 변경되면 월도 조정
+                              if (_selectedYear == widget.maxYear &&
+                                  _selectedMonth > widget.maxMonth) {
+                                _selectedMonth = widget.maxMonth;
+                                _monthController.animateToItem(
+                                  _selectedMonth - 1,
+                                  duration: const Duration(milliseconds: 200),
+                                  curve: Curves.easeOut,
+                                );
+                              }
+                            });
+                          },
+                          childDelegate: ListWheelChildBuilderDelegate(
+                            builder: (context, index) {
+                              if (index < 0 || index >= years.length) {
+                                return null;
+                              }
+                              final year = years[index];
+                              final isSelected = year == _selectedYear;
+                              return Center(
+                                child: Text(
+                                  "$year",
+                                  style: textTheme.bodyLarge?.copyWith(
+                                    fontSize: responsive.responsiveFontSize(mobileSize: 18),
+                                    fontWeight: isSelected
+                                        ? FontWeight.w600
+                                        : FontWeight.w400,
+                                    color: isSelected
+                                        ? AppColors.primary
+                                        : AppColors.mainText,
+                                  ),
+                                ),
+                              );
+                            },
+                            childCount: years.length,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(
+                  width: responsive.responsivePadding(mobilePadding: 16),
+                ),
+                // 월 선택
+                Expanded(
+                  child: Column(
+                    children: [
+                      Text(
+                        "월",
+                        style: textTheme.bodyMedium?.copyWith(
+                          fontSize: responsive.responsiveFontSize(mobileSize: 14),
+                          fontWeight: FontWeight.w500,
+                          color: AppColors.inactiveText,
+                        ),
+                      ),
+                      SizedBox(
+                        height: responsive.responsivePadding(mobilePadding: 8),
+                      ),
+                      Container(
+                        height: 200,
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                            color: const Color(0xFFF7F7F8),
+                            width: 1,
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: ListWheelScrollView.useDelegate(
+                          controller: _monthController,
+                          itemExtent: 50,
+                          physics: const FixedExtentScrollPhysics(),
+                          onSelectedItemChanged: (index) {
+                            if (index >= 0 && index < availableMonths.length) {
+                              setState(() {
+                                _selectedMonth = availableMonths[index];
+                              });
+                            }
+                          },
+                          childDelegate: ListWheelChildBuilderDelegate(
+                            builder: (context, index) {
+                              if (index < 0 || index >= availableMonths.length) {
+                                return null;
+                              }
+                              final month = availableMonths[index];
+                              final isSelected = month == _selectedMonth;
+                              return Center(
+                                child: Text(
+                                  "$month월",
+                                  style: textTheme.bodyLarge?.copyWith(
+                                    fontSize: responsive.responsiveFontSize(mobileSize: 18),
+                                    fontWeight: isSelected
+                                        ? FontWeight.w600
+                                        : FontWeight.w400,
+                                    color: isSelected
+                                        ? AppColors.primary
+                                        : AppColors.mainText,
+                                  ),
+                                ),
+                              );
+                            },
+                            childCount: availableMonths.length,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(
+              height: responsive.responsivePadding(mobilePadding: 24),
+            ),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                    },
+                    style: OutlinedButton.styleFrom(
+                      side: BorderSide(
+                        color: const Color(0xFFF7F7F8),
+                        width: 1,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: EdgeInsets.symmetric(
+                        vertical: responsive.responsivePadding(mobilePadding: 14),
+                      ),
+                    ),
+                    child: Text(
+                      "취소",
+                      style: textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.mainText,
+                      ),
+                    ),
+                  ),
+                ),
+                SizedBox(
+                  width: responsive.responsivePadding(mobilePadding: 12),
+                ),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () {
+                      widget.onSelected(_selectedYear, _selectedMonth);
+                      Navigator.of(context).pop();
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: AppColors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 0,
+                      shadowColor: Colors.transparent,
+                      padding: EdgeInsets.symmetric(
+                        vertical: responsive.responsivePadding(mobilePadding: 14),
+                      ),
+                    ),
+                    child: Text(
+                      "확인",
+                      style: textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.white,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );

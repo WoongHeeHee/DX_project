@@ -31,7 +31,7 @@ class AppRouter {
   AppRouter({required this.authService});
 
   late final GoRouter router = GoRouter(
-    initialLocation: '/onboarding/language',
+    initialLocation: '/login',
     routes: [
       // 인증 관련
       GoRoute(
@@ -54,7 +54,12 @@ class AppRouter {
       ),
       GoRoute(
         path: '/onboarding/loading',
-        builder: (context, state) => const OnboardingLoadingScreen(),
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>?;
+          return OnboardingLoadingScreen(
+            inputName: extra?['inputName'] as String? ?? '',
+          );
+        },
       ),
       GoRoute(
         path: '/onboarding/name-confirm',

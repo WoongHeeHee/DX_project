@@ -8,23 +8,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:apex_sijang_app/main.dart';
+import 'package:market_explorer_frontend/main.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
+  testWidgets('앱이 정상적으로 빌드되는지 확인', (WidgetTester tester) async {
+    // 앱을 빌드하고 프레임을 트리거합니다.
     await tester.pumpWidget(const MyApp());
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
-
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
-
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    // 앱이 정상적으로 빌드되었는지 확인합니다.
+    // MaterialApp.router가 사용되므로 Material 위젯이 있는지 확인
+    expect(find.byType(MaterialApp), findsOneWidget);
   });
 }

@@ -175,9 +175,6 @@ class _OnboardingCountryScreenState extends State<OnboardingCountryScreen> {
     final double progress = currentStep / totalSteps;
 
     return ResponsivePadding(
-      mobilePadding: 16,
-      tabletPadding: 24,
-      desktopPadding: 32,
       child: LayoutBuilder(
         builder: (context, constraints) {
           final double containerWidth = constraints.maxWidth;
@@ -218,9 +215,12 @@ class _OnboardingCountryScreenState extends State<OnboardingCountryScreen> {
     String userName,
   ) {
     return ResponsivePadding(
-      mobilePadding: 16,
-      tabletPadding: 24,
-      desktopPadding: 32,
+      mobileEdgeInsets: EdgeInsets.only(
+        left: responsive.responsivePadding(mobilePadding: 20),
+        right: responsive.responsivePadding(mobilePadding: 20),
+        top: responsive.responsivePadding(mobilePadding: 8),
+        bottom: responsive.responsivePadding(mobilePadding: 20),
+      ),
       child: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -232,22 +232,22 @@ class _OnboardingCountryScreenState extends State<OnboardingCountryScreen> {
             Text(
               "STEP 3 · Country",
               style: textTheme.bodySmall?.copyWith(
-                fontSize: responsive.responsiveFontSize(mobileSize: 11),
-                fontWeight: FontWeight.w400,
+                fontSize: responsive.responsiveFontSize(mobileSize: 16),
+                fontWeight: FontWeight.w600,
                 color: AppColors.inactiveText,
                 letterSpacing: 0.22,
               ),
             ),
             SizedBox(
-              height: responsive.responsivePadding(mobilePadding: 4),
+              height: responsive.responsivePadding(mobilePadding: 40),
             ),
             // 타이틀 (headlineLarge)
             Text(
               "$userName님,\n어느 나라에서 오셨나요?",
               style: textTheme.headlineLarge?.copyWith(
                 fontSize: responsive.responsiveFontSize(mobileSize: 26),
-                fontWeight: FontWeight.w500,
-                height: 1,
+                fontWeight: FontWeight.w600,
+                height: 1.3,
                 color: AppColors.mainText,
               ),
             ),
@@ -266,50 +266,28 @@ class _OnboardingCountryScreenState extends State<OnboardingCountryScreen> {
     ResponsiveHelper responsive,
     TextTheme textTheme,
   ) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // 라벨
-        Padding(
-          padding: EdgeInsets.only(
-            bottom: responsive.responsivePadding(mobilePadding: 2),
-          ),
-          child: Text(
-            "국가 선택",
-            style: textTheme.bodyMedium?.copyWith(
-              fontSize: responsive.responsiveFontSize(mobileSize: 13),
-              fontWeight: FontWeight.w500,
-              color: AppColors.inactiveText,
-            ),
-          ),
-        ),
-        SizedBox(
-          height: responsive.responsivePadding(mobilePadding: 12),
-        ),
-        // 드롭다운 (CustomDropdown 사용 - explore_screen과 동일)
-        CustomDropdown<CountryFilter>(
-          selectedValue: selectedCountry,
-          items: countries,
-          getLabel: (country) => country.name,
-          getImageUrl: (country) => country.flagImageUrl,
-          onItemSelected: (country) {
-            setState(() {
-              selectedCountry = country;
-              showCountryDropdown = false;
-            });
-          },
-          isOpen: showCountryDropdown,
-          onToggle: () {
-            setState(() {
-              showCountryDropdown = !showCountryDropdown;
-            });
-          },
-          width: null, // null로 설정하면 전체 너비 사용
-          maxHeight: 300,
-          placeholder: "국가 리스트에서 선택",
-          showCheckIcon: true,
-        ),
-      ],
+    return CustomDropdown<CountryFilter>(
+      selectedValue: selectedCountry,
+      items: countries,
+      getLabel: (country) => country.name,
+      getImageUrl: (country) => country.flagImageUrl,
+      onItemSelected: (country) {
+        setState(() {
+          selectedCountry = country;
+          showCountryDropdown = false;
+        });
+      },
+      isOpen: showCountryDropdown,
+      onToggle: () {
+        setState(() {
+          showCountryDropdown = !showCountryDropdown;
+        });
+      },
+      width: null, // null로 설정하면 전체 너비 사용
+      maxHeight: 300,
+      placeholder: "국가 선택하기",
+      showCheckIcon: true,
+      useTextFieldStyle: true, // 텍스트 필드 스타일 사용
     );
   }
 
@@ -318,11 +296,11 @@ class _OnboardingCountryScreenState extends State<OnboardingCountryScreen> {
     TextTheme textTheme,
   ) {
     return ResponsivePadding(
-      mobilePadding: 16,
-      tabletPadding: 24,
-      desktopPadding: 32,
-        child: GestureDetector(
-          onTap: () {
+      child: SizedBox(
+        width: double.infinity,
+        height: 60,
+        child: ElevatedButton(
+          onPressed: () {
             if (selectedCountry != null) {
               Navigator.push(
                 context,
@@ -336,21 +314,20 @@ class _OnboardingCountryScreenState extends State<OnboardingCountryScreen> {
               );
             }
           },
-        child: Container(
-          width: double.infinity,
-          padding: EdgeInsets.symmetric(
-            horizontal: responsive.responsivePadding(mobilePadding: 16),
-            vertical: responsive.responsivePadding(mobilePadding: 12),
-          ),
-          decoration: BoxDecoration(
-            color: AppColors.primary,
-            borderRadius: BorderRadius.circular(8),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.primary,
+            foregroundColor: AppColors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            elevation: 0,
+            shadowColor: Colors.transparent,
+            splashFactory: NoSplash.splashFactory,
+            animationDuration: Duration.zero,
           ),
           child: Text(
             "Enter",
-            textAlign: TextAlign.center,
-            style: textTheme.labelLarge?.copyWith(
-              fontSize: responsive.responsiveFontSize(mobileSize: 15),
+            style: textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w600,
               color: AppColors.white,
             ),
@@ -360,4 +337,3 @@ class _OnboardingCountryScreenState extends State<OnboardingCountryScreen> {
     );
   }
 }
-
