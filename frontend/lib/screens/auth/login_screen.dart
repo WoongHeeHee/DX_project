@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
-import '../../providers/auth_provider.dart';
+import '../../core/widgets/responsive_helper.dart';
+import '../../core/widgets/responsive_padding.dart';
+import '../../core/theme/app_colors.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -14,66 +15,197 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
 
   Future<void> _handleGoogleSignIn() async {
+    // 일단 로그인 시도 없이 바로 온보딩 화면으로 이동
+    context.go('/onboarding/language');
+    
+    // TODO: 실제 로그인 기능 구현 시 아래 코드 사용
+    /*
     setState(() {
       _isLoading = true;
     });
 
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final success = await authProvider.signInWithGoogle();
+    try {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final success = await authProvider.signInWithGoogle();
 
-    setState(() {
-      _isLoading = false;
-    });
+      setState(() {
+        _isLoading = false;
+      });
 
-    if (!mounted) return;
+      if (!mounted) return;
 
-    if (success) {
-      final user = authProvider.user;
-      if (user != null && !user.onboardingCompleted) {
+      if (success) {
+        // 로그인 성공 시 온보딩 첫 화면으로 이동
         context.go('/onboarding/language');
       } else {
-        context.go('/explore');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(authProvider.error ?? '로그인에 실패했습니다.'),
+            ),
+          );
+        }
       }
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(authProvider.error ?? '로그인에 실패했습니다.'),
-        ),
-      );
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+      
+      if (mounted) {
+        // 에러가 발생해도 온보딩 화면으로 이동
+        context.go('/onboarding/language');
+      }
     }
+    */
   }
 
   @override
   Widget build(BuildContext context) {
+    final responsive = context.responsive;
+    final textTheme = Theme.of(context).textTheme;
+
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('로그인'),
-      ),
-      body: Center(
+      backgroundColor: AppColors.white,
+      body: SafeArea(
         child: _isLoading
-            ? const CircularProgressIndicator()
-            : Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  ElevatedButton(
-                    onPressed: _handleGoogleSignIn,
-                    style: ElevatedButton.styleFrom(
-                      minimumSize: const Size(200, 50),
+            ? const Center(
+                child: CircularProgressIndicator(),
+              )
+            : ResponsivePadding(
+                child: Column(
+                  children: [
+                    // 로고를 중앙에 배치
+                    Expanded(
+                      child: Center(
+                        child: _buildLogoPlaceholder(responsive),
+                      ),
                     ),
-                    child: const Text('Google로 로그인'),
-                  ),
-                  const SizedBox(height: 20),
-                  const Padding(
-                    padding: EdgeInsets.all(16.0),
-                    child: Text(
-                      'Google OAuth 클라이언트 ID가 필요합니다.\n'
-                      'GOOGLE_OAUTH_SETUP.md 파일을 참고하세요.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 12, color: Colors.grey),
+                    // Google 로그인 버튼
+                    _buildGoogleLoginButton(responsive, textTheme),
+                    SizedBox(
+                      height: responsive.responsivePadding(mobilePadding: 10),
                     ),
-                  ),
-                ],
+                    // 영업 중 제보하기 버튼
+                    _buildReportButton(responsive, textTheme),
+                    SizedBox(
+                      height: responsive.responsivePadding(mobilePadding: 40),
+                    ),
+                  ],
+                ),
               ),
+      ),
+    );
+  }
+
+  Widget _buildLogoPlaceholder(ResponsiveHelper responsive) {
+    final logoSize = responsive.responsiveFontSize(mobileSize: 120);
+    
+    return Container(
+      width: logoSize,
+      height: logoSize,
+      decoration: BoxDecoration(
+        color: AppColors.lightGrey,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Center(
+        child: Text(
+          "로고 들어갈 예정",
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: responsive.responsiveFontSize(mobileSize: 12),
+            color: AppColors.inactiveText,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGoogleLoginButton(
+    ResponsiveHelper responsive,
+    TextTheme textTheme,
+  ) {
+    return GestureDetector(
+      onTap: _handleGoogleSignIn,
+      child: Container(
+        width: double.infinity,
+        padding: EdgeInsets.only(
+          left: responsive.responsivePadding(mobilePadding: 16),
+          right: responsive.responsivePadding(mobilePadding: 16),
+          top: responsive.responsivePadding(mobilePadding: 16),
+          bottom: responsive.responsivePadding(mobilePadding: 16),
+        ),
+        decoration: BoxDecoration(
+          color: AppColors.white,
+          border: Border.all(
+            color: AppColors.mainText,
+            width: 1,
+          ),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Google 로고
+            Image.asset(
+              "assets/images/Google_logo.png",
+              width: 24,
+              height: 24,
+              fit: BoxFit.contain,
+            ),
+            SizedBox(
+              width: responsive.responsivePadding(mobilePadding: 8),
+            ),
+            Flexible(
+              child: Text(
+                "Google 로그인",
+                style: textTheme.bodyMedium?.copyWith(
+                  fontSize: responsive.responsiveFontSize(mobileSize: 16),
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.mainText,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildReportButton(
+    ResponsiveHelper responsive,
+    TextTheme textTheme,
+  ) {
+    return GestureDetector(
+      onTap: () {
+        context.go('/report/guide');
+      },
+      child: Container(
+        width: double.infinity,
+        padding: EdgeInsets.only(
+          left: responsive.responsivePadding(mobilePadding: 16),
+          right: responsive.responsivePadding(mobilePadding: 16),
+          top: responsive.responsivePadding(mobilePadding: 16),
+          bottom: responsive.responsivePadding(mobilePadding: 16),
+        ),
+        decoration: BoxDecoration(
+          color: AppColors.white,
+          border: Border.all(
+            color: AppColors.mainText,
+            width: 1,
+          ),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Text(
+          "영업 중 제보하기",
+          textAlign: TextAlign.center,
+          style: textTheme.bodyMedium?.copyWith(
+            fontSize: responsive.responsiveFontSize(mobileSize: 16),
+            fontWeight: FontWeight.w600,
+            color: AppColors.mainText,
+          ),
+        ),
       ),
     );
   }

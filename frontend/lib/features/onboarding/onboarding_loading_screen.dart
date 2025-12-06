@@ -5,13 +5,15 @@ import "package:flutter/material.dart";
 import "../../core/widgets/responsive_helper.dart";
 import "../../core/widgets/responsive_padding.dart";
 import "../../core/theme/app_colors.dart";
+import "../../data/repositories/api_repository.dart";
+import "onboarding_name_confirm_screen.dart";
 
 class OnboardingLoadingScreen extends StatefulWidget {
-  final VoidCallback? onComplete;
+  final String inputName;
 
   const OnboardingLoadingScreen({
     super.key,
-    this.onComplete,
+    required this.inputName,
   });
 
   @override
@@ -19,66 +21,69 @@ class OnboardingLoadingScreen extends StatefulWidget {
       _OnboardingLoadingScreenState();
 }
 
-class _OnboardingLoadingScreenState
-    extends State<OnboardingLoadingScreen>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _animationController;
-  late Animation<double> _scaleAnimation;
-  late Animation<double> _fadeAnimation;
+class _OnboardingLoadingScreenState extends State<OnboardingLoadingScreen> {
+  final _apiRepository = ApiRepository();
 
   @override
   void initState() {
     super.initState();
 
-    // 애니메이션 컨트롤러 설정
-    _animationController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1500),
-    );
-
-    // 스케일 애니메이션 (펄스 효과)
-    _scaleAnimation = Tween<double>(
-      begin: 0.9,
-      end: 1.0,
-    ).animate(
-      CurvedAnimation(
-        parent: _animationController,
-        curve: Curves.easeInOut,
-      ),
-    );
-
-    // 페이드 애니메이션
-    _fadeAnimation = Tween<double>(
-      begin: 0.5,
-      end: 1.0,
-    ).animate(
-      CurvedAnimation(
-        parent: _animationController,
-        curve: Curves.easeInOut,
-      ),
-    );
-
-    // 애니메이션 반복
-    _animationController.repeat(reverse: true);
-
-    // 3초 후 완료 콜백 호출
-    Timer(const Duration(seconds: 3), () {
-      if (mounted) {
-        _animationController.stop();
-        widget.onComplete?.call();
-      }
-    });
+    // 화면이 로드되면 바로 API 호출
+    _generateKoreanName();
   }
 
-  @override
-  void dispose() {
-    _animationController.dispose();
-    super.dispose();
+  Future<void> _generateKoreanName() async {
+    try {
+      // 한국 이름 생성 API 호출
+      debugPrint('한국 이름 생성 요청: ${widget.inputName}');
+      final koreanNameResponse =
+          await _apiRepository.userService.generateKoreanName(widget.inputName);
+
+      debugPrint(
+          '한국 이름 생성 응답: ${koreanNameResponse.koreanName}, ${koreanNameResponse.englishPronunciation}');
+
+      if (koreanNameResponse.koreanName.isEmpty) {
+        throw Exception('한국 이름이 생성되지 않았습니다.');
+      }
+
+      if (mounted) {
+        // 로딩 완료 후 이름 확인 화면으로 이동
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => OnboardingNameConfirmScreen(
+              inputName: widget.inputName,
+              koreanName: koreanNameResponse.koreanName,
+              englishPronunciation: koreanNameResponse.englishPronunciation,
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('한국 이름 생성 에러: $e');
+      if (mounted) {
+        Navigator.pop(context); // 로딩 화면 닫기
+        // 에러 화면 대신 스낵바로 표시하고 재시도 가능하도록
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('한국 이름 생성에 실패했습니다: ${e.toString()}'),
+            duration: const Duration(seconds: 3),
+            action: SnackBarAction(
+              label: '다시 시도',
+              onPressed: () {
+                // 재시도 로직은 사용자가 버튼을 다시 누르면 실행됨
+              },
+            ),
+          ),
+        );
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final responsive = context.responsive;
+    final textTheme = Theme.of(context).textTheme;
 
     return Scaffold(
       backgroundColor: AppColors.white,
@@ -89,7 +94,7 @@ class _OnboardingLoadingScreenState
             _buildProgressIndicator(responsive),
             // 메인 컨텐츠 (중앙 정렬)
             Expanded(
-              child: _buildContent(responsive),
+              child: _buildContent(responsive, textTheme),
             ),
           ],
         ),
@@ -103,9 +108,6 @@ class _OnboardingLoadingScreenState
     final double progress = currentStep / totalSteps;
 
     return ResponsivePadding(
-      mobilePadding: 16,
-      tabletPadding: 24,
-      desktopPadding: 32,
       child: LayoutBuilder(
         builder: (context, constraints) {
           final double containerWidth = constraints.maxWidth;
@@ -140,36 +142,28 @@ class _OnboardingLoadingScreenState
     );
   }
 
-  Widget _buildContent(ResponsiveHelper responsive) {
-    return ResponsivePadding(
-      mobilePadding: 16,
-      tabletPadding: 24,
-      desktopPadding: 32,
-      child: Center(
-        child: AnimatedBuilder(
-          animation: _animationController,
-          builder: (context, child) {
-            return Opacity(
-              opacity: _fadeAnimation.value,
-              child: Transform.scale(
-                scale: _scaleAnimation.value,
-                child: Container(
-                  width: 203,
-                  height: 203,
-                  decoration: BoxDecoration(
-                    image: const DecorationImage(
-                      image: NetworkImage("https://placehold.co/203x203"),
-                      fit: BoxFit.cover,
-                    ),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ),
-            );
-          },
-        ),
+  Widget _buildContent(ResponsiveHelper responsive, TextTheme textTheme) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          CircularProgressIndicator(
+            color: AppColors.primary,
+            strokeWidth: 3,
+          ),
+          SizedBox(
+            height: responsive.responsivePadding(mobilePadding: 24),
+          ),
+          Text(
+            "당신의 한국 이름을 만드는 중 ...",
+            style: textTheme.bodyMedium?.copyWith(
+              fontSize: responsive.responsiveFontSize(mobileSize: 14),
+              fontWeight: FontWeight.w400,
+              color: AppColors.mainText,
+            ),
+          ),
+        ],
       ),
     );
   }
 }
-

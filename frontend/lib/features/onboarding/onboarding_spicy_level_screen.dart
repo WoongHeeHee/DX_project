@@ -44,8 +44,7 @@ class OnboardingSpicyLevelScreen extends StatefulWidget {
       _OnboardingSpicyLevelScreenState();
 }
 
-class _OnboardingSpicyLevelScreenState
-    extends State<OnboardingSpicyLevelScreen>
+class _OnboardingSpicyLevelScreenState extends State<OnboardingSpicyLevelScreen>
     with SingleTickerProviderStateMixin {
   int _spicyLevel = 1; // 1~5 단계, 기본값은 1
   final int _totalSteps = 5;
@@ -54,7 +53,7 @@ class _OnboardingSpicyLevelScreenState
 
   // 각 단계별 라벨 (1, 3, 5번째만 표시)
   final Map<int, String> _levelLabels = {
-    1: "아직 어려워요",
+    1: "아직\n어려워요",
     3: "김치",
     5: "불닭소스",
   };
@@ -110,9 +109,6 @@ class _OnboardingSpicyLevelScreenState
     final double progress = currentStep / totalSteps;
 
     return ResponsivePadding(
-      mobilePadding: 16,
-      tabletPadding: 24,
-      desktopPadding: 32,
       child: LayoutBuilder(
         builder: (context, constraints) {
           final double containerWidth = constraints.maxWidth;
@@ -153,9 +149,12 @@ class _OnboardingSpicyLevelScreenState
     String userName,
   ) {
     return ResponsivePadding(
-      mobilePadding: 16,
-      tabletPadding: 24,
-      desktopPadding: 32,
+      mobileEdgeInsets: EdgeInsets.only(
+        left: responsive.responsivePadding(mobilePadding: 20),
+        right: responsive.responsivePadding(mobilePadding: 20),
+        top: responsive.responsivePadding(mobilePadding: 8),
+        bottom: responsive.responsivePadding(mobilePadding: 0),
+      ),
       child: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -167,30 +166,33 @@ class _OnboardingSpicyLevelScreenState
             Text(
               "STEP 7 · Spicy Level",
               style: textTheme.bodySmall?.copyWith(
-                fontSize: responsive.responsiveFontSize(mobileSize: 11),
-                fontWeight: FontWeight.w500,
+                fontSize: responsive.responsiveFontSize(mobileSize: 16),
+                fontWeight: FontWeight.w600,
                 color: AppColors.inactiveText,
                 letterSpacing: 0.22,
               ),
             ),
             SizedBox(
-              height: responsive.responsivePadding(mobilePadding: 4),
+              height: responsive.responsivePadding(mobilePadding: 40),
             ),
             // 타이틀 (headlineLarge)
             Text(
-              "$userName님,\n맵기 레벨은 어디까지\n가능하세요?",
+              "$userName님,\n맵기 레벨은 어디까지 가능하세요?",
               style: textTheme.headlineLarge?.copyWith(
                 fontSize: responsive.responsiveFontSize(mobileSize: 26),
-                fontWeight: FontWeight.w500,
-                height: 1,
+                fontWeight: FontWeight.w600,
+                height: 1.3,
                 color: AppColors.mainText,
               ),
             ),
             SizedBox(
-              height: responsive.responsivePadding(mobilePadding: 20),
+              height: responsive.responsivePadding(mobilePadding: 40),
             ),
             // 맵기 레벨 슬라이더
             _buildSpicyLevelSlider(responsive, textTheme),
+            SizedBox(
+              height: responsive.responsivePadding(mobilePadding: 20),
+            ),
           ],
         ),
       ),
@@ -201,213 +203,218 @@ class _OnboardingSpicyLevelScreenState
     ResponsiveHelper responsive,
     TextTheme textTheme,
   ) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final sliderWidth = constraints.maxWidth;
-        final handleSize = 32.0;
-        
-        // 게이지 바는 전체 너비 사용, 불 이모티콘은 양쪽 끝에서 잘리지 않도록
-        final availableWidth = sliderWidth - handleSize; // 불 이모티콘 크기만큼 여유 공간
-        final stepWidth = availableWidth / (_totalSteps - 1);
+    final circleRadius = 9.0; // 원의 반지름
+    final circleDiameter = circleRadius * 2;
+    final gaugeHeight = 4.0; // 게이지 바 높이
+    final endMargin = 16.0; // 양 끝 여백
+
+    return Builder(
+      builder: (context) {
+        final screenWidth = MediaQuery.of(context).size.width;
+        final padding = responsive.responsivePadding(mobilePadding: 20) * 2;
+        final sliderWidth = screenWidth - padding;
+
+        // 양 끝 여백을 제외한 사용 가능한 너비
+        final availableWidth = sliderWidth - (endMargin * 2) - circleDiameter;
+        // 각 원 사이의 거리
+        final stepDistance = availableWidth / (_totalSteps - 1);
+
+        // 각 원의 중심 위치 계산
+        final circlePositions = List.generate(_totalSteps, (index) {
+          return endMargin + circleRadius + (stepDistance * index);
+        });
 
         return Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            // 불 이모티콘과 게이지 바를 포함한 전체 터치 영역
-            GestureDetector(
-              onHorizontalDragUpdate: (details) {
-                final localPosition = details.localPosition.dx;
-                final newStep = ((localPosition / stepWidth).round() + 1)
-                    .clamp(1, _totalSteps);
-                
-                if (newStep != _spicyLevel) {
-                  setState(() {
-                    _spicyLevel = newStep;
-                  });
-                  _animationController.forward(from: 0.0);
-                }
-              },
-              onHorizontalDragEnd: (details) {
-                _animationController.forward();
-              },
-              onTapDown: (details) {
-                final localPosition = details.localPosition.dx;
-                final newStep = ((localPosition / stepWidth).round() + 1)
-                    .clamp(1, _totalSteps);
-                
-                if (newStep != _spicyLevel) {
-                  setState(() {
-                    _spicyLevel = newStep;
-                  });
-                  _animationController.forward(from: 0.0);
-                }
-              },
-              child: Column(
-                children: [
-                  // 불 이모티콘 (게이지 바 위에 명확하게 표시)
-                  SizedBox(
-                    height: handleSize + 8, // 불 이모티콘을 위한 충분한 공간
-                    child: AnimatedBuilder(
-                      animation: _animation,
-                      builder: (context, child) {
-                        // 불 이모티콘 위치: 각 단계에 맞춰 배치하되, 점과 정렬되도록
-                        // 점의 위치와 동일하게 계산: stepWidth * (step - 1) + handleSize / 2
-                        final handlePosition = stepWidth * (_spicyLevel - 1) + handleSize / 2 - handleSize / 2;
-                        
-                        return Stack(
-                          children: [
-                            // 불 이모티콘 (드래그 가능한 핸들)
-                            Positioned(
-                              left: handlePosition.clamp(0.0, availableWidth), // 화면 안에 있도록 clamp
-                              top: 4,
-                              child: Transform.scale(
-                                scale: 1.0 + (_animation.value * 0.1),
-                                child: Container(
-                                  width: handleSize,
-                                  height: handleSize,
-                                  decoration: BoxDecoration(
-                                    color: AppColors.white,
-                                    shape: BoxShape.circle,
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withOpacity(0.15),
-                                        blurRadius: 8,
-                                        offset: const Offset(0, 2),
-                                      ),
-                                    ],
-                                  ),
-                                  child: const Center(
-                                    child: Text(
-                                      "🔥",
-                                      style: TextStyle(fontSize: 20),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        );
-                      },
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  // 게이지 바
-                  Stack(
-                    children: [
-                      // 게이지 바 배경
-                      Container(
-                        width: double.infinity,
-                        height: 4,
+            // 게이지 바와 원을 포함한 전체 터치 영역
+            SizedBox(
+              width: sliderWidth,
+              height: circleDiameter + 8, // 원이 게이지 위에 올라갈 공간
+              child: GestureDetector(
+                onHorizontalDragUpdate: (details) {
+                  final localPosition = details.localPosition.dx;
+                  // 가장 가까운 원 찾기
+                  int closestIndex = 0;
+                  double minDistance = double.infinity;
+                  for (int i = 0; i < circlePositions.length; i++) {
+                    final distance = (localPosition - circlePositions[i]).abs();
+                    if (distance < minDistance) {
+                      minDistance = distance;
+                      closestIndex = i;
+                    }
+                  }
+                  final newStep = closestIndex + 1;
+
+                  if (newStep != _spicyLevel) {
+                    setState(() {
+                      _spicyLevel = newStep;
+                    });
+                    _animationController.forward(from: 0.0);
+                  }
+                },
+                onHorizontalDragEnd: (details) {
+                  _animationController.forward();
+                },
+                onTapDown: (details) {
+                  final localPosition = details.localPosition.dx;
+                  // 가장 가까운 원 찾기
+                  int closestIndex = 0;
+                  double minDistance = double.infinity;
+                  for (int i = 0; i < circlePositions.length; i++) {
+                    final distance = (localPosition - circlePositions[i]).abs();
+                    if (distance < minDistance) {
+                      minDistance = distance;
+                      closestIndex = i;
+                    }
+                  }
+                  final newStep = closestIndex + 1;
+
+                  if (newStep != _spicyLevel) {
+                    setState(() {
+                      _spicyLevel = newStep;
+                    });
+                    _animationController.forward(from: 0.0);
+                  }
+                },
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    // 게이지 바 배경
+                    Positioned(
+                      left: 0,
+                      top: circleRadius - gaugeHeight / 2,
+                      child: Container(
+                        width: sliderWidth,
+                        height: gaugeHeight,
                         decoration: BoxDecoration(
                           color: const Color(0xFFF3EEF3),
                           borderRadius: BorderRadius.circular(999),
                         ),
                       ),
-                      // 게이지 바 진행률
-                      AnimatedBuilder(
-                        animation: _animation,
-                        builder: (context, child) {
-                          // 진행률은 불 이모티콘의 중심까지 표시
-                          final progressWidth = stepWidth * (_spicyLevel - 1) + handleSize / 2;
-                          
-                          return Container(
-                            width: progressWidth.clamp(0.0, sliderWidth),
-                            height: 4,
+                    ),
+                    // 게이지 바 진행률
+                    AnimatedBuilder(
+                      animation: _animation,
+                      builder: (context, child) {
+                        // 선택된 단계의 원 중심까지 진행률 표시
+                        final progressWidth = circlePositions[_spicyLevel - 1];
+
+                        return Positioned(
+                          left: 0,
+                          top: circleRadius - gaugeHeight / 2,
+                          child: Container(
+                            width: progressWidth,
+                            height: gaugeHeight,
                             decoration: BoxDecoration(
                               color: AppColors.primary,
                               borderRadius: BorderRadius.circular(999),
                             ),
-                          );
-                        },
-                      ),
-                      // 각 단계 위치에 점 표시 (터치 가이드) - 불 이모티콘과 정렬되도록
-                      ...List.generate(_totalSteps, (index) {
-                        final step = index + 1;
-                        // 점의 중심이 불 이모티콘의 중심과 일치하도록: stepWidth * (step - 1) + handleSize / 2
-                        final position = stepWidth * (step - 1) + handleSize / 2;
-                        return Positioned(
-                          left: position - 4, // 점의 중심이 position에 오도록
-                          top: 0,
-                          child: Container(
-                            width: 8,
-                            height: 4,
-                            decoration: BoxDecoration(
-                              color: step <= _spicyLevel
-                                  ? AppColors.primary
-                                  : Colors.transparent,
-                              borderRadius: BorderRadius.circular(2),
-                            ),
                           ),
                         );
-                      }),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            SizedBox(
-              height: responsive.responsivePadding(mobilePadding: 8),
-            ),
-            // 라벨들 (1, 3, 5번째만 표시)
-            LayoutBuilder(
-              builder: (context, labelConstraints) {
-                final handleSize = 32.0;
-                final sliderWidth = labelConstraints.maxWidth;
-                final availableWidth = sliderWidth - handleSize;
-                final stepWidth = availableWidth / (_totalSteps - 1);
+                      },
+                    ),
+                    // 5개의 원 (게이지 바 위에 배치)
+                    ...List.generate(_totalSteps, (index) {
+                      final step = index + 1;
+                      final isActive = _spicyLevel >= step;
+                      final position = circlePositions[index];
 
-                return SizedBox(
-                  width: sliderWidth,
-                  child: Stack(
-                    children: [
-                      // 각 단계 위치에 점과 라벨 배치
-                      ...List.generate(_totalSteps, (index) {
-                        final step = index + 1;
-                        final hasLabel = _levelLabels.containsKey(step);
-                        final isActive = _spicyLevel >= step;
-                        // 점의 위치: handleRadius를 중심으로 배치
-                        final position = stepWidth * (step - 1) + handleSize / 2;
+                      return Positioned(
+                        left: position - circleRadius,
+                        top: 0,
+                        child: AnimatedBuilder(
+                          animation: _animation,
+                          builder: (context, child) {
+                            final scale =
+                                (step == _spicyLevel && _animation.value > 0)
+                                    ? 1.0 + (_animation.value * 0.1)
+                                    : 1.0;
 
-                        return Positioned(
-                          left: position - 5, // 점의 중심이 position에 오도록
-                          top: 0,
-                          child: Column(
-                            children: [
-                              // 점 (모든 단계에 표시)
-                              Container(
-                                width: 10,
-                                height: 10,
+                            return Transform.scale(
+                              scale: scale,
+                              child: Container(
+                                width: circleDiameter,
+                                height: circleDiameter,
                                 decoration: BoxDecoration(
                                   color: isActive
                                       ? AppColors.primary
-                                      : const Color(0xFFF3EEF3),
+                                      : AppColors.white,
                                   shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: isActive
+                                        ? AppColors.primary
+                                        : const Color(0xFFF3EEF3),
+                                    width: 2,
+                                  ),
+                                  boxShadow: isActive
+                                      ? [
+                                          BoxShadow(
+                                            color: AppColors.primary
+                                                .withOpacity(0.3),
+                                            blurRadius: 4,
+                                            offset: const Offset(0, 2),
+                                          ),
+                                        ]
+                                      : null,
                                 ),
                               ),
-                              // 라벨 (1, 3, 5번째만)
-                              if (hasLabel)
-                                Padding(
-                                  padding: EdgeInsets.only(
-                                    top: responsive.responsivePadding(mobilePadding: 4),
-                                  ),
-                                  child: Text(
-                                    _levelLabels[step]!,
-                                    style: textTheme.bodySmall?.copyWith(
-                                      fontSize: responsive.responsiveFontSize(mobileSize: 10),
-                                      fontWeight: FontWeight.w500,
-                                      color: isActive
-                                          ? AppColors.primary
-                                          : AppColors.inactiveText,
-                                    ),
-                                  ),
-                                ),
-                            ],
+                            );
+                          },
+                        ),
+                      );
+                    }),
+                  ],
+                ),
+              ),
+            ),
+            SizedBox(
+              height: responsive.responsivePadding(mobilePadding: 12),
+            ),
+            // 라벨들 (1, 3, 5번째만 표시)
+            IntrinsicHeight(
+              child: SizedBox(
+                width: sliderWidth,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    // 각 단계 위치에 라벨 배치
+                    ...List.generate(_totalSteps, (index) {
+                      final step = index + 1;
+                      final hasLabel = _levelLabels.containsKey(step);
+                      final isActive = _spicyLevel >= step;
+                      final position = circlePositions[index];
+
+                      if (!hasLabel) return const SizedBox.shrink();
+
+                      return Positioned(
+                        left: position, // 원의 중심에 맞춤
+                        top: 0,
+                        child: Transform.translate(
+                          offset: const Offset(-60, 0), // 라벨을 중앙 정렬하기 위한 오프셋
+                          child: SizedBox(
+                            width: 120,
+                            child: Text(
+                              _levelLabels[step]!,
+                              textAlign: TextAlign.center,
+                              maxLines: 2,
+                              style: textTheme.bodySmall?.copyWith(
+                                fontSize: responsive.responsiveFontSize(
+                                    mobileSize: 12),
+                                fontWeight: FontWeight.w600,
+                                height: 1.3,
+                                color: isActive
+                                    ? AppColors.primary
+                                    : AppColors.inactiveText,
+                              ),
+                            ),
                           ),
-                        );
-                      }),
-                    ],
-                  ),
-                );
-              },
+                        ),
+                      );
+                    }),
+                  ],
+                ),
+              ),
             ),
           ],
         );
@@ -420,11 +427,11 @@ class _OnboardingSpicyLevelScreenState
     TextTheme textTheme,
   ) {
     return ResponsivePadding(
-      mobilePadding: 16,
-      tabletPadding: 24,
-      desktopPadding: 32,
-        child: GestureDetector(
-          onTap: () {
+      child: SizedBox(
+        width: double.infinity,
+        height: 60,
+        child: ElevatedButton(
+          onPressed: () {
             Navigator.push(
               context,
               MaterialPageRoute(
@@ -439,22 +446,21 @@ class _OnboardingSpicyLevelScreenState
               ),
             );
           },
-        child: Container(
-          width: double.infinity,
-          padding: EdgeInsets.symmetric(
-            horizontal: responsive.responsivePadding(mobilePadding: 16),
-            vertical: responsive.responsivePadding(mobilePadding: 12),
-          ),
-          decoration: BoxDecoration(
-            color: AppColors.primary,
-            borderRadius: BorderRadius.circular(8),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.primary,
+            foregroundColor: AppColors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            elevation: 0,
+            shadowColor: Colors.transparent,
+            splashFactory: NoSplash.splashFactory,
+            animationDuration: Duration.zero,
           ),
           child: Text(
             "Enter",
-            textAlign: TextAlign.center,
-            style: textTheme.labelLarge?.copyWith(
-              fontSize: responsive.responsiveFontSize(mobileSize: 15),
-              fontWeight: FontWeight.w500,
+            style: textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w600,
               color: AppColors.white,
             ),
           ),
@@ -463,4 +469,3 @@ class _OnboardingSpicyLevelScreenState
     );
   }
 }
-

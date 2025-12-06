@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db
-from app.db.models import User
+from app.db.models import User, AdventureLevel, KoreanExperience
 from app.models.schemas import (
     User as UserSchema, 
     UserUpdate, 
@@ -79,22 +79,44 @@ async def complete_onboarding(
     if current_user is None:
         # 임시 사용자 생성 (기능 실험용)
         # 실제 운영 환경에서는 인증이 필요하도록 변경해야 합니다
-        from app.models.schemas import UserCreate
-        from datetime import datetime
-        
-        temp_user_data = UserCreate(
-            google_id=None,  # 임시 사용자
-            email=None,
-            display_name="임시 사용자",
-            locale=update_data.get('locale', 'ko')
-        )
-        current_user = User(**temp_user_data.dict())
-        db.add(current_user)
-        db.commit()
-        db.refresh(current_user)
+        try:
+            current_user = User(
+                google_id=None,  # 임시 사용자
+                email=None,
+                display_name="임시 사용자",
+                locale=update_data.get('locale', 'ko'),
+                adventure=AdventureLevel.MODERATE,
+                korean_experience=KoreanExperience.FIRST_TIME,
+            )
+            db.add(current_user)
+            db.commit()
+            db.refresh(current_user)
+        except Exception as e:
+            db.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"임시 사용자 생성 실패: {str(e)}"
+            )
     
     # 프로필 업데이트
     for field, value in update_data.items():
+        # Enum 필드는 문자열을 Enum으로 변환
+        if field == 'adventure' and isinstance(value, str):
+            try:
+                value = AdventureLevel(value)
+            except ValueError:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"잘못된 adventure 값: {value}"
+                )
+        elif field == 'korean_experience' and isinstance(value, str):
+            try:
+                value = KoreanExperience(value)
+            except ValueError:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"잘못된 korean_experience 값: {value}"
+                )
         setattr(current_user, field, value)
     
     # 온보딩 완료 플래그 설정

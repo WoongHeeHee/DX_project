@@ -2,6 +2,7 @@
 
 import "package:flutter/material.dart";
 import "responsive_helper.dart";
+import "../constants/app_spacing.dart";
 
 /// 반응형 패딩 위젯
 /// 화면 크기에 따라 패딩이 자동으로 조정됩니다.
@@ -17,7 +18,7 @@ class ResponsivePadding extends StatelessWidget {
   const ResponsivePadding({
     super.key,
     required this.child,
-    this.mobilePadding = 0,
+    this.mobilePadding = AppSpacing.defaultHorizontalMargin,
     this.tabletPadding,
     this.desktopPadding,
     this.mobileEdgeInsets,

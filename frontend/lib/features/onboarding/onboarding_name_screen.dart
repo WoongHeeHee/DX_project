@@ -4,10 +4,7 @@ import "package:flutter/material.dart";
 import "../../core/widgets/responsive_helper.dart";
 import "../../core/widgets/responsive_padding.dart";
 import "../../core/theme/app_colors.dart";
-import "../../core/widgets/loading_overlay.dart";
-import "../../data/repositories/api_repository.dart";
 import "onboarding_loading_screen.dart";
-import "onboarding_name_confirm_screen.dart";
 
 class OnboardingNameScreen extends StatefulWidget {
   const OnboardingNameScreen({super.key});
@@ -19,8 +16,20 @@ class OnboardingNameScreen extends StatefulWidget {
 class _OnboardingNameScreenState extends State<OnboardingNameScreen> {
   final TextEditingController _nameController = TextEditingController();
   final FocusNode _focusNode = FocusNode();
-  bool _isLoading = false;
-  final _apiRepository = ApiRepository();
+  bool _isFocused = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController.addListener(() {
+      setState(() {});
+    });
+    _focusNode.addListener(() {
+      setState(() {
+        _isFocused = _focusNode.hasFocus;
+      });
+    });
+  }
 
   @override
   void dispose() {
@@ -37,15 +46,11 @@ class _OnboardingNameScreenState extends State<OnboardingNameScreen> {
   Widget build(BuildContext context) {
     final responsive = context.responsive;
     final textTheme = Theme.of(context).textTheme;
-    final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
-    final isKeyboardVisible = keyboardHeight > 0;
 
-    return LoadingOverlay(
-      isLoading: _isLoading,
-      child: Scaffold(
-        backgroundColor: AppColors.white,
-        body: SafeArea(
-          child: Column(
+    return Scaffold(
+      backgroundColor: AppColors.white,
+      body: SafeArea(
+        child: Column(
           children: [
             // 상단 진행률 인디케이터
             _buildProgressIndicator(responsive),
@@ -53,12 +58,9 @@ class _OnboardingNameScreenState extends State<OnboardingNameScreen> {
             Expanded(
               child: _buildContent(responsive, textTheme),
             ),
-            // 하단 버튼 (키보드가 올라오면 숨김 버튼으로 변경)
-            isKeyboardVisible
-                ? _buildKeyboardDismissButton(responsive, textTheme)
-                : _buildBottomButton(responsive, textTheme),
+            // 하단 버튼
+            _buildBottomButton(responsive, textTheme),
           ],
-          ),
         ),
       ),
     );
@@ -70,9 +72,6 @@ class _OnboardingNameScreenState extends State<OnboardingNameScreen> {
     final double progress = currentStep / totalSteps;
 
     return ResponsivePadding(
-      mobilePadding: 16,
-      tabletPadding: 24,
-      desktopPadding: 32,
       child: LayoutBuilder(
         builder: (context, constraints) {
           final double containerWidth = constraints.maxWidth;
@@ -112,41 +111,41 @@ class _OnboardingNameScreenState extends State<OnboardingNameScreen> {
     TextTheme textTheme,
   ) {
     return ResponsivePadding(
-      mobilePadding: 16,
-      tabletPadding: 24,
-      desktopPadding: 32,
+      mobileEdgeInsets: EdgeInsets.only(
+        left: responsive.responsivePadding(mobilePadding: 20),
+        right: responsive.responsivePadding(mobilePadding: 20),
+        top: responsive.responsivePadding(mobilePadding: 8),
+        bottom: responsive.responsivePadding(mobilePadding: 20),
+      ),
       child: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            SizedBox(
-              height: responsive.responsivePadding(mobilePadding: 20),
-            ),
             // STEP 2 · Name
             Text(
               "STEP 2 · Name",
               style: textTheme.bodySmall?.copyWith(
-                fontSize: responsive.responsiveFontSize(mobileSize: 11),
-                fontWeight: FontWeight.w400,
+                fontSize: responsive.responsiveFontSize(mobileSize: 16),
+                fontWeight: FontWeight.w600,
                 color: AppColors.inactiveText,
                 letterSpacing: 0.22,
               ),
             ),
             SizedBox(
-              height: responsive.responsivePadding(mobilePadding: 4),
+              height: responsive.responsivePadding(mobilePadding: 40),
             ),
             // 타이틀 (headlineLarge)
             Text(
               "당신의 이름은 무엇인가요?",
               style: textTheme.headlineLarge?.copyWith(
                 fontSize: responsive.responsiveFontSize(mobileSize: 26),
-                fontWeight: FontWeight.w400,
-                height: 1,
+                fontWeight: FontWeight.w600,
+                height: 1.3,
                 color: AppColors.mainText,
               ),
             ),
             SizedBox(
-              height: responsive.responsivePadding(mobilePadding: 20),
+              height: responsive.responsivePadding(mobilePadding: 30),
             ),
             // 이름 입력 필드
             _buildNameInputField(responsive, textTheme),
@@ -160,77 +159,84 @@ class _OnboardingNameScreenState extends State<OnboardingNameScreen> {
     ResponsiveHelper responsive,
     TextTheme textTheme,
   ) {
+    final hasText = _nameController.text.isNotEmpty;
+    final textSize = responsive.responsiveFontSize(mobileSize: 16);
+
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.symmetric(
-        horizontal: responsive.responsivePadding(mobilePadding: 12),
-        vertical: responsive.responsivePadding(mobilePadding: 14),
+      padding: EdgeInsets.only(
+        left: responsive.responsivePadding(mobilePadding: 16),
+        right: responsive.responsivePadding(mobilePadding: 16),
+        top: responsive.responsivePadding(mobilePadding: 12),
+        bottom: responsive.responsivePadding(mobilePadding: 12),
       ),
       decoration: BoxDecoration(
-        color: const Color(0xFFF2F2F4),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: TextField(
-        controller: _nameController,
-        focusNode: _focusNode,
-        textInputAction: TextInputAction.done,
-        onSubmitted: (_) {
-          _dismissKeyboard();
-        },
-        style: textTheme.bodyMedium?.copyWith(
-          fontSize: responsive.responsiveFontSize(mobileSize: 14),
-          fontWeight: FontWeight.w500,
-          color: AppColors.mainText,
+        color: AppColors.white,
+        border: Border.all(
+          color: _isFocused
+              ? AppColors.mainText.withOpacity(0.5)
+              : const Color(0xFFF7F7F8),
+          width: 1,
         ),
-        decoration: InputDecoration(
-          hintText: "이름 입력하기",
-          hintStyle: textTheme.bodyMedium?.copyWith(
-            fontSize: responsive.responsiveFontSize(mobileSize: 14),
-            fontWeight: FontWeight.w500,
-            color: AppColors.inactiveText,
-          ),
-          border: InputBorder.none,
-          enabledBorder: InputBorder.none,
-          focusedBorder: InputBorder.none,
-          errorBorder: InputBorder.none,
-          focusedErrorBorder: InputBorder.none,
-          disabledBorder: InputBorder.none,
-          contentPadding: EdgeInsets.zero,
-          filled: false,
-        ),
+        borderRadius: BorderRadius.circular(12),
       ),
-    );
-  }
-
-  Widget _buildKeyboardDismissButton(
-    ResponsiveHelper responsive,
-    TextTheme textTheme,
-  ) {
-    return ResponsivePadding(
-      mobilePadding: 16,
-      tabletPadding: 24,
-      desktopPadding: 32,
-      child: GestureDetector(
-        onTap: _dismissKeyboard,
-        child: Container(
-          width: double.infinity,
-          padding: EdgeInsets.symmetric(
-            vertical: responsive.responsivePadding(mobilePadding: 13),
-          ),
-          decoration: BoxDecoration(
-            color: AppColors.primary,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Text(
-            "키보드 숨기기",
-            textAlign: TextAlign.center,
-            style: textTheme.labelLarge?.copyWith(
-              fontSize: responsive.responsiveFontSize(mobileSize: 15),
-              fontWeight: FontWeight.w500,
-              color: AppColors.white,
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: _nameController,
+              focusNode: _focusNode,
+              textInputAction: TextInputAction.done,
+              cursorColor: AppColors.primary,
+              onSubmitted: (_) {
+                _dismissKeyboard();
+              },
+              style: textTheme.bodyMedium?.copyWith(
+                fontSize: textSize,
+                fontWeight: hasText ? FontWeight.w600 : FontWeight.w500,
+                color: AppColors.mainText,
+              ),
+              decoration: InputDecoration(
+                hintText: "이름 입력하기",
+                hintStyle: textTheme.bodyMedium?.copyWith(
+                  fontSize: textSize,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.inactiveText,
+                  letterSpacing: 0.5,
+                ),
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                errorBorder: InputBorder.none,
+                focusedErrorBorder: InputBorder.none,
+                disabledBorder: InputBorder.none,
+                contentPadding: EdgeInsets.zero,
+                filled: false,
+              ),
             ),
           ),
-        ),
+          if (hasText)
+            Padding(
+              padding: EdgeInsets.only(
+                left: responsive.responsivePadding(mobilePadding: 8),
+              ),
+              child: GestureDetector(
+                onTap: () {
+                  _nameController.clear();
+                },
+                child: Container(
+                  width: textSize,
+                  height: textSize,
+                  alignment: Alignment.center,
+                  child: Icon(
+                    Icons.close,
+                    size: textSize,
+                    color: AppColors.mainText,
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -240,93 +246,38 @@ class _OnboardingNameScreenState extends State<OnboardingNameScreen> {
     TextTheme textTheme,
   ) {
     return ResponsivePadding(
-      mobilePadding: 16,
-      tabletPadding: 24,
-      desktopPadding: 32,
-        child: GestureDetector(
-          onTap: () async {
+      child: SizedBox(
+        width: double.infinity,
+        height: 60,
+        child: ElevatedButton(
+          onPressed: () async {
             if (_nameController.text.trim().isNotEmpty) {
-              setState(() {
-                _isLoading = true;
-              });
-
-              try {
-                // 한국 이름 생성 API 호출
-                debugPrint('한국 이름 생성 요청: ${_nameController.text.trim()}');
-                final koreanNameResponse = await _apiRepository.userService
-                    .generateKoreanName(_nameController.text.trim());
-                
-                debugPrint('한국 이름 생성 응답: ${koreanNameResponse.koreanName}, ${koreanNameResponse.englishPronunciation}');
-
-                if (koreanNameResponse.koreanName.isEmpty) {
-                  throw Exception('한국 이름이 생성되지 않았습니다.');
-                }
-
-                if (mounted) {
-                  // 로딩 화면으로 이동
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => OnboardingLoadingScreen(
-                        onComplete: () {
-                          // 로딩 완료 후 이름 확인 화면으로 이동
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => OnboardingNameConfirmScreen(
-                                inputName: _nameController.text.trim(),
-                                koreanName: koreanNameResponse.koreanName,
-                                englishPronunciation:
-                                    koreanNameResponse.englishPronunciation,
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  );
-                }
-              } catch (e) {
-                debugPrint('한국 이름 생성 에러: $e');
-                if (mounted) {
-                  // 에러 화면 대신 스낵바로 표시하고 재시도 가능하도록
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('한국 이름 생성에 실패했습니다: ${e.toString()}'),
-                      duration: const Duration(seconds: 3),
-                      action: SnackBarAction(
-                        label: '다시 시도',
-                        onPressed: () {
-                          // 재시도 로직은 사용자가 버튼을 다시 누르면 실행됨
-                        },
-                      ),
-                    ),
-                  );
-                }
-              } finally {
-                if (mounted) {
-                  setState(() {
-                    _isLoading = false;
-                  });
-                }
-              }
+              // 바로 로딩 화면으로 이동
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => OnboardingLoadingScreen(
+                    inputName: _nameController.text.trim(),
+                  ),
+                ),
+              );
             }
           },
-        child: Container(
-          width: double.infinity,
-          padding: EdgeInsets.symmetric(
-            vertical: responsive.responsivePadding(mobilePadding: 13),
-          ),
-          decoration: BoxDecoration(
-            color: AppColors.primary,
-            borderRadius: BorderRadius.circular(8),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.primary,
+            foregroundColor: AppColors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            elevation: 0,
+            shadowColor: Colors.transparent,
+            splashFactory: NoSplash.splashFactory,
+            animationDuration: Duration.zero,
           ),
           child: Text(
             "입력 완료",
-            textAlign: TextAlign.center,
-            style: textTheme.labelLarge?.copyWith(
-              fontSize: responsive.responsiveFontSize(mobileSize: 15),
-              fontWeight: FontWeight.w500,
+            style: textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w600,
               color: AppColors.white,
             ),
           ),
@@ -335,4 +286,3 @@ class _OnboardingNameScreenState extends State<OnboardingNameScreen> {
     );
   }
 }
-
