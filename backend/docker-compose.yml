@@ -1,0 +1,116 @@
+version: '3.8'
+
+services:
+  # PostgreSQL은 외부 서버 사용 (.env 파일의 DATABASE_URL로 설정)
+  # postgres 서비스는 제거됨
+
+  # Redis
+  redis:
+    image: redis:7-alpine
+    container_name: market_explorer_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - market_explorer_network
+
+  # MinIO (S3 호환 객체 스토리지)
+  minio:
+    image: minio/minio:latest
+    container_name: market_explorer_minio
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin123
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+    networks:
+      - market_explorer_network
+
+  # Celery Worker
+  celery_worker:
+    build: .
+    container_name: market_explorer_celery_worker
+    command: celery -A app.tasks.celery_app worker --loglevel=info
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - AWS_ACCESS_KEY_ID=minioadmin
+      - AWS_SECRET_ACCESS_KEY=minioadmin123
+      - AWS_REGION=us-east-1
+      - S3_BUCKET_NAME=market-explorer-photos
+      - S3_ENDPOINT_URL=http://minio:9000
+    volumes:
+      - .:/app
+    depends_on:
+      - redis
+      - minio
+    networks:
+      - market_explorer_network
+
+  # Celery Beat (스케줄러)
+  celery_beat:
+    build: .
+    container_name: market_explorer_celery_beat
+    command: celery -A app.tasks.celery_app beat --loglevel=info
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - AWS_ACCESS_KEY_ID=minioadmin
+      - AWS_SECRET_ACCESS_KEY=minioadmin123
+      - AWS_REGION=us-east-1
+      - S3_BUCKET_NAME=market-explorer-photos
+      - S3_ENDPOINT_URL=http://minio:9000
+    volumes:
+      - .:/app
+    depends_on:
+      - redis
+      - minio
+    networks:
+      - market_explorer_network
+
+  # FastAPI 애플리케이션
+  api:
+    build: .
+    container_name: market_explorer_api
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - AWS_ACCESS_KEY_ID=minioadmin
+      - AWS_SECRET_ACCESS_KEY=minioadmin123
+      - AWS_REGION=us-east-1
+      - S3_BUCKET_NAME=market-explorer-photos
+      - S3_ENDPOINT_URL=http://minio:9000
+    volumes:
+      - .:/app
+    depends_on:
+      - redis
+      - minio
+    networks:
+      - market_explorer_network
+
+volumes:
+  redis_data:
+  minio_data:
+
+networks:
+  market_explorer_network:
+    driver: bridge

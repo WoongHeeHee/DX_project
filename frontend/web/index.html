@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <!--
+    If you are serving your web app in a path other than the root, change the
+    href value below to reflect the base path you are serving from.
+
+    The path provided below has to start and end with a slash "/" in order for
+    it to work correctly.
+
+    For more details:
+    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
+
+    This is a placeholder for base href that will be replaced by the value of
+    the `--base-href` argument provided to `flutter build`.
+  -->
+  <base href="$FLUTTER_BASE_HREF">
+
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="A new Flutter project.">
+
+  <!-- iOS meta tags & icons -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="market_explorer_frontend">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="favicon.png"/>
+
+  <title>market_explorer_frontend</title>
+  <link rel="manifest" href="manifest.json">
+
+  <!-- Google Client ID 설정 -->
+  <!-- Google 로그인을 사용하려면 아래 GOOGLE_CLIENT_ID에 값을 입력하세요 -->
+  <!-- 자세한 설정 방법은 프로젝트 루트의 GOOGLE_CLIENT_ID_SETUP.md 파일을 참고하세요 -->
+  <script>
+    window.ENV = {
+      API_BASE_URL: 'http://localhost:8000',
+      GOOGLE_CLIENT_ID: '584089307412-hfnij6j84iqfr5gj3m45ef7ue1f3k5je.apps.googleusercontent.com',
+      KAKAO_MAP_API_KEY: '3c2cfc4a8b18371d95cd012ed72c9fde',
+    };
+  </script>
+
+  <!-- Google Identity Services 스크립트 -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  
+  <script>
+    // 전체 페이지 리디렉션 방식에서는 GIS 초기화가 필요 없음
+    // (OAuth 2.0 OpenID Connect 플로우 사용)
+    
+    // Google 로그인 전체 페이지 리디렉션 (Flutter에서 호출)
+    window.triggerGoogleSignIn = function() {
+      console.log('Google 로그인 시작 - 전체 페이지 리디렉션');
+      
+      const clientId = window.ENV?.GOOGLE_CLIENT_ID || '';
+      if (!clientId || clientId.trim() === '') {
+        console.error('Google Client ID가 설정되지 않았습니다.');
+        window.postMessage({
+          type: 'GOOGLE_SIGN_IN_ERROR',
+          error: 'Google Client ID가 설정되지 않았습니다.'
+        }, '*');
+        return;
+      }
+      
+      // redirect URI는 반드시 절대 경로 형태로 설정
+      const redirectUri = window.location.origin + '/auth/callback';
+      console.log('Redirect URI:', redirectUri);
+      
+      const nonce = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+      
+      // OpenID Connect 흐름으로 id_token 받기
+      // response_type=id_token은 URL fragment (#)로 id_token을 반환
+      const url = `https://accounts.google.com/o/oauth2/v2/auth?` +
+        `client_id=${encodeURIComponent(clientId)}` +
+        `&redirect_uri=${encodeURIComponent(redirectUri)}` +
+        `&response_type=id_token` +
+        `&scope=openid email profile` +
+        `&nonce=${nonce}` +
+        `&prompt=select_account`;
+      
+      console.log('Google 로그인 URL로 전체 페이지 리디렉션:', url);
+      console.log('⚠️ 중요: Google Cloud Console에서 다음 redirect URI가 승인되어 있어야 합니다:', redirectUri);
+      
+      // 현재 nonce를 저장하여 리디렉션 후 확인
+      sessionStorage.setItem('google_oauth_nonce', nonce);
+      sessionStorage.setItem('google_oauth_redirect', 'true');
+      
+      // 전체 페이지 리디렉션 (팝업 없이)
+      window.location.href = url;
+    };
+    
+    // 페이지 로드 시 URL이 잘못된 형태로 오는 경우 정규화
+    (function() {
+      const currentPath = window.location.pathname;
+      const currentSearch = window.location.search;
+      const currentHash = window.location.hash;
+      
+      // id_token이 경로(path)에 포함된 경우 감지 및 정규화
+      if (currentPath.includes('id_token') || currentPath.startsWith('id_token')) {
+        console.warn('⚠️ 경고: id_token이 경로로 인식되었습니다. URL을 정규화합니다.');
+        console.warn('원본 경로:', currentPath);
+        
+        // id_token 추출
+        let idToken = null;
+        if (currentPath.includes('id_token=')) {
+          const pathParts = currentPath.split('id_token=');
+          if (pathParts.length > 1) {
+            idToken = pathParts[1].split('&')[0].split('#')[0];
+          }
+        }
+        
+        // /auth/callback 경로로 정규화
+        if (idToken) {
+          const normalizedUrl = window.location.origin + '/auth/callback?id_token=' + idToken;
+          console.warn('정규화된 URL로 리디렉션:', normalizedUrl);
+          window.location.replace(normalizedUrl);
+          return;
+        }
+      }
+      
+      // hash fragment에 id_token이 있는 경우 (정상적인 OAuth 응답)
+      if (currentHash && currentHash.includes('id_token=')) {
+        // hash fragment를 query parameter로 변환하는 것은 보안상 권장하지 않음
+        // 대신 /auth/callback 경로로 이동하여 hash fragment를 유지
+        if (!currentPath.endsWith('/auth/callback')) {
+          console.log('hash fragment에 id_token이 있습니다. /auth/callback으로 이동합니다.');
+          window.location.replace(window.location.origin + '/auth/callback' + currentHash);
+        }
+      }
+    })();
+    
+  </script>
+</head>
+<body>
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>
