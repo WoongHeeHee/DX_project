@@ -32,9 +32,9 @@ class SearchErrorScreen extends StatelessWidget {
       ),
       child: ConstrainedBox(
         constraints: const BoxConstraints(minHeight: 644),
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.only(top: 8),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.only(top: 8),
           decoration: BoxDecoration(
             color: AppColors.white,
             borderRadius: BorderRadius.circular(12),
@@ -46,13 +46,13 @@ class SearchErrorScreen extends StatelessWidget {
               ),
             ],
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.start,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildMainContent(context, responsive, textTheme),
-            ],
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildMainContent(context, responsive, textTheme),
+          ],
           ),
         ),
       ),

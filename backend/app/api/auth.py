@@ -74,7 +74,7 @@ def get_current_user(user_id: str = Depends(verify_token), db: Session = Depends
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="사용자를 찾을 수 없습니다"
-            )
+        )
         return user
     except HTTPException:
         raise

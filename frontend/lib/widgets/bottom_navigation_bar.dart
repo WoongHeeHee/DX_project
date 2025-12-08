@@ -59,29 +59,29 @@ class CustomBottomNavigationBar extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 4),
               child: GestureDetector(
                 onTap: () {
-                  switch (index) {
-                    case 0:
+        switch (index) {
+          case 0:
                       context.go(item.route);
-                      break;
-                    case 1:
+            break;
+          case 1:
                       context.go(item.route);
-                      break;
-                    case 2:
+            break;
+          case 2:
                       final path =
                           returnPath ?? GoRouterState.of(context).uri.toString();
                       context.go(item.route, extra: {'returnPath': path});
-                      break;
-                    case 3:
+            break;
+          case 3:
                       context.go(item.route);
-                      break;
-                  }
-                },
+            break;
+        }
+      },
                 child: Container(
                   height: 48,
                   decoration: BoxDecoration(
                     color: selected ? selectedBg : unselectedBg,
                     borderRadius: BorderRadius.circular(8),
-                  ),
+        ),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -101,7 +101,7 @@ class CustomBottomNavigationBar extends StatelessWidget {
                         ),
                       ),
                     ],
-                  ),
+        ),
                 ),
               ),
             ),

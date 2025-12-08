@@ -16,7 +16,7 @@ from app.models.schemas import (
     SavedMenu as SavedMenuSchema,
     BaseResponse
 )
-from app.api.auth import get_current_user
+from app.api.auth import get_current_user, get_optional_user
 from app.db.models import User
 
 router = APIRouter()
@@ -82,6 +82,74 @@ async def list_menus(
         )
 
     return [to_schema(m) for m in rows]
+
+
+@router.get("/{menu_item_id}", response_model=MenuItemSchema)
+async def get_menu_item(
+    menu_item_id: str,
+    current_user: Optional[User] = Depends(get_optional_user),
+    db: Session = Depends(get_db)
+):
+    """특정 메뉴 아이템 상세 조회 (저장 여부 포함)"""
+    menu_item = db.query(MenuItem).filter(MenuItem.id == menu_item_id).first()
+    
+    if not menu_item:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="메뉴를 찾을 수 없습니다"
+        )
+    
+    # 저장 여부 확인 (인증된 사용자인 경우만)
+    is_saved = False
+    if current_user:
+        saved_menu = db.query(SavedMenu).filter(
+            SavedMenu.user_id == current_user.id,
+            SavedMenu.menu_item_id == menu_item_id
+        ).first()
+        is_saved = saved_menu is not None
+    
+    # 스키마 변환
+    created_at = menu_item.created_at or datetime.utcnow()
+    name = menu_item.name or "메뉴"
+    rep_image_url = menu_item.rep_image_url
+    if not rep_image_url:
+        enc = quote(name)
+        rep_image_url = (
+            f"https://dnzeuzpu74ulj.cloudfront.net/placeholders/Menu_all/"
+            f"{enc}/{enc}1_{menu_item.id}.png"
+        )
+    
+    return MenuItemSchema.model_validate(
+        {
+            "id": menu_item.id,
+            "name": name,
+            "name_en": getattr(menu_item, "name_en", None),
+            "name_zh": getattr(menu_item, "name_zh", None),
+            "name_ja": getattr(menu_item, "name_ja", None),
+            "description": getattr(menu_item, "description", None),
+            "description_en": getattr(menu_item, "description_en", None),
+            "description_zh": getattr(menu_item, "description_zh", None),
+            "description_ja": getattr(menu_item, "description_ja", None),
+            "similar_food": getattr(menu_item, "similar_food", None),
+            "similar_food_en": getattr(menu_item, "similar_food_en", None),
+            "similar_food_zh": getattr(menu_item, "similar_food_zh", None),
+            "similar_food_ja": getattr(menu_item, "similar_food_ja", None),
+            "rep_image_url": rep_image_url,
+            "price": getattr(menu_item, "price", None),
+            "contains": getattr(menu_item, "contains", None),
+            "contains_en": getattr(menu_item, "contains_en", None),
+            "contains_zh": getattr(menu_item, "contains_zh", None),
+            "contains_ja": getattr(menu_item, "contains_ja", None),
+            "may_contains": getattr(menu_item, "may_contains", None),
+            "may_contains_en": getattr(menu_item, "may_contains_en", None),
+            "may_contains_zh": getattr(menu_item, "may_contains_zh", None),
+            "may_contains_ja": getattr(menu_item, "may_contains_ja", None),
+            "category": getattr(menu_item, "category", None),
+            "spice_level": getattr(menu_item, "spice_level", 1) or 1,
+            "created_at": created_at,
+            "is_saved": is_saved,
+        }
+    )
 
 
 @router.post("/{menu_item_id}/save", response_model=BaseResponse)

@@ -138,61 +138,62 @@ class _CustomDropdownState<T> extends State<CustomDropdown<T>> {
     return CompositedTransformTarget(
       link: _layerLink,
       child: GestureDetector(
-        key: _buttonKey,
-        onTap: widget.onToggle,
-        child: Container(
-          width: widget.width != null ? widget.width : double.infinity,
-          padding: EdgeInsets.symmetric(
-            horizontal: responsive.responsivePadding(mobilePadding: 12),
-            vertical: responsive.responsivePadding(mobilePadding: 10),
-          ),
-          decoration: BoxDecoration(
-            color: AppColors.chipBackground,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Row(
-            mainAxisSize: widget.width != null
-                ? MainAxisSize.min
-                : MainAxisSize.max,
-            children: [
-              // 이미지가 있는 경우 표시
-              if (widget.getImageUrl != null && widget.selectedValue != null)
-                Builder(
-                  builder: (context) {
-                    final imageUrl = widget.getImageUrl!(widget.selectedValue!);
-                    return Container(
-                      width: responsive.responsiveIconSize(mobileSize: 30),
-                      height: responsive.responsiveIconSize(mobileSize: 18),
-                      decoration: BoxDecoration(
-                        color: imageUrl != null
-                            ? Colors.transparent
-                            : AppColors.filterColor,
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                      child: imageUrl != null
-                          ? ClipRRect(
-                              borderRadius: BorderRadius.circular(2),
-                              child: Image.asset(
-                                imageUrl,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) {
-                                  debugPrint("❌ 국기 이미지 로드 실패: $imageUrl");
+      key: _buttonKey,
+      onTap: widget.onToggle,
+      child: Container(
+        width: widget.width != null ? widget.width : double.infinity,
+        padding: EdgeInsets.symmetric(
+          horizontal: responsive.responsivePadding(mobilePadding: 12),
+          vertical: responsive.responsivePadding(mobilePadding: 10),
+        ),
+        decoration: BoxDecoration(
+          color: AppColors.chipBackground,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          mainAxisSize: widget.width != null
+              ? MainAxisSize.min
+              : MainAxisSize.max,
+          children: [
+            // 이미지가 있는 경우 표시
+            if (widget.getImageUrl != null && widget.selectedValue != null)
+              Builder(
+                builder: (context) {
+                  final imageUrl = widget.getImageUrl!(widget.selectedValue!);
+                  return Container(
+                    width: responsive.responsiveIconSize(mobileSize: 30),
+                    height: responsive.responsiveIconSize(mobileSize: 18),
+                    decoration: BoxDecoration(
+                      color: imageUrl != null
+                          ? Colors.transparent
+                          : AppColors.filterColor,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                    child: imageUrl != null
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(2),
+                            child: Image.asset(
+                              imageUrl,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                debugPrint("❌ 국기 이미지 로드 실패: $imageUrl");
                                   return Container(
                                     color: AppColors.filterColor,
                                   );
-                                },
-                              ),
-                            )
-                          : null,
-                    );
-                  },
-                ),
-              if (widget.getImageUrl != null && widget.selectedValue != null)
+                              },
+                            ),
+                          )
+                        : null,
+                  );
+                },
+              ),
+            if (widget.getImageUrl != null && widget.selectedValue != null)
                 SizedBox(
                   width: responsive.responsivePadding(mobilePadding: 8),
                 ),
-              // 선택된 값 또는 플레이스홀더
-              Text(
+            // 선택된 값 또는 플레이스홀더
+            Expanded(
+              child: Text(
                 widget.selectedValue != null
                     ? widget.getLabel(widget.selectedValue as T)
                     : widget.placeholder,
@@ -200,17 +201,18 @@ class _CustomDropdownState<T> extends State<CustomDropdown<T>> {
                   fontSize: responsive.responsiveFontSize(mobileSize: 13),
                   fontWeight: FontWeight.w600,
                   color: AppColors.subText,
+                  fontFamily: 'Inter',
                 ),
               ),
-              SizedBox(width: responsive.responsivePadding(mobilePadding: 8)),
-              Icon(
-                widget.isOpen
-                    ? Icons.keyboard_arrow_up
-                    : Icons.keyboard_arrow_down,
-                size: responsive.responsiveIconSize(mobileSize: 16),
-                color: AppColors.subText,
-              ),
-            ],
+            ),
+            Icon(
+              widget.isOpen
+                  ? Icons.keyboard_arrow_up
+                  : Icons.keyboard_arrow_down,
+              size: responsive.responsiveIconSize(mobileSize: 16),
+              color: AppColors.subText,
+            ),
+          ],
           ),
         ),
       ),
@@ -252,11 +254,12 @@ class _CustomDropdownState<T> extends State<CustomDropdown<T>> {
 
             return InkWell(
               onTap: () {
-                widget.onItemSelected(item);
-                // 선택 즉시 드롭다운을 닫아 반영 지연 없이 업데이트
+                // 선택 즉시 드롭다운을 닫기
                 if (widget.isOpen) {
                   widget.onToggle();
                 }
+                // 그 다음 아이템 선택 처리
+                widget.onItemSelected(item);
               },
               child: Container(
                 padding: EdgeInsets.only(

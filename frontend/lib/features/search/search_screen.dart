@@ -145,14 +145,14 @@ class _SearchScreenState extends State<SearchScreen> {
             ),
             const SizedBox(width: 4),
             Expanded(
-              child: Text(
-                "궁금한 시장 메뉴를 알려드릴게요",
-                style: textTheme.titleLarge?.copyWith(
-                  fontSize: responsive.responsiveFontSize(mobileSize: 20),
-                  fontWeight: FontWeight.w500,
-                  color: AppColors.mainText,
-                  height: 1.30,
-                ),
+        child: Text(
+          "궁금한 시장 메뉴를 알려드릴게요",
+          style: textTheme.titleLarge?.copyWith(
+            fontSize: responsive.responsiveFontSize(mobileSize: 20),
+            fontWeight: FontWeight.w500,
+            color: AppColors.mainText,
+            height: 1.30,
+          ),
               ),
             ),
           ],

@@ -35,11 +35,14 @@
   <!-- Google Client ID 설정 -->
   <!-- Google 로그인을 사용하려면 아래 GOOGLE_CLIENT_ID에 값을 입력하세요 -->
   <!-- 자세한 설정 방법은 프로젝트 루트의 GOOGLE_CLIENT_ID_SETUP.md 파일을 참고하세요 -->
+  <!-- 
+    카카오 맵 API 키는 Flutter/Dart 코드에서 직접 주입됩니다.
+    kakao_config.dart의 jsKey가 모든 플랫폼에서 사용됩니다.
+  -->
   <script>
     window.ENV = {
       API_BASE_URL: 'http://localhost:8000',
       GOOGLE_CLIENT_ID: '584089307412-hfnij6j84iqfr5gj3m45ef7ue1f3k5je.apps.googleusercontent.com',
-      KAKAO_MAP_API_KEY: '3c2cfc4a8b18371d95cd012ed72c9fde',
     };
   </script>
 

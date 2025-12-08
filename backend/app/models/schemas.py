@@ -245,6 +245,7 @@ class MenuItem(MenuItemBase):
     """메뉴 아이템 응답 모델"""
     id: str
     created_at: datetime
+    is_saved: Optional[bool] = Field(None, description="현재 사용자가 저장했는지 여부 (인증된 사용자만)")
 
     class Config:
         from_attributes = True

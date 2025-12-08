@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../core/utils/platform_detector.dart';
 import '../core/utils/web_env_helper.dart';
+import 'kakao_config.dart';
 
 class AppConfig {
   // API 설정
@@ -89,13 +90,11 @@ class AppConfig {
   }
 
   // 지도 API
-  static String get kakaoMapApiKey {
-    try {
-      return dotenv.env['KAKAO_MAP_API_KEY'] ?? '';
-    } catch (e) {
-      return '';
-    }
-  }
+  /// 카카오 맵 API 키
+  /// 
+  /// 단일 출처: KakaoConfig.jsKey
+  /// 모든 플랫폼에서 동일한 키를 사용합니다.
+  static String get kakaoMapApiKey => KakaoConfig.jsKey;
   
   static String get naverMapClientId {
     try {

@@ -25,6 +25,7 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
   int currentImageIndex = 0;
   bool _isLoading = false;
   bool _isSaved = false;
+  String _locale = 'ko';
   MenuItemDetailModel? _menuItemDetail;
 
   @override
@@ -38,12 +39,20 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
       _isLoading = true;
     });
 
+    String locale = _locale;
+    try {
+      locale = await _apiRepository.userService.getLocale();
+    } catch (e) {
+      debugPrint("locale 조회 실패, 기본값 사용: $e");
+    }
+
     try {
       // 음식 상세 정보 조회 (저장 여부 포함)
       final menuItemDetail = await _apiRepository.menuService.getMenuItem(widget.food.id);
       
       if (mounted) {
         setState(() {
+          _locale = locale;
           _menuItemDetail = menuItemDetail;
           _isSaved = menuItemDetail.isSaved;
           _isLoading = false;
@@ -60,7 +69,7 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
   }
 
   Future<void> _toggleSave() async {
-    if (_menuItemDetail == null) return;
+    final targetId = _menuItemDetail?.id ?? widget.food.id;
 
     setState(() {
       _isLoading = true;
@@ -68,15 +77,46 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
 
     try {
       if (_isSaved) {
-        await _apiRepository.menuService.unsaveMenuItem(widget.food.id);
+        await _apiRepository.menuService.unsaveMenuItem(targetId);
       } else {
-        await _apiRepository.menuService.saveMenuItem(widget.food.id);
+        await _apiRepository.menuService.saveMenuItem(targetId);
       }
       
       if (mounted) {
         setState(() {
           _isSaved = !_isSaved;
           _isLoading = false;
+          if (_menuItemDetail != null) {
+            _menuItemDetail = MenuItemDetailModel(
+              id: _menuItemDetail!.id,
+              name: _menuItemDetail!.name,
+              nameEn: _menuItemDetail!.nameEn,
+              nameZh: _menuItemDetail!.nameZh,
+              nameJa: _menuItemDetail!.nameJa,
+              description: _menuItemDetail!.description,
+              descriptionEn: _menuItemDetail!.descriptionEn,
+              descriptionZh: _menuItemDetail!.descriptionZh,
+              descriptionJa: _menuItemDetail!.descriptionJa,
+              similarFood: _menuItemDetail!.similarFood,
+              similarFoodEn: _menuItemDetail!.similarFoodEn,
+              similarFoodZh: _menuItemDetail!.similarFoodZh,
+              similarFoodJa: _menuItemDetail!.similarFoodJa,
+              repImageUrl: null, // rep_image_url 미사용
+              price: _menuItemDetail!.price,
+              contains: _menuItemDetail!.contains,
+              containsEn: _menuItemDetail!.containsEn,
+              containsZh: _menuItemDetail!.containsZh,
+              containsJa: _menuItemDetail!.containsJa,
+              mayContains: _menuItemDetail!.mayContains,
+              mayContainsEn: _menuItemDetail!.mayContainsEn,
+              mayContainsZh: _menuItemDetail!.mayContainsZh,
+              mayContainsJa: _menuItemDetail!.mayContainsJa,
+              category: _menuItemDetail!.category,
+              spiceLevel: _menuItemDetail!.spiceLevel,
+              createdAt: _menuItemDetail!.createdAt,
+              isSaved: _isSaved,
+            );
+          }
         });
       }
     } catch (e) {
@@ -152,7 +192,7 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
     ResponsiveHelper responsive,
     TextTheme textTheme,
   ) {
-    final images = widget.food.imageUrls;
+    final images = _menuImages();
     final carouselHeight = responsive.isMobile ? 233.25 : 280.0;
 
     return Container(
@@ -226,6 +266,10 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
     ResponsiveHelper responsive,
     TextTheme textTheme,
   ) {
+    final name = _menuItemDetail?.getNameByLocale(_locale) ?? widget.food.name;
+    final description =
+        _menuItemDetail?.getDescriptionByLocale(_locale) ?? widget.food.description;
+
     return Container(
       padding: EdgeInsets.symmetric(
         horizontal: responsive.responsivePadding(mobilePadding: 16),
@@ -235,7 +279,7 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Text(
-            widget.food.name,
+            name,
             textAlign: TextAlign.center,
             style: textTheme.titleLarge?.copyWith(
               fontSize: responsive.responsiveFontSize(
@@ -247,7 +291,7 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
           ),
           const SizedBox(height: 12),
           Text(
-            widget.food.description,
+            description,
             textAlign: TextAlign.center,
             style: textTheme.bodyMedium?.copyWith(
               fontSize: responsive.responsiveFontSize(mobileSize: 14),
@@ -344,6 +388,45 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
     ResponsiveHelper responsive,
     TextTheme textTheme,
   ) {
+    if (_menuItemDetail != null) {
+      final similar = _menuItemDetail!.getSimilarFoodByLocale(_locale);
+      final hasSimilar = similar != null && similar.trim().isNotEmpty;
+      if (!hasSimilar) return const SizedBox.shrink();
+
+      return Container(
+        padding: EdgeInsets.all(
+          responsive.responsivePadding(mobilePadding: 16),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              "비슷한 음식",
+              style: textTheme.titleMedium?.copyWith(
+                fontSize: responsive.responsiveFontSize(
+                  mobileSize: 16,
+                  tabletSize: 18,
+                  desktopSize: 20,
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              similar,
+              style: textTheme.bodyMedium?.copyWith(
+                fontSize: responsive.responsiveFontSize(mobileSize: 14),
+                color: AppColors.mainText,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (widget.food.similarFoods.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
     return Container(
       padding: EdgeInsets.all(
         responsive.responsivePadding(mobilePadding: 16),
@@ -362,18 +445,8 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
             ),
           ),
           const SizedBox(height: 12),
-          // API에서 가져온 비슷한 음식 사용
-          if (_menuItemDetail?.similarFood != null)
-            Text(
-              _menuItemDetail!.similarFood!,
-              style: textTheme.bodyMedium?.copyWith(
-                fontSize: responsive.responsiveFontSize(mobileSize: 14),
-                color: AppColors.mainText,
-              ),
-            )
-          else if (widget.food.similarFoods.isNotEmpty)
-            Row(
-              children: widget.food.similarFoods.map((similarFood) {
+          Row(
+            children: widget.food.similarFoods.map((similarFood) {
               return Expanded(
                 child: Container(
                   margin: EdgeInsets.only(
@@ -422,6 +495,57 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
     ResponsiveHelper responsive,
     TextTheme textTheme,
   ) {
+    if (_menuItemDetail != null) {
+      final contains = _menuItemDetail!.getContainsByLocale(_locale);
+      final mayContains = _menuItemDetail!.getMayContainsByLocale(_locale);
+      final hasContains = contains != null && contains.trim().isNotEmpty;
+      final hasMayContains = mayContains != null && mayContains.trim().isNotEmpty;
+
+      if (!hasContains && !hasMayContains) {
+        return const SizedBox.shrink();
+      }
+
+      return Container(
+        padding: EdgeInsets.all(
+          responsive.responsivePadding(mobilePadding: 16),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              "알레르기 안내",
+              style: textTheme.titleMedium?.copyWith(
+                fontSize: responsive.responsiveFontSize(
+                  mobileSize: 16,
+                  tabletSize: 18,
+                  desktopSize: 20,
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            if (hasContains)
+              _buildAllergyCard(
+                responsive,
+                textTheme,
+                "Contain",
+                contains,
+              ),
+            if (hasMayContains)
+              _buildAllergyCard(
+                responsive,
+                textTheme,
+                "May contain ",
+                mayContains,
+              ),
+          ],
+        ),
+      );
+    }
+
+    if (widget.food.contains.isEmpty && widget.food.mayContain.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
     return Container(
       padding: EdgeInsets.all(
         responsive.responsivePadding(mobilePadding: 16),
@@ -441,38 +565,20 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
           ),
           const SizedBox(height: 12),
           // API에서 가져온 알레르기 정보 사용
-          if (_menuItemDetail != null) ...[
-            if (_menuItemDetail!.contains != null && _menuItemDetail!.contains!.isNotEmpty)
-              _buildAllergyCard(
-                responsive,
-                textTheme,
-                "Contain",
-                _menuItemDetail!.contains!,
-              ),
-            if (_menuItemDetail!.mayContains != null && _menuItemDetail!.mayContains!.isNotEmpty)
-              _buildAllergyCard(
-                responsive,
-                textTheme,
-                "May contain ",
-                _menuItemDetail!.mayContains!,
-              ),
-          ] else ...[
-            // 기존 데이터 사용
-            if (widget.food.contains.isNotEmpty)
-              _buildAllergyCard(
-                responsive,
-                textTheme,
-                "Contain",
-                widget.food.contains.join(", "),
-              ),
-            if (widget.food.mayContain.isNotEmpty)
-              _buildAllergyCard(
-                responsive,
-                textTheme,
-                "May contain ",
-                widget.food.mayContain.join(", "),
-              ),
-          ],
+          if (widget.food.contains.isNotEmpty)
+            _buildAllergyCard(
+              responsive,
+              textTheme,
+              "Contain",
+              widget.food.contains.join(", "),
+            ),
+          if (widget.food.mayContain.isNotEmpty)
+            _buildAllergyCard(
+              responsive,
+              textTheme,
+              "May contain ",
+              widget.food.mayContain.join(", "),
+            ),
         ],
       ),
     );
@@ -519,5 +625,24 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
       ),
     );
   }
+
+  List<String> _menuImages() {
+    // 이미지 경로는 locale과 무관하게 원본(ko) 이름 사용, rep_image_url 미사용
+    final baseName = widget.food.baseName;
+    final baseId = _menuItemDetail?.id ?? widget.food.id;
+    return List.generate(
+      3,
+      (index) => _placeholderImage(baseName, baseId, variant: index + 1),
+    );
+  }
+
+  String _placeholderImage(String name, String id, {int variant = 1}) {
+    final encodedName = Uri.encodeComponent(name);
+    final clampedVariant = variant < 1
+        ? 1
+        : (variant > 3 ? 3 : variant); // 파일명은 1~3 변형만 존재
+    return "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Menu_all/${encodedName}/${encodedName}${clampedVariant}_${id}.png";
+  }
+
 }
 

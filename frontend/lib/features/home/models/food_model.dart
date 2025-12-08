@@ -3,7 +3,8 @@
 /// 음식 모델
 class FoodModel {
   final String id;
-  final String name;
+  final String name; // 표시용 (locale 반영)
+  final String baseName; // 이미지 경로용 원본(ko) 이름
   final String category; // Meals, Snacks, Sweets, Drink
   final String imageUrl;
   final String description;
@@ -17,6 +18,7 @@ class FoodModel {
   FoodModel({
     required this.id,
     required this.name,
+    required this.baseName,
     required this.category,
     required this.imageUrl,
     required this.description,

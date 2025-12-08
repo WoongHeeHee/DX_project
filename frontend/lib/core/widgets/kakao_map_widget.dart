@@ -2,9 +2,9 @@
 
 import "dart:convert";
 import "package:flutter/material.dart";
-import "package:flutter_dotenv/flutter_dotenv.dart";
 import "package:webview_flutter/webview_flutter.dart";
 import "../../core/theme/app_colors.dart";
+import "../../config/kakao_config.dart";
 
 /// 카카오 지도 위젯
 class KakaoMapWidget extends StatefulWidget {
@@ -47,7 +47,8 @@ class _KakaoMapWidgetState extends State<KakaoMapWidget> {
   }
 
   void _initializeWebView() {
-    final apiKey = widget.apiKey ?? dotenv.env["KAKAO_MAP_API_KEY"] ?? "";
+    // 단일 출처: KakaoConfig.jsKey
+    final apiKey = widget.apiKey ?? KakaoConfig.jsKey;
 
     // API 키 확인 (디버깅용)
     if (apiKey.isEmpty) {
@@ -120,11 +121,9 @@ class _KakaoMapWidgetState extends State<KakaoMapWidget> {
   }
 
   String _buildMapHtml() {
-    // 카카오 지도 API 키 (env 파일에서 읽어오기)
-    final apiKey =
-        widget.apiKey ??
-        dotenv.env["KAKAO_MAP_API_KEY"] ??
-        ""; // env 파일에서 KAKAO_MAP_API_KEY 읽기
+    // 단일 출처: KakaoConfig.jsKey
+    // Flutter/Dart 코드에서 직접 HTML로 주입
+    final apiKey = widget.apiKey ?? KakaoConfig.jsKey;
 
     // API 키 검증
     if (apiKey.isEmpty) {
@@ -437,7 +436,10 @@ class _KakaoMapWidgetState extends State<KakaoMapWidget> {
         borderRadius: BorderRadius.circular(8),
         child: Stack(
           children: [
-            WebViewWidget(controller: _controller),
+            WebViewWidget(
+              key: ValueKey('webview_${widget.placeName}_${widget.address}'), // 고유 key 추가
+              controller: _controller,
+            ),
             if (_isLoading)
               Container(
                 color: AppColors.imagePlaceholder,

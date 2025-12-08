@@ -1,13 +1,16 @@
 // lib/features/home/market_detail_screen.dart
 
 import "package:flutter/material.dart";
+import "package:go_router/go_router.dart";
 import "../../core/theme/app_colors.dart";
 import "../../core/widgets/responsive_helper.dart";
-import "../../core/widgets/kakao_map_widget.dart";
 import "../../core/widgets/loading_overlay.dart";
 import "../../data/repositories/api_repository.dart";
 import "../../data/models/market_models.dart" as api_models;
+import "../../data/models/menu_models.dart";
 import "models/market_model.dart";
+import "models/food_model.dart";
+import "constants/must_try_items.dart";
 
 class MarketDetailScreen extends StatefulWidget {
   final MarketModel market;
@@ -22,10 +25,11 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
   final _apiRepository = ApiRepository();
   int currentImageIndex = 0;
   bool _isLoading = false;
+  String _userLocale = 'ko';
   
   // API로 가져온 데이터
   api_models.MarketInfoModel? _marketInfo;
-  List<dynamic> _mustEatMenus = [];
+  Map<String, MenuItemModel> _menuNameToModel = {}; // 메뉴 ID -> MenuItemModel 매핑 (변수명은 유지)
 
   @override
   void initState() {
@@ -39,16 +43,25 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
     });
 
     try {
+      // 사용자 locale 가져오기
+      final locale = await _apiRepository.userService.getLocale();
+      
       // 시장 부가정보 조회
       final marketInfo = await _apiRepository.marketService.getMarketInfo(widget.market.id);
       
-      // Must eat 메뉴 조회
-      final mustEatMenus = await _apiRepository.marketService.getMarketMustEat(widget.market.id);
+      // 모든 메뉴를 가져와서 ID로 매핑
+      final allMenus = await _apiRepository.menuService.getMenuItems(limit: 200);
+      final menuIdToModel = <String, MenuItemModel>{};
+      for (final menu in allMenus) {
+        menuIdToModel[menu.id] = menu;
+      }
+      debugPrint("[MarketDetail] 총 메뉴 수: ${allMenus.length}, 매핑된 수: ${menuIdToModel.length}");
       
       if (mounted) {
         setState(() {
           _marketInfo = marketInfo;
-          _mustEatMenus = mustEatMenus;
+          _userLocale = locale;
+          _menuNameToModel = menuIdToModel; // 실제로는 ID로 매핑
           _isLoading = false;
         });
       }
@@ -70,7 +83,7 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
     return LoadingOverlay(
       isLoading: _isLoading,
       child: Scaffold(
-        backgroundColor: AppColors.softGreyBackground,
+        backgroundColor: Colors.white, // #FFFFFF
         body: SafeArea(
           child: SingleChildScrollView(
           child: Column(
@@ -121,130 +134,111 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
       ),
       child: Container(
         decoration: BoxDecoration(
-          color: AppColors.white,
+          color: Colors.white, // #FFFFFF - border가 보이지 않게 배경과 동일
           borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.03),
-              blurRadius: 12,
-              offset: const Offset(0, 6),
-            ),
-          ],
         ),
         padding: EdgeInsets.all(
           responsive.responsivePadding(mobilePadding: 12),
-        ),
-        child: Column(
-          children: [
-            SizedBox(
-              width: double.infinity,
-              height: carouselHeight,
-              child: PageView.builder(
-                itemCount: images.length,
-                onPageChanged: (index) {
-                  setState(() {
-                    currentImageIndex = index;
-                  });
-                },
-                itemBuilder: (context, index) {
-                  return Container(
-                    margin: EdgeInsets.only(
-                      right: responsive.responsivePadding(mobilePadding: 8),
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.imagePlaceholder,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: Image.network(
-                        images[index],
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Container(color: AppColors.imagePlaceholder);
-                        },
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-            const SizedBox(height: 8),
-            // 페이지 인디케이터
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(
-                images.length,
-                (index) => Container(
-                  width: index == currentImageIndex ? 14 : 6,
-                  height: 6,
-                  margin: EdgeInsets.symmetric(
-                    horizontal: responsive.responsivePadding(mobilePadding: 3),
+      ),
+      child: Column(
+        children: [
+          SizedBox(
+            width: double.infinity,
+            height: carouselHeight,
+            child: PageView.builder(
+              itemCount: images.length,
+              onPageChanged: (index) {
+                setState(() {
+                  currentImageIndex = index;
+                });
+              },
+              itemBuilder: (context, index) {
+                return Container(
+                  margin: EdgeInsets.only(
+                    right: responsive.responsivePadding(mobilePadding: 8),
                   ),
                   decoration: BoxDecoration(
-                    color: index == currentImageIndex
-                        ? AppColors.mainText
-                        : AppColors.imagePlaceholder,
-                    borderRadius: BorderRadius.circular(999),
+                    color: AppColors.imagePlaceholder,
+                    borderRadius: BorderRadius.circular(12),
                   ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.network(
+                      images[index],
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(color: AppColors.imagePlaceholder);
+                      },
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 8),
+          // 페이지 인디케이터
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(
+              images.length,
+              (index) => Container(
+                width: index == currentImageIndex ? 14 : 6,
+                height: 6,
+                margin: EdgeInsets.symmetric(
+                  horizontal: responsive.responsivePadding(mobilePadding: 3),
+                ),
+                decoration: BoxDecoration(
+                  color: index == currentImageIndex
+                      ? const Color(0xFF0F1724) // Figma 활성 색상
+                      : const Color(0xFFF2F2F3), // Figma 비활성 색상
+                  borderRadius: BorderRadius.circular(999),
                 ),
               ),
             ),
-          ],
+          ),
+        ],
         ),
       ),
     );
   }
 
   Widget _buildMarketInfo(ResponsiveHelper responsive, TextTheme textTheme) {
-    return Container(
+    return Padding(
       padding: EdgeInsets.symmetric(
         horizontal: responsive.responsivePadding(mobilePadding: 16),
         vertical: responsive.responsivePadding(mobilePadding: 12),
       ),
-      child: Container(
-        width: double.infinity,
-        decoration: BoxDecoration(
-          color: AppColors.white,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.03),
-              blurRadius: 12,
-              offset: const Offset(0, 6),
-            ),
-          ],
-        ),
-        padding: EdgeInsets.all(
-          responsive.responsivePadding(mobilePadding: 16),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Text(
-              widget.market.name,
-              textAlign: TextAlign.center,
-              style: textTheme.titleLarge?.copyWith(
-                fontSize: responsive.responsiveFontSize(
-                  mobileSize: 22,
-                  tabletSize: 24,
-                  desktopSize: 26,
-                ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Text(
+            widget.market.name,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: responsive.responsiveFontSize(
+                mobileSize: 22,
+                tabletSize: 24,
+                desktopSize: 26,
               ),
+              fontWeight: FontWeight.w600, // Semi Bold
+              color: const Color(0xFF0F1724), // Figma 색상
+              fontFamily: 'Inter',
             ),
-            const SizedBox(height: 12),
-            Text(
-              widget.market.description,
-              textAlign: TextAlign.center,
-              style: textTheme.bodyMedium?.copyWith(
-                fontSize: responsive.responsiveFontSize(mobileSize: 14),
-                fontWeight: FontWeight.w300,
-                height: 1.5,
-              ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            widget.market.description,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: responsive.responsiveFontSize(mobileSize: 14),
+              fontWeight: FontWeight.w300, // Light
+              color: const Color(0xFF0F1724), // Figma 색상
+              height: 1.5,
+              fontFamily: 'Inter',
             ),
-            SizedBox(height: responsive.responsivePadding(mobilePadding: 5)),
-          ],
-        ),
+          ),
+          SizedBox(height: responsive.responsivePadding(mobilePadding: 5)),
+        ],
       ),
     );
   }
@@ -253,244 +247,306 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
     ResponsiveHelper responsive,
     TextTheme textTheme,
   ) {
-    return Container(
-      padding: EdgeInsets.all(responsive.responsivePadding(mobilePadding: 16)),
-      child: Container(
-        width: double.infinity,
-        decoration: BoxDecoration(
-          color: AppColors.white,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.03),
-              blurRadius: 12,
-              offset: const Offset(0, 6),
-            ),
-          ],
-        ),
-        padding: EdgeInsets.all(responsive.responsivePadding(mobilePadding: 12)),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              "Must try",
-              style: textTheme.titleMedium?.copyWith(
-                fontSize: responsive.responsiveFontSize(
-                  mobileSize: 16,
-                  tabletSize: 18,
-                  desktopSize: 20,
-                ),
+    final mustTryMenuIds = mustTryItemsByMarket[widget.market.name] ?? [];
+    
+    return Padding(
+      padding: EdgeInsets.symmetric(
+        horizontal: responsive.responsivePadding(mobilePadding: 16),
+        vertical: responsive.responsivePadding(mobilePadding: 12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            "Must try",
+            style: TextStyle(
+              fontSize: responsive.responsiveFontSize(
+                mobileSize: 16,
+                tabletSize: 18,
+                desktopSize: 20,
               ),
+              fontWeight: FontWeight.w600, // Semi Bold
+              color: const Color(0xFF111827), // Figma 색상
+              fontFamily: 'Inter',
             ),
-            const SizedBox(height: 12),
-            // API에서 가져온 Must eat 메뉴 사용
-            if (_mustEatMenus.isEmpty)
-              Text(
-                "Must eat 메뉴가 없습니다.",
-                style: textTheme.bodySmall?.copyWith(
-                  color: AppColors.inactiveText,
+          ),
+          const SizedBox(height: 12),
+          if (mustTryMenuIds.isEmpty)
+            Text(
+              "Must try 메뉴가 없습니다.",
+              style: TextStyle(
+                fontSize: responsive.responsiveFontSize(mobileSize: 12),
+                fontWeight: FontWeight.w400, // Regular
+                color: const Color(0xFF9CA3AF), // Figma 색상
+                fontFamily: 'Inter',
+              ),
+            )
+          else
+            ...mustTryMenuIds.map((menuId) {
+              final menuModel = _menuNameToModel[menuId];
+              
+              if (menuModel == null) {
+                debugPrint("[MarketDetail] 메뉴 ID로 찾기 실패: $menuId");
+                return const SizedBox.shrink();
+              }
+              
+              // 메뉴 이름(한국어 원본)으로 이미지 경로 생성
+              final baseName = menuModel.name;
+              final imageUrl = _placeholderImage(baseName, menuId);
+              final displayName = menuModel.getNameByLocale(_userLocale);
+              
+              return _buildMustTryItem(
+                responsive,
+                textTheme,
+                MustTryItem(
+                  id: menuId,
+                  name: displayName,
+                  description: '', // 설명은 무시
+                  imageUrl: imageUrl,
                 ),
-              )
-            else
-              ..._mustEatMenus.map((item) {
-                // TODO: Must eat 메뉴 모델 구조 확인 필요
-                return _buildMustTryItem(
-                  responsive,
-                  textTheme,
-                  MustTryItem(
-                    id: item['id'] ?? '',
-                    name: item['name'] ?? '',
-                    description: item['description'] ?? '',
-                    imageUrl: item['image_url'] ?? 'https://placehold.co/117x77',
-                  ),
-                );
-              }),
-          ],
-        ),
+                menuModel, // MenuItemModel 전달 (라우팅용)
+              );
+            }),
+        ],
       ),
     );
+  }
+
+  String _placeholderImage(String name, String id, {int variant = 1}) {
+    final encodedName = Uri.encodeComponent(name);
+    final clamped = variant < 1 ? 1 : (variant > 3 ? 3 : variant);
+    return "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Menu_all/${encodedName}/${encodedName}${clamped}_${id}.png";
   }
 
   Widget _buildMustTryItem(
     ResponsiveHelper responsive,
     TextTheme textTheme,
     MustTryItem item,
+    MenuItemModel menuModel,
   ) {
-    return Container(
-      margin: EdgeInsets.only(
-        bottom: responsive.responsivePadding(mobilePadding: 8),
-      ),
-      padding: EdgeInsets.all(responsive.responsivePadding(mobilePadding: 8)),
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: responsive.isMobile ? 117 : 140,
-            height: responsive.isMobile ? 77 : 92,
-            decoration: BoxDecoration(
-              color: AppColors.imagePlaceholder,
-              borderRadius: BorderRadius.circular(6),
+    return GestureDetector(
+      onTap: () {
+        // MenuItemModel을 FoodModel로 변환
+        final food = _convertMenuItemToFoodModel(menuModel);
+        context.push('/explore/food/${food.id}', extra: {'food': food});
+      },
+      child: Container(
+        margin: EdgeInsets.only(
+          bottom: responsive.responsivePadding(mobilePadding: 8),
+        ),
+        padding: EdgeInsets.all(responsive.responsivePadding(mobilePadding: 8)),
+        decoration: BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 이미지 (117x77 고정)
+            Container(
+              width: 117,
+              height: 77,
+              decoration: BoxDecoration(
+                color: AppColors.imagePlaceholder,
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: Image.network(
+                  item.imageUrl,
+                  width: 117,
+                  height: 77,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    debugPrint("[MarketDetail] 이미지 로드 실패: ${item.imageUrl}");
+                    return Container(
+                      width: 117,
+                      height: 77,
+                      color: AppColors.imagePlaceholder,
+                    );
+                  },
+                ),
+              ),
             ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(6),
-              child: Image.network(
-                item.imageUrl,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(color: AppColors.imagePlaceholder);
-                },
+          SizedBox(width: responsive.responsivePadding(mobilePadding: 8)),
+          // 메뉴 이름 (설명은 무시)
+          Expanded(
+            child: Padding(
+              padding: EdgeInsets.symmetric(
+                vertical: responsive.responsivePadding(mobilePadding: 4),
+              ),
+              child: Text(
+                item.name,
+                style: TextStyle(
+                  fontSize: responsive.responsiveFontSize(mobileSize: 13),
+                  fontWeight: FontWeight.w500, // Medium
+                  color: const Color(0xFF0F1724), // Figma 색상
+                  fontFamily: 'Inter',
+                ),
               ),
             ),
           ),
-          SizedBox(width: responsive.responsivePadding(mobilePadding: 8)),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  item.name,
-                  style: textTheme.bodyMedium?.copyWith(
-                    fontSize: responsive.responsiveFontSize(mobileSize: 13),
-                    fontWeight: FontWeight.w500,
-                    color: AppColors.mainText,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  item.description,
-                  style: textTheme.bodySmall?.copyWith(
-                    fontSize: responsive.responsiveFontSize(mobileSize: 12),
-                    color: AppColors.inactiveText,
-                  ),
-                ),
-              ],
-            ),
-          ),
         ],
+        ),
       ),
     );
+  }
+
+  /// MenuItemModel을 FoodModel로 변환 (라우팅용)
+  FoodModel _convertMenuItemToFoodModel(MenuItemModel menu) {
+    final locale = _userLocale;
+    final baseName = menu.name; // 이미지 경로는 항상 ko 이름 사용
+    final contains = (menu.getContainsByLocale(locale) ?? '')
+        .split(RegExp(r',\s*'))
+        .where((e) => e.isNotEmpty)
+        .toList();
+    final mayContains = (menu.getMayContainsByLocale(locale) ?? '')
+        .split(RegExp(r',\s*'))
+        .where((e) => e.isNotEmpty)
+        .toList();
+    final similarText = menu.getSimilarFoodByLocale(locale);
+    final similarFoods = <SimilarFood>[
+      if (similarText != null && similarText.trim().isNotEmpty)
+        SimilarFood(
+          id: "similar_${menu.id}",
+          name: similarText.trim(),
+          description: "",
+        ),
+    ];
+
+    // 3장의 플레이스홀더(variant 1~3) 생성
+    final imageUrls = List.generate(
+      3,
+      (i) => _placeholderImage(baseName, menu.id, variant: i + 1),
+    );
+
+    return FoodModel(
+      id: menu.id,
+      name: menu.getNameByLocale(locale),
+      baseName: baseName,
+      category: menu.category ?? "Meals",
+      imageUrl: imageUrls.first,
+      description: menu.getDescriptionByLocale(locale) ?? '',
+      imageUrls: imageUrls,
+      spiciness: menu.spiceLevel,
+      spicinessDescription: _getSpicinessDescription(menu.spiceLevel),
+      similarFoods: similarFoods,
+      contains: contains,
+      mayContain: mayContains,
+    );
+  }
+
+  String _getSpicinessDescription(int level) {
+    final descriptions = [
+      "안 매워요",
+      "김치보다 안 매워요",
+      "김치만큼 매워요",
+      "불닭보다 안 매워요",
+      "불닭만큼 매워요",
+    ];
+    return descriptions[level.clamp(1, 5) - 1];
   }
 
   Widget _buildLocationSection(
     ResponsiveHelper responsive,
     TextTheme textTheme,
   ) {
-    return Container(
-      padding: EdgeInsets.all(responsive.responsivePadding(mobilePadding: 16)),
-      child: Container(
-        width: double.infinity,
-        decoration: BoxDecoration(
-          color: AppColors.white,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.03),
-              blurRadius: 12,
-              offset: const Offset(0, 6),
+    return Padding(
+      padding: EdgeInsets.symmetric(
+        horizontal: responsive.responsivePadding(mobilePadding: 16),
+        vertical: responsive.responsivePadding(mobilePadding: 12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            "오시는 길",
+            style: TextStyle(
+              fontSize: responsive.responsiveFontSize(
+                mobileSize: 16,
+                tabletSize: 18,
+                desktopSize: 20,
+              ),
+              fontWeight: FontWeight.w600, // Semi Bold
+              color: const Color(0xFF111827), // Figma 색상
+              fontFamily: 'Inter',
             ),
-          ],
-        ),
-        padding: EdgeInsets.all(responsive.responsivePadding(mobilePadding: 12)),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              "오시는 길",
-              style: textTheme.titleMedium?.copyWith(
-                fontSize: responsive.responsiveFontSize(
-                  mobileSize: 16,
-                  tabletSize: 18,
-                  desktopSize: 20,
-                ),
-              ),
+          ),
+          const SizedBox(height: 12),
+          // 지도 영역 (placeholder - 추후 구현 예정)
+          Container(
+            width: double.infinity,
+            height: responsive.isMobile ? 140 : 180,
+            decoration: BoxDecoration(
+              color: AppColors.imagePlaceholder,
+              borderRadius: BorderRadius.circular(8),
             ),
-            const SizedBox(height: 12),
-            // 카카오 지도 (광장시장인 경우에만 실제 지도 표시)
-            widget.market.name == "광장시장"
-                ? KakaoMapWidget(
-                    address: widget.market.address,
-                    placeName: widget.market.name,
-                    height: responsive.isMobile ? 180 : 220,
-                    latitude: 37.5700, // 광장시장 위도
-                    longitude: 127.0015, // 광장시장 경도
-                  )
-                : Container(
-                    width: double.infinity,
-                    height: responsive.isMobile ? 140 : 180,
-                    decoration: BoxDecoration(
-                      color: AppColors.imagePlaceholder,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: Image.network(
-                        widget.market.mapImageUrl,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Container(color: AppColors.imagePlaceholder);
-                        },
-                      ),
-                    ),
-                  ),
-            const SizedBox(height: 12),
-            // 정보 카드들 (API에서 가져온 데이터 사용)
-            if (_marketInfo != null) ...[
-              _buildInfoCard(
-                responsive,
-                textTheme,
-                "영업 정보",
-                _marketInfo!.openTime != null && _marketInfo!.closeTime != null
-                    ? "${_marketInfo!.openTime} - ${_marketInfo!.closeTime}"
-                    : widget.market.operatingHours,
-              ),
-              _buildInfoCard(
-                responsive,
-                textTheme,
-                "주소",
-                _marketInfo!.getAddressByLocale('ko') ?? widget.market.address,
-              ),
-              _buildInfoCard(
-                responsive,
-                textTheme,
-                "교통",
-                _marketInfo!.getTransportByLocale('ko') ?? widget.market.transportation,
-              ),
-              _buildInfoCard(
-                responsive,
-                textTheme,
-                "주차",
-                _marketInfo!.getParkingByLocale('ko') ?? widget.market.parking,
-              ),
-              _buildInfoCard(
-                responsive,
-                textTheme,
-                "화장실",
-                _marketInfo!.getRestroomByLocale('ko') ?? widget.market.restroom,
-              ),
-            ] else ...[
-              _buildInfoCard(
-                responsive,
-                textTheme,
-                "영업 정보",
-                widget.market.operatingHours,
-              ),
-              _buildInfoCard(responsive, textTheme, "주소", widget.market.address),
-              _buildInfoCard(
-                responsive,
-                textTheme,
-                "교통",
-                widget.market.transportation,
-              ),
-              _buildInfoCard(responsive, textTheme, "주차", widget.market.parking),
-              _buildInfoCard(responsive, textTheme, "화장실", widget.market.restroom),
-            ],
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: widget.market.mapImageUrl.isNotEmpty
+                  ? Image.network(
+                      widget.market.mapImageUrl,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(color: AppColors.imagePlaceholder);
+                      },
+                    )
+                  : Container(color: AppColors.imagePlaceholder),
+            ),
+          ),
+          const SizedBox(height: 12),
+          // 정보 카드들 (API에서 가져온 데이터 사용, locale 반영)
+          if (_marketInfo != null) ...[
+            _buildInfoCard(
+              responsive,
+              textTheme,
+              "영업 정보",
+              _marketInfo!.openTime != null && _marketInfo!.closeTime != null
+                  ? "${_marketInfo!.openTime} - ${_marketInfo!.closeTime}"
+                  : widget.market.operatingHours,
+            ),
+            _buildInfoCard(
+              responsive,
+              textTheme,
+              "주소",
+              _marketInfo!.getAddressByLocale(_userLocale) ?? widget.market.address,
+            ),
+            _buildInfoCard(
+              responsive,
+              textTheme,
+              "교통",
+              _marketInfo!.getTransportByLocale(_userLocale) ?? widget.market.transportation,
+            ),
+            _buildInfoCard(
+              responsive,
+              textTheme,
+              "주차",
+              _marketInfo!.getParkingByLocale(_userLocale) ?? widget.market.parking,
+            ),
+            _buildInfoCard(
+              responsive,
+              textTheme,
+              "화장실",
+              _marketInfo!.getRestroomByLocale(_userLocale) ?? widget.market.restroom,
+            ),
+          ] else ...[
+            _buildInfoCard(
+              responsive,
+              textTheme,
+              "영업 정보",
+              widget.market.operatingHours,
+            ),
+            _buildInfoCard(responsive, textTheme, "주소", widget.market.address),
+            _buildInfoCard(
+              responsive,
+              textTheme,
+              "교통",
+              widget.market.transportation,
+            ),
+            _buildInfoCard(responsive, textTheme, "주차", widget.market.parking),
+            _buildInfoCard(responsive, textTheme, "화장실", widget.market.restroom),
           ],
-        ),
+        ],
       ),
     );
   }
@@ -513,23 +569,28 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
         color: AppColors.white,
         borderRadius: BorderRadius.circular(8),
       ),
+      constraints: const BoxConstraints(minHeight: 50), // Figma 높이
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
             title,
-            style: textTheme.bodySmall?.copyWith(
+            style: TextStyle(
               fontSize: responsive.responsiveFontSize(mobileSize: 12),
-              fontWeight: FontWeight.w500,
-              color: AppColors.mainText,
+              fontWeight: FontWeight.w500, // Medium
+              color: const Color(0xFF111827), // Figma 색상
+              fontFamily: 'Inter',
             ),
           ),
           const SizedBox(height: 2),
           Text(
-            content,
-            style: textTheme.bodySmall?.copyWith(
+            content.isNotEmpty ? content : '-',
+            style: TextStyle(
               fontSize: responsive.responsiveFontSize(mobileSize: 12),
-              color: AppColors.inactiveText,
+              fontWeight: FontWeight.w400, // Regular
+              color: const Color(0xFF9CA3AF), // Figma 색상
+              fontFamily: 'Inter',
             ),
           ),
         ],

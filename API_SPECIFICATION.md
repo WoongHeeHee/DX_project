@@ -6,13 +6,14 @@
 2. [사용자 (Users)](#사용자-users)
 3. [시장 (Markets)](#시장-markets)
 4. [가게 (Shops)](#가게-shops)
-5. [사진 업로드 (Photos)](#사진-업로드-photos)
-6. [검색 (Search)](#검색-search)
-7. [추천 (Recommendations)](#추천-recommendations)
-8. [다이어리 (Diary)](#다이어리-diary)
-9. [지도 - 시장 (Market Photos)](#지도---시장-market-photos)
-10. [공통 응답 형식](#공통-응답-형식)
-11. [에러 코드](#에러-코드)
+5. [메뉴 (Menus)](#메뉴-menus)
+6. [사진 업로드 (Photos)](#사진-업로드-photos)
+7. [검색 (Search)](#검색-search)
+8. [추천 (Recommendations)](#추천-recommendations)
+9. [다이어리 (Diary)](#다이어리-diary)
+10. [지도 - 시장 (Market Photos)](#지도---시장-market-photos)
+11. [공통 응답 형식](#공통-응답-형식)
+12. [에러 코드](#에러-코드)
 
 ---
 
@@ -48,7 +49,7 @@ Content-Type: application/json
 #### Request Body
 ```json
 {
-  "code": "google_id_token_string",
+  "id_token": "google_id_token_string",
   "redirect_uri": "http://localhost:3000/callback"
 }
 ```
@@ -56,8 +57,8 @@ Content-Type: application/json
 #### Request Body Schema
 | 필드 | 타입 | 필수 | 설명 |
 |------|------|------|------|
-| code | string | ✅ | Google ID Token |
-| redirect_uri | string | ✅ | 리디렉션 URI |
+| id_token | string | ✅ | Google ID Token |
+| redirect_uri | string | ❌ | 리디렉션 URI (선택사항) |
 
 #### Response Example
 ```json
@@ -105,9 +106,6 @@ GET /auth/me
 Authorization: Bearer {access_token}
 ```
 
-#### Request Body
-없음
-
 #### Response Example
 ```json
 {
@@ -120,8 +118,7 @@ Authorization: Bearer {access_token}
   "spice_level": 3,
   "adventure": "moderate",
   "korean_experience": "first_time",
-  "locale": "en",
-  "onboarding_completed": false,
+  "locale": "ko",
   "created_at": "2024-01-01T00:00:00Z",
   "updated_at": null
 }
@@ -130,9 +127,6 @@ Authorization: Bearer {access_token}
 #### Status Codes
 - `200 OK`: 성공
 - `401 Unauthorized`: 인증 실패
-
-#### Notes
-- 인증 필수 엔드포인트
 
 ---
 
@@ -153,9 +147,6 @@ JWT 토큰 갱신
 ```
 Authorization: Bearer {access_token}
 ```
-
-#### Request Body
-없음
 
 #### Response Example
 ```json
@@ -204,7 +195,7 @@ Authorization: Bearer {access_token}
   "spice_level": 3,
   "adventure": "moderate",
   "korean_experience": "first_time",
-  "locale": "en",
+  "locale": "ko",
   "created_at": "2024-01-01T00:00:00Z"
 }
 ```
@@ -260,16 +251,6 @@ Content-Type: application/json
 | korean_experience | string | ❌ | 한국 경험 수준 |
 | locale | string | ❌ | 언어 (ko, en, zh, ja) |
 
-#### Response Example
-```json
-{
-  "id": "123e4567-e89b-12d3-a456-426614174000",
-  "display_name": "Jane Doe",
-  "korean_name": "김준호",
-  ...
-}
-```
-
 #### Status Codes
 - `200 OK`: 업데이트 성공
 - `400 Bad Request`: 잘못된 입력 값
@@ -282,17 +263,18 @@ Content-Type: application/json
 #### Endpoint
 ```
 POST /users/onboarding
+PUT /users/complete-onboarding
 ```
 
 #### Description
-온보딩 정보 입력 및 완료 처리
+온보딩 정보 입력 및 완료 처리 (인증 선택적)
 
 #### Method
-`POST`
+`POST` 또는 `PUT`
 
 #### Request Headers
 ```
-Authorization: Bearer {access_token}
+Authorization: Bearer {access_token}  (선택)
 Content-Type: application/json
 ```
 
@@ -334,11 +316,12 @@ Content-Type: application/json
 #### Status Codes
 - `200 OK`: 온보딩 완료
 - `400 Bad Request`: 필수 필드 누락
-- `401 Unauthorized`: 인증 실패
+- `401 Unauthorized`: 인증 실패 (선택적)
 
 #### Notes
 - 온보딩 완료 후 `onboarding_completed`가 `true`로 설정됨
 - 필수 필드: country, birth_yyyy_mm, spice_level, adventure, korean_experience
+- 인증되지 않은 경우 임시 사용자 생성 (기능 실험용)
 
 ---
 
@@ -350,14 +333,14 @@ POST /users/generate-korean-name
 ```
 
 #### Description
-사용자 원본 이름으로부터 한국 이름 생성
+사용자 원본 이름으로부터 한국 이름 생성 (인증 선택적)
 
 #### Method
 `POST`
 
 #### Request Headers
 ```
-Authorization: Bearer {access_token}
+Authorization: Bearer {access_token}  (선택)
 Content-Type: application/json
 ```
 
@@ -394,12 +377,7 @@ Content-Type: application/json
 #### Status Codes
 - `200 OK`: 생성 성공
 - `400 Bad Request`: 잘못된 입력
-- `401 Unauthorized`: 인증 실패
 - `500 Internal Server Error`: OpenAI API 오류
-
-#### Notes
-- OpenAI GPT-4o 모델 사용
-- 생성된 한국 이름은 자동으로 사용자 프로필에 저장되지 않음 (별도 업데이트 필요)
 
 ---
 
@@ -470,7 +448,6 @@ Authorization: Bearer {access_token}
 
 #### Notes
 - 계정 삭제 시 업로드한 사진의 `uploader_user_id`는 NULL로 설정 (익명화)
-- 실제 삭제는 소프트 삭제 방식 고려 가능
 
 ---
 
@@ -489,9 +466,6 @@ GET /markets/
 #### Method
 `GET`
 
-#### Request Headers
-없음 (인증 불필요)
-
 #### Response Example
 ```json
 [
@@ -503,6 +477,8 @@ GET /markets/
     "name_ja": "広蔵市場",
     "description": "서울의 대표적인 전통시장",
     "silhouette_url": "https://example.com/silhouette.jpg",
+    "lat": 37.5665,
+    "lng": 126.9780,
     "created_at": "2024-01-01T00:00:00Z"
   }
 ]
@@ -526,9 +502,6 @@ GET /markets/{market_id}
 #### Method
 `GET`
 
-#### Request Headers
-없음 (인증 불필요)
-
 #### Path Parameters
 | 파라미터 | 타입 | 필수 | 설명 |
 |---------|------|------|------|
@@ -544,6 +517,8 @@ GET /markets/{market_id}
   "name_ja": "広蔵市場",
   "description": "서울의 대표적인 전통시장",
   "silhouette_url": "https://example.com/silhouette.jpg",
+  "lat": 37.5665,
+  "lng": 126.9780,
   "created_at": "2024-01-01T00:00:00Z"
 }
 ```
@@ -567,9 +542,6 @@ GET /markets/{market_id}/menu-items
 #### Method
 `GET`
 
-#### Request Headers
-없음 (인증 불필요)
-
 #### Path Parameters
 | 파라미터 | 타입 | 필수 | 설명 |
 |---------|------|------|------|
@@ -580,7 +552,6 @@ GET /markets/{market_id}/menu-items
 [
   {
     "id": "123e4567-e89b-12d3-a456-426614174000",
-    "market_id": "123e4567-e89b-12d3-a456-426614174000",
     "name": "떡볶이",
     "name_en": "Tteokbokki",
     "description": "쫄깃한 떡과 매콤한 양념",
@@ -610,9 +581,6 @@ GET /markets/{market_id}/stats
 
 #### Method
 `GET`
-
-#### Request Headers
-없음 (인증 불필요)
 
 #### Path Parameters
 | 파라미터 | 타입 | 필수 | 설명 |
@@ -644,6 +612,207 @@ GET /markets/{market_id}/stats
 
 ---
 
+### 5. 시장 부가정보 조회
+
+#### Endpoint
+```
+GET /markets/{market_id}/info
+```
+
+#### Description
+시장 부가정보 조회 (주소, 교통, 주차, 화장실 등)
+
+#### Method
+`GET`
+
+#### Path Parameters
+| 파라미터 | 타입 | 필수 | 설명 |
+|---------|------|------|------|
+| market_id | string (UUID) | ✅ | 시장 ID |
+
+#### Response Example
+```json
+{
+  "market_info_id": "123e4567-e89b-12d3-a456-426614174000",
+  "market_id": "123e4567-e89b-12d3-a456-426614174000",
+  "address": "서울특별시 종로구 종로 6가",
+  "address_en": "6 Jongno, Jongno-gu, Seoul",
+  "transport": "지하철 1호선 종로5가역",
+  "parking": "주차 가능",
+  "restroom": "화장실 있음",
+  "open_time": "09:00",
+  "close_time": "18:00",
+  "closed_days": "매주 일요일",
+  "created_at": "2024-01-01T00:00:00Z"
+}
+```
+
+#### Status Codes
+- `200 OK`: 성공
+- `404 Not Found`: 시장 또는 부가정보를 찾을 수 없음
+
+---
+
+### 6. 시장 부가정보 생성
+
+#### Endpoint
+```
+POST /markets/{market_id}/info
+```
+
+#### Description
+시장 부가정보 생성
+
+#### Method
+`POST`
+
+#### Request Headers
+```
+Content-Type: application/json
+```
+
+#### Path Parameters
+| 파라미터 | 타입 | 필수 | 설명 |
+|---------|------|------|------|
+| market_id | string (UUID) | ✅ | 시장 ID |
+
+#### Request Body
+```json
+{
+  "address": "서울특별시 종로구 종로 6가",
+  "address_en": "6 Jongno, Jongno-gu, Seoul",
+  "transport": "지하철 1호선 종로5가역",
+  "parking": "주차 가능",
+  "restroom": "화장실 있음",
+  "open_time": "09:00",
+  "close_time": "18:00",
+  "closed_days": "매주 일요일"
+}
+```
+
+#### Status Codes
+- `200 OK`: 생성 성공
+- `400 Bad Request`: 이미 부가정보가 존재함
+- `404 Not Found`: 시장을 찾을 수 없음
+
+---
+
+### 7. 시장 부가정보 업데이트
+
+#### Endpoint
+```
+PUT /markets/{market_id}/info
+```
+
+#### Description
+시장 부가정보 업데이트
+
+#### Method
+`PUT`
+
+#### Request Headers
+```
+Content-Type: application/json
+```
+
+#### Path Parameters
+| 파라미터 | 타입 | 필수 | 설명 |
+|---------|------|------|------|
+| market_id | string (UUID) | ✅ | 시장 ID |
+
+#### Request Body
+```json
+{
+  "address": "서울특별시 종로구 종로 6가",
+  "address_en": "6 Jongno, Jongno-gu, Seoul",
+  "transport": "지하철 1호선 종로5가역",
+  "parking": "주차 가능",
+  "restroom": "화장실 있음",
+  "open_time": "09:00",
+  "close_time": "18:00",
+  "closed_days": "매주 일요일"
+}
+```
+
+#### Status Codes
+- `200 OK`: 업데이트 성공
+- `404 Not Found`: 시장 또는 부가정보를 찾을 수 없음
+
+---
+
+### 8. 시장 상태 조회
+
+#### Endpoint
+```
+GET /markets/{market_id}/status
+```
+
+#### Description
+시장 상태 조회: 상태(green/yellow/red) 및 기본 카운트
+
+#### Method
+`GET`
+
+#### Path Parameters
+| 파라미터 | 타입 | 필수 | 설명 |
+|---------|------|------|------|
+| market_id | string (UUID) | ✅ | 시장 ID |
+
+#### Response Example
+```json
+{
+  "status": "green",
+  "total_shops": 150,
+  "open_shops": 120,
+  "suspicious_shops": 0,
+  "closed_shops": 30
+}
+```
+
+#### Status Codes
+- `200 OK`: 성공
+- `404 Not Found`: 시장을 찾을 수 없음
+
+---
+
+### 9. 시장 인기 키워드 조회
+
+#### Endpoint
+```
+GET /markets/{market_id}/top-keywords
+```
+
+#### Description
+시장 인기 키워드 상위 10개 반환
+
+#### Method
+`GET`
+
+#### Path Parameters
+| 파라미터 | 타입 | 필수 | 설명 |
+|---------|------|------|------|
+| market_id | string (UUID) | ✅ | 시장 ID |
+
+#### Response Example
+```json
+[
+  {
+    "keyword": "대부분 현지인들이 방문해요",
+    "count": 45
+  },
+  {
+    "keyword": "한적해요",
+    "count": 30
+  }
+]
+```
+
+#### Status Codes
+- `200 OK`: 성공
+- `404 Not Found`: 시장을 찾을 수 없음
+
+---
+
 ## 가게 (Shops)
 
 ### 1. 근처 가게 검색
@@ -654,7 +823,7 @@ POST /shops/nearby
 ```
 
 #### Description
-현재 위치 기준 반경 내 가게 검색 (PostGIS 사용)
+현재 위치 기준 반경 내 가게 검색 (하버사인 공식 사용)
 
 #### Method
 `POST`
@@ -694,7 +863,6 @@ Content-Type: application/json
       "name_en": "Myeongdong Tteokbokki",
       "lat": 37.5665,
       "lng": 126.9780,
-      "address": "서울특별시 중구 명동",
       "distance_meters": 3.5,
       "last_reported_open_at": "2024-01-01T10:00:00Z",
       "created_at": "2024-01-01T00:00:00Z"
@@ -709,7 +877,7 @@ Content-Type: application/json
 - `400 Bad Request`: 잘못된 입력 값
 
 #### Notes
-- PostGIS `ST_DWithin` 함수 사용
+- 하버사인 공식으로 정확한 거리 계산
 - 거리순 정렬로 반환
 
 ---
@@ -727,9 +895,6 @@ GET /shops/{shop_id}
 #### Method
 `GET`
 
-#### Request Headers
-없음 (인증 불필요)
-
 #### Path Parameters
 | 파라미터 | 타입 | 필수 | 설명 |
 |---------|------|------|------|
@@ -742,13 +907,12 @@ GET /shops/{shop_id}
   "market_id": "123e4567-e89b-12d3-a456-426614174000",
   "name": "명동 떡볶이집",
   "name_en": "Myeongdong Tteokbokki",
+  "name_zh": "明洞炒年糕店",
+  "name_ja": "明洞トッポッキ店",
   "lat": 37.5665,
   "lng": 126.9780,
-  "address": "서울특별시 중구 명동",
-  "rep_image_url": "https://example.com/shop.jpg",
-  "open_time": "09:00",
-  "close_time": "22:00",
-  "closed_days": [0, 6],
+  "closed_days": "매주 일요일",
+  "closed_days_en": "Every Sunday",
   "last_reported_open_at": "2024-01-01T10:00:00Z",
   "created_at": "2024-01-01T00:00:00Z"
 }
@@ -773,9 +937,6 @@ GET /shops/{shop_id}/menu
 #### Method
 `GET`
 
-#### Request Headers
-없음 (인증 불필요)
-
 #### Path Parameters
 | 파라미터 | 타입 | 필수 | 설명 |
 |---------|------|------|------|
@@ -786,7 +947,6 @@ GET /shops/{shop_id}/menu
 [
   {
     "id": "123e4567-e89b-12d3-a456-426614174000",
-    "market_id": "123e4567-e89b-12d3-a456-426614174000",
     "name": "떡볶이",
     "name_en": "Tteokbokki",
     "description": "쫄깃한 떡과 매콤한 양념",
@@ -819,9 +979,6 @@ PUT /shops/{shop_id}/report-open
 
 #### Method
 `PUT`
-
-#### Request Headers
-없음 (인증 불필요)
 
 #### Path Parameters
 | 파라미터 | 타입 | 필수 | 설명 |
@@ -858,9 +1015,6 @@ GET /shops/
 #### Method
 `GET`
 
-#### Request Headers
-없음 (인증 불필요)
-
 #### Query Parameters
 | 파라미터 | 타입 | 필수 | 설명 |
 |---------|------|------|------|
@@ -884,6 +1038,361 @@ GET /shops/
 
 #### Status Codes
 - `200 OK`: 성공
+
+---
+
+### 6. 가게 핀하기
+
+#### Endpoint
+```
+POST /shops/{shop_id}/pin
+```
+
+#### Description
+가게 핀하기 (저장)
+
+#### Method
+`POST`
+
+#### Request Headers
+```
+Authorization: Bearer {access_token}
+```
+
+#### Path Parameters
+| 파라미터 | 타입 | 필수 | 설명 |
+|---------|------|------|------|
+| shop_id | string (UUID) | ✅ | 가게 ID |
+
+#### Response Example
+```json
+{
+  "success": true,
+  "message": "가게가 핀되었습니다"
+}
+```
+
+#### Status Codes
+- `200 OK`: 핀 추가 성공
+- `404 Not Found`: 가게를 찾을 수 없음
+- `401 Unauthorized`: 인증 실패
+
+#### Notes
+- 이미 핀한 가게는 중복 추가되지 않음
+- 이벤트가 `events` 테이블에 기록됨
+
+---
+
+### 7. 가게 핀 해제
+
+#### Endpoint
+```
+DELETE /shops/{shop_id}/pin
+```
+
+#### Description
+가게 핀 해제
+
+#### Method
+`DELETE`
+
+#### Request Headers
+```
+Authorization: Bearer {access_token}
+```
+
+#### Path Parameters
+| 파라미터 | 타입 | 필수 | 설명 |
+|---------|------|------|------|
+| shop_id | string (UUID) | ✅ | 가게 ID |
+
+#### Response Example
+```json
+{
+  "success": true,
+  "message": "핀이 해제되었습니다"
+}
+```
+
+#### Status Codes
+- `200 OK`: 핀 해제 성공
+- `404 Not Found`: 핀한 가게를 찾을 수 없음
+- `401 Unauthorized`: 인증 실패
+
+---
+
+### 8. 내가 핀한 가게 목록 조회
+
+#### Endpoint
+```
+GET /shops/my-pins
+```
+
+#### Description
+내가 핀한 가게 목록 조회
+
+#### Method
+`GET`
+
+#### Request Headers
+```
+Authorization: Bearer {access_token}
+```
+
+#### Query Parameters
+| 파라미터 | 타입 | 필수 | 설명 |
+|---------|------|------|------|
+| market_id | string (UUID) | ❌ | 시장 ID로 필터링 |
+| limit | integer | ❌ | 최대 반환 개수 (기본값: 20) |
+| offset | integer | ❌ | 오프셋 (기본값: 0) |
+
+#### Response Example
+```json
+[
+  {
+    "id": "123e4567-e89b-12d3-a456-426614174000",
+    "user_id": "123e4567-e89b-12d3-a456-426614174000",
+    "shop_id": "123e4567-e89b-12d3-a456-426614174000",
+    "created_at": "2024-01-01T10:00:00Z"
+  }
+]
+```
+
+#### Status Codes
+- `200 OK`: 성공
+- `401 Unauthorized`: 인증 실패
+
+---
+
+## 메뉴 (Menus)
+
+### 1. 메뉴 리스트 조회
+
+#### Endpoint
+```
+GET /menus/
+```
+
+#### Description
+메뉴 리스트 조회 (카테고리별 필터 가능)
+
+#### Method
+`GET`
+
+#### Query Parameters
+| 파라미터 | 타입 | 필수 | 설명 |
+|---------|------|------|------|
+| category | string | ❌ | 카테고리 필터 |
+| limit | integer | ❌ | 최대 반환 개수 (기본값: 50) |
+| offset | integer | ❌ | 오프셋 (기본값: 0) |
+
+#### Response Example
+```json
+[
+  {
+    "id": "123e4567-e89b-12d3-a456-426614174000",
+    "name": "떡볶이",
+    "name_en": "Tteokbokki",
+    "name_zh": "炒年糕",
+    "name_ja": "トッポッキ",
+    "description": "쫄깃한 떡과 매콤한 양념",
+    "description_en": "Chewy rice cakes with spicy sauce",
+    "similar_food": "라면",
+    "rep_image_url": "https://example.com/tteokbokki.jpg",
+    "price": "₩3,000~₩4,000",
+    "contains": "밀, 대두",
+    "category": "Meals",
+    "spice_level": 3,
+    "created_at": "2024-01-01T00:00:00Z"
+  }
+]
+```
+
+#### Status Codes
+- `200 OK`: 성공
+
+---
+
+### 2. 메뉴 상세 조회
+
+#### Endpoint
+```
+GET /menus/{menu_item_id}
+```
+
+#### Description
+특정 메뉴 아이템 상세 조회 (저장 여부 포함)
+
+#### Method
+`GET`
+
+#### Request Headers
+```
+Authorization: Bearer {access_token}  (선택)
+```
+
+#### Path Parameters
+| 파라미터 | 타입 | 필수 | 설명 |
+|---------|------|------|------|
+| menu_item_id | string (UUID) | ✅ | 메뉴 아이템 ID |
+
+#### Response Example
+```json
+{
+  "id": "123e4567-e89b-12d3-a456-426614174000",
+  "name": "떡볶이",
+  "name_en": "Tteokbokki",
+  "name_zh": "炒年糕",
+  "name_ja": "トッポッキ",
+  "description": "쫄깃한 떡과 매콤한 양념",
+  "description_en": "Chewy rice cakes with spicy sauce",
+  "similar_food": "라면",
+  "rep_image_url": "https://example.com/tteokbokki.jpg",
+  "price": "₩3,000~₩4,000",
+  "contains": "밀, 대두",
+  "category": "Meals",
+  "spice_level": 3,
+  "is_saved": false,
+  "created_at": "2024-01-01T00:00:00Z"
+}
+```
+
+#### Response Schema
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| is_saved | boolean | 현재 사용자가 저장했는지 여부 (인증된 사용자만) |
+
+#### Status Codes
+- `200 OK`: 성공
+- `404 Not Found`: 메뉴를 찾을 수 없음
+
+#### Notes
+- 인증된 사용자인 경우 `is_saved` 필드가 포함됨
+
+---
+
+### 3. 메뉴 찜하기
+
+#### Endpoint
+```
+POST /menus/{menu_item_id}/save
+```
+
+#### Description
+메뉴 찜하기 (저장)
+
+#### Method
+`POST`
+
+#### Request Headers
+```
+Authorization: Bearer {access_token}
+```
+
+#### Path Parameters
+| 파라미터 | 타입 | 필수 | 설명 |
+|---------|------|------|------|
+| menu_item_id | string (UUID) | ✅ | 메뉴 아이템 ID |
+
+#### Response Example
+```json
+{
+  "success": true,
+  "message": "메뉴가 저장되었습니다"
+}
+```
+
+#### Status Codes
+- `200 OK`: 저장 성공
+- `404 Not Found`: 메뉴를 찾을 수 없음
+- `401 Unauthorized`: 인증 실패
+
+#### Notes
+- 이미 찜한 메뉴는 중복 추가되지 않음
+
+---
+
+### 4. 찜한 메뉴 해제
+
+#### Endpoint
+```
+DELETE /menus/{menu_item_id}/save
+```
+
+#### Description
+찜한 메뉴 해제
+
+#### Method
+`DELETE`
+
+#### Request Headers
+```
+Authorization: Bearer {access_token}
+```
+
+#### Path Parameters
+| 파라미터 | 타입 | 필수 | 설명 |
+|---------|------|------|------|
+| menu_item_id | string (UUID) | ✅ | 메뉴 아이템 ID |
+
+#### Response Example
+```json
+{
+  "success": true,
+  "message": "저장이 해제되었습니다"
+}
+```
+
+#### Status Codes
+- `200 OK`: 해제 성공
+- `404 Not Found`: 찜한 메뉴를 찾을 수 없음
+- `401 Unauthorized`: 인증 실패
+
+---
+
+### 5. 내가 찜한 메뉴 목록 조회
+
+#### Endpoint
+```
+GET /menus/saved
+```
+
+#### Description
+내가 찜한 메뉴 목록 조회
+
+#### Method
+`GET`
+
+#### Request Headers
+```
+Authorization: Bearer {access_token}
+```
+
+#### Query Parameters
+| 파라미터 | 타입 | 필수 | 설명 |
+|---------|------|------|------|
+| limit | integer | ❌ | 최대 반환 개수 (기본값: 20) |
+| offset | integer | ❌ | 오프셋 (기본값: 0) |
+
+#### Response Example
+```json
+[
+  {
+    "id": "123e4567-e89b-12d3-a456-426614174000",
+    "name": "떡볶이",
+    "name_en": "Tteokbokki",
+    "description": "쫄깃한 떡과 매콤한 양념",
+    "rep_image_url": "https://example.com/tteokbokki.jpg",
+    "category": "Meals",
+    "spice_level": 3,
+    "created_at": "2024-01-01T00:00:00Z"
+  }
+]
+```
+
+#### Status Codes
+- `200 OK`: 성공
+- `401 Unauthorized`: 인증 실패
 
 ---
 
@@ -974,7 +1483,6 @@ S3에 사진 업로드 완료 후 서버에 알림
 #### Request Headers
 ```
 Content-Type: application/json
-Authorization: Bearer {access_token}  (선택 - 회원인 경우)
 ```
 
 #### Request Body
@@ -1084,9 +1592,6 @@ GET /uploads/photo/{photo_id}
 #### Method
 `GET`
 
-#### Request Headers
-없음 (인증 불필요)
-
 #### Path Parameters
 | 파라미터 | 타입 | 필수 | 설명 |
 |---------|------|------|------|
@@ -1102,10 +1607,7 @@ GET /uploads/photo/{photo_id}
   "lng": 126.9780,
   "taken_at": "2024-01-01T10:00:00Z",
   "processed": true,
-  "parsed_items": {
-    "menu_name": "떡볶이",
-    "bbox": [[10, 20, 100, 120]]
-  },
+  "menu_item_id": "123e4567-e89b-12d3-a456-426614174000",
   "created_at": "2024-01-01T10:00:05Z"
 }
 ```
@@ -1296,9 +1798,6 @@ GET /search/menu-items
 #### Method
 `GET`
 
-#### Request Headers
-없음 (인증 불필요)
-
 #### Query Parameters
 | 파라미터 | 타입 | 필수 | 설명 |
 |---------|------|------|------|
@@ -1341,9 +1840,6 @@ GET /search/popular-menus
 #### Method
 `GET`
 
-#### Request Headers
-없음 (인증 불필요)
-
 #### Query Parameters
 | 파라미터 | 타입 | 필수 | 설명 |
 |---------|------|------|------|
@@ -1378,13 +1874,10 @@ GET /search/trending-keywords
 ```
 
 #### Description
-트렌딩 키워드 조회 (다이어리에서 선택된 키워드 집계)
+트렌딩 키워드 조회
 
 #### Method
 `GET`
-
-#### Request Headers
-없음 (인증 불필요)
 
 #### Query Parameters
 | 파라미터 | 타입 | 필수 | 설명 |
@@ -1472,7 +1965,7 @@ Authorization: Bearer {access_token}
 - `401 Unauthorized`: 인증 실패
 
 #### Notes
-- 사용자의 `nationality`와 `birth`만 활용하여 추천
+- 사용자의 `country`와 `birth_yyyy_mm`만 활용하여 추천
 - 개인 맞춤 → 국적-나이별 트렌드 → 전체 인기 순으로 추천
 
 ---
@@ -1950,6 +2443,7 @@ Content-Type: application/json
 
 #### Notes
 - 이미 좋아요한 메뉴는 중복 추가되지 않음
+- 이벤트가 `events` 테이블에 기록됨
 
 ---
 
@@ -1991,64 +2485,7 @@ Authorization: Bearer {access_token}
 
 ---
 
-### 8. 핀 추가
-
-#### Endpoint
-```
-POST /diary/pins
-```
-
-#### Description
-가게 또는 메뉴에 핀 추가 (북마크)
-
-#### Method
-`POST`
-
-#### Request Headers
-```
-Authorization: Bearer {access_token}
-Content-Type: application/json
-```
-
-#### Request Body
-```json
-{
-  "shop_id": "123e4567-e89b-12d3-a456-426614174000",
-  "menu_item_id": null
-}
-```
-
-또는
-
-```json
-{
-  "shop_id": null,
-  "menu_item_id": "123e4567-e89b-12d3-a456-426614174000"
-}
-```
-
-#### Request Body Schema
-| 필드 | 타입 | 필수 | 설명 |
-|------|------|------|------|
-| shop_id | string (UUID) | ❌ | 가게 ID (shop_id 또는 menu_item_id 중 하나 필수) |
-| menu_item_id | string (UUID) | ❌ | 메뉴 아이템 ID |
-
-#### Response Example
-```json
-{
-  "success": true,
-  "message": "핀이 추가되었습니다"
-}
-```
-
-#### Status Codes
-- `200 OK`: 핀 추가 성공
-- `400 Bad Request`: shop_id와 menu_item_id 모두 없음
-- `401 Unauthorized`: 인증 실패
-
----
-
-### 9. 내 좋아요 목록
+### 8. 내 좋아요 목록
 
 #### Endpoint
 ```
@@ -2093,49 +2530,6 @@ Authorization: Bearer {access_token}
 
 ---
 
-### 10. 내 핀 목록
-
-#### Endpoint
-```
-GET /diary/my-pins
-```
-
-#### Description
-현재 사용자가 핀한 가게/메뉴 목록 조회
-
-#### Method
-`GET`
-
-#### Request Headers
-```
-Authorization: Bearer {access_token}
-```
-
-#### Query Parameters
-| 파라미터 | 타입 | 필수 | 설명 |
-|---------|------|------|------|
-| limit | integer | ❌ | 최대 반환 개수 (기본값: 20) |
-| offset | integer | ❌ | 오프셋 (기본값: 0) |
-
-#### Response Example
-```json
-[
-  {
-    "id": "123e4567-e89b-12d3-a456-426614174000",
-    "user_id": "123e4567-e89b-12d3-a456-426614174000",
-    "shop_id": "123e4567-e89b-12d3-a456-426614174000",
-    "menu_item_id": null,
-    "created_at": "2024-01-01T10:00:00Z"
-  }
-]
-```
-
-#### Status Codes
-- `200 OK`: 성공
-- `401 Unauthorized`: 인증 실패
-
----
-
 ## 지도 - 시장 (Market Photos)
 
 ### 1. 최근 사진 조회
@@ -2150,9 +2544,6 @@ GET /markets/{market_id}/recent-photos
 
 #### Method
 `GET`
-
-#### Request Headers
-없음 (인증 불필요)
 
 #### Path Parameters
 | 파라미터 | 타입 | 필수 | 설명 |
@@ -2179,10 +2570,7 @@ GET /markets/{market_id}/recent-photos
       "lat": 37.5665,
       "lng": 126.9780,
       "taken_at": "2024-01-01T10:00:00Z",
-      "parsed_items": {
-        "menu_name": "떡볶이",
-        "bbox": [[10, 20, 100, 120]]
-      },
+      "menu_item_id": "123e4567-e89b-12d3-a456-426614174000",
       "created_at": "2024-01-01T10:00:05Z"
     }
   ],
@@ -2196,7 +2584,7 @@ GET /markets/{market_id}/recent-photos
 
 #### Notes
 - 60분 이내의 사진만 조회
-- `processed = true`이고 `parsed_items`가 있는 사진만 반환
+- `processed = true`인 사진만 반환
 - S3 presigned URL은 응답에 포함됨
 
 ---
@@ -2213,9 +2601,6 @@ GET /markets/{market_id}/bestselling
 
 #### Method
 `GET`
-
-#### Request Headers
-없음 (인증 불필요)
 
 #### Path Parameters
 | 파라미터 | 타입 | 필수 | 설명 |
@@ -2265,9 +2650,6 @@ GET /markets/{market_id}/shops/status
 #### Method
 `GET`
 
-#### Request Headers
-없음 (인증 불필요)
-
 #### Path Parameters
 | 파라미터 | 타입 | 필수 | 설명 |
 |---------|------|------|------|
@@ -2286,11 +2668,11 @@ GET /markets/{market_id}/shops/status
       "name_ja": "明洞トッポッキ店",
       "lat": 37.5665,
       "lng": 126.9780,
-      "address": "서울특별시 중구 명동",
       "rep_image_url": "https://example.com/shop.jpg",
       "open_time": "09:00",
       "close_time": "22:00",
-      "closed_days": [0, 6],
+      "closed_days": "매주 일요일",
+      "closed_days_en": "Every Sunday",
       "last_reported_open_at": "2024-01-01T10:00:00Z",
       "status": "green"
     }
@@ -2331,9 +2713,6 @@ GET /markets/{market_id}/photos/locations
 
 #### Method
 `GET`
-
-#### Request Headers
-없음 (인증 불필요)
 
 #### Path Parameters
 | 파라미터 | 타입 | 필수 | 설명 |
@@ -2546,4 +2925,3 @@ await fetch('/uploads/photo-complete', {
 ---
 
 *이 문서는 API v1.0.0 기준으로 작성되었습니다.*
-

@@ -11,6 +11,7 @@ import "../../widgets/bottom_navigation_bar.dart";
 import "../../data/repositories/api_repository.dart";
 import "../../data/models/market_models.dart" as api_models;
 import "../../data/models/menu_models.dart";
+import "constants/must_try_items.dart";
 import "models/filter_model.dart";
 import "models/market_model.dart";
 import "models/food_model.dart";
@@ -29,9 +30,10 @@ class _ExploreScreenState extends State<ExploreScreen> {
   String selectedRegion = "서울"; // 기본값은 서울
   int currentFoodPage = 0; // Korean Street Food 페이지네이션 인덱스
   int currentTrendBannerIndex = 0; // Now Trend 배너 인덱스
-  final PageController _trendBannerController = PageController();
+  late PageController _trendBannerController;
   bool _isLoading = false;
   String? _koreanName;
+  String _userLocale = 'ko';
 
   // API로 가져온 데이터
   List<TrendBannerModel> _trendBanners = [];
@@ -40,6 +42,37 @@ class _ExploreScreenState extends State<ExploreScreen> {
   Map<String, List<MenuItemModel>> _foodsByCategory = {};
   List<MenuItemModel> _nationalAgeMenus = [];
   List<MenuItemModel> _savedBasedMenus = [];
+  Map<String, List<MarketModel>> _marketsByRegion = {};
+  Map<String, MenuItemModel> _menuIdToModel = {}; // 메뉴 ID -> MenuItemModel 매핑
+
+  // 고정 지역 탭
+  static const List<String> _regions = ["서울", "경기", "인천", "강원", "광주", "전라도", "경상도", "대구", "제주"];
+
+  // 시장 시드 데이터 (지역/이름/ID)
+  static const List<Map<String, String>> _marketSeeds = [
+    {"region": "서울", "name": "광장시장", "id": "MA0001"},
+    {"region": "서울", "name": "망원시장", "id": "MA0002"},
+    {"region": "서울", "name": "통인시장", "id": "MA0003"},
+    {"region": "서울", "name": "서울풍물시장", "id": "MA0004"},
+    {"region": "경기", "name": "수원남문로데오시장", "id": "MA0005"},
+    {"region": "인천", "name": "신포국제시장", "id": "MA0006"},
+    {"region": "강원", "name": "단양 구경시장", "id": "MA0007"},
+    {"region": "강원", "name": "속초관광수산시장", "id": "MA0008"},
+    {"region": "강원", "name": "정선5일장", "id": "MA0009"},
+    {"region": "광주", "name": "광주 양동시장", "id": "MA0010"},
+    {"region": "전라도", "name": "순천 아랫장", "id": "MA0011"},
+    {"region": "경상도", "name": "안동 구시장", "id": "MA0012"},
+    {"region": "대구", "name": "대구 서문시장", "id": "MA0013"},
+    {"region": "제주", "name": "동문재래시장", "id": "MA0014"},
+    {"region": "제주", "name": "서귀포 매일올레시장", "id": "MA0015"},
+  ];
+
+  // S3 플레이스홀더용 샘플 (이름/ID 매칭)
+  static const List<Map<String, String>> _samplePlaceholders = [
+    {"id": "ME155", "name": "떡볶이"},
+    {"id": "ME012", "name": "김밥"},
+    {"id": "ME148", "name": "닭강정"},
+  ];
 
   // Korean Street Food 데이터
   Map<String, List<FoodModel>> get foodsByCategory {
@@ -63,33 +96,69 @@ class _ExploreScreenState extends State<ExploreScreen> {
     };
   }
 
-  List<FoodModel> _convertMenuItemsToFoodModels(List<MenuItemModel> menuItems) {
-    return menuItems.map((menu) {
+  /// 단일 MenuItemModel을 FoodModel로 변환 (라우팅용)
+  FoodModel _convertMenuItemToFoodModel(MenuItemModel menu) {
+    final locale = _userLocale;
+    final baseName = menu.name; // 이미지 경로는 항상 ko 이름 사용
+    final contains = (menu.getContainsByLocale(locale) ?? '')
+        .split(RegExp(r',\s*'))
+        .where((e) => e.isNotEmpty)
+        .toList();
+    final mayContains = (menu.getMayContainsByLocale(locale) ?? '')
+        .split(RegExp(r',\s*'))
+        .where((e) => e.isNotEmpty)
+        .toList();
+    final similarText = menu.getSimilarFoodByLocale(locale);
+    final similarFoods = <SimilarFood>[
+      if (similarText != null && similarText.trim().isNotEmpty)
+        SimilarFood(
+          id: "similar_${menu.id}",
+          name: similarText.trim(),
+          description: "",
+        ),
+    ];
+
+    // 3장의 플레이스홀더(variant 1~3) 생성 (rep_image_url 미사용)
+    final imageUrls = List.generate(
+      3,
+      (i) => _placeholderImage(baseName, menu.id, variant: i + 1),
+    );
+
       return FoodModel(
         id: menu.id,
-        name: menu.name,
+      name: menu.getNameByLocale(locale),
+      baseName: baseName,
         category: menu.category ?? "Meals",
-        imageUrl: menu.repImageUrl ?? 'https://placehold.co/151x141',
-        description: menu.description ?? '',
-        imageUrls: [menu.repImageUrl ?? 'https://placehold.co/362x244'],
+      imageUrl: imageUrls.first,
+      description: menu.getDescriptionByLocale(locale) ?? '',
+      imageUrls: imageUrls,
         spiciness: menu.spiceLevel,
         spicinessDescription: _getSpicinessDescription(menu.spiceLevel),
-        similarFoods: [],
-        contains: menu.contains?.split(', ') ?? [],
-        mayContain: menu.mayContains?.split(', ') ?? [],
-      );
-    }).toList();
+      similarFoods: similarFoods,
+      contains: contains,
+      mayContain: mayContains,
+    );
+  }
+
+  List<FoodModel> _convertMenuItemsToFoodModels(List<MenuItemModel> menuItems) {
+    return menuItems.map((menu) => _convertMenuItemToFoodModel(menu)).toList();
   }
 
   String _getSpicinessDescription(int level) {
     final descriptions = [
-      "맵지 않아요",
-      "약간 매워요",
-      "적당히 매워요",
+      "안 매워요",
+      "김치보다 안 매워요",
       "김치만큼 매워요",
-      "매우 매워요",
+      "불닭보다 안 매워요",
+      "불닭만큼 매워요",
     ];
     return descriptions[level.clamp(1, 5) - 1];
+  }
+
+  /// API 카테고리 값 정규화 (DB에는 Drinks로 저장되어 있음)
+  String _categoryParamForApi(String category) {
+    if (category.toLowerCase() == "drink") return "Drinks";
+    return category;
   }
 
   Future<void> _loadTrendBanners() async {
@@ -100,11 +169,11 @@ class _ExploreScreenState extends State<ExploreScreen> {
       List<MenuItemModel> trendMenus = [];
       try {
         trendMenus =
-            await _apiRepository.recommendationService.getNationalityAgeTrend(
-          country: countryCode,
-          birthYyyyMm: birthYyyyMm,
-          limit: 3,
-        );
+          await _apiRepository.recommendationService.getNationalityAgeTrend(
+        country: countryCode,
+        birthYyyyMm: birthYyyyMm,
+        limit: 3,
+      );
         debugPrint(
             "[Explore] trend fetch: country=$countryCode birth=$birthYyyyMm count=${trendMenus.length}");
       } catch (e) {
@@ -125,8 +194,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
                     id: menu.id,
                     foodName: menu.name,
                     description: "지금 가장 많이 선택되고 있는 실시간 인기 메뉴예요.",
-                    imageUrl:
-                        _menuImageUrl(menu), // repImageUrl 없을 때 placeholder 처리
+                    imageUrl: _menuImageUrl(menu),
                     countryId: selectedCountry?.id,
                     ageId: selectedAge?.id,
                   ))
@@ -147,107 +215,88 @@ class _ExploreScreenState extends State<ExploreScreen> {
     }
   }
 
-  List<FoodModel> _getMealsFoods() {
-    final names = [
-      "갈치조림",
-      "김밥",
-      "비빔당면",
-      "내장국밥",
-      "떡갈비",
-      "막국수",
-      "막창구이",
-      "꼬마김밥",
-      "족발",
-      "쫄면",
-      "회국수",
-      "소머리국밥",
-      "곤드레밥",
-      "콧등치기국수",
-      "꼬막비빔국수",
-      "간고등어",
-      "헛제사밥",
-      "장터국밥",
-      "찜닭",
-    ];
-    return List.generate(
-      19,
-      (index) => _createDummyFood("Meals", index + 1, names[index]),
-    );
+  List<FoodModel> _getMealsFoods() => _buildSampleFoods("Meals", 8);
+  List<FoodModel> _getSnacksFoods() => _buildSampleFoods("Snacks", 8);
+  List<FoodModel> _getSweetsFoods() => _buildSampleFoods("Sweets", 6);
+  List<FoodModel> _getDrinkFoods() => _buildSampleFoods("Drink", 6);
+
+  List<FoodModel> _buildSampleFoods(String category, int count) {
+    return List.generate(count, (index) {
+      final sample = _samplePlaceholders[index % _samplePlaceholders.length];
+      final name = sample["name"]!;
+      final id = sample["id"]!;
+      return FoodModel(
+        id: id,
+        name: name,
+        baseName: name,
+        category: category,
+        imageUrl: _placeholderImage(name, id),
+        description: "지금 가장 많이 선택되는 메뉴예요.",
+        imageUrls: [_placeholderImage(name, id)],
+        spiciness: 3,
+        spicinessDescription: "김치만큼 매워요",
+        similarFoods: const [],
+        contains: const [],
+        mayContain: const [],
+      );
+    });
   }
 
-  List<FoodModel> _getSnacksFoods() {
-    final names = [
-      "구운옥수수",
-      "기름떡볶이",
-      "납작만두",
-      "녹두전",
-      "닭강정",
-      "닭꼬치",
-      "떡볶이",
-      "모둠전",
-      "빈대떡",
-      "소떡소떡",
-      "순대",
-      "순대볶음",
-      "어묵꼬치",
-      "옛날통닭",
-      "오징어순대",
-      "육회",
-      "핫도그",
-      "육전",
-      "만두",
-    ];
-    return List.generate(
-      19,
-      (index) => _createDummyFood("Snacks", index + 1, names[index]),
-    );
+  Map<String, List<MarketModel>> _seedMarketsByRegion() {
+    final regionMap = {for (final r in _regions) r: <MarketModel>[]};
+    for (final seed in _marketSeeds) {
+      final region = seed["region"]!;
+      final name = seed["name"]!;
+      final id = seed["id"]!;
+      regionMap[region]!.add(_buildMarketFromSeed(region, name, id));
+    }
+    return regionMap;
   }
 
-  List<FoodModel> _getSweetsFoods() {
-    final names = ["공갈빵", "꽈배기", "달고나", "딸기찹쌀떡", "오메기떡", "호떡", "술빵"];
-    return List.generate(
-      7,
-      (index) => _createDummyFood("Sweets", index + 1, names[index]),
-    );
+  Map<String, List<MarketModel>> _assignMarketsByRegion(
+      List<MarketModel> markets) {
+    // id 우선 매핑 → 이름(ko) 매핑. 분배 없음, 매핑 실패 시 "서울"에 모음
+    final idToRegion = {for (final seed in _marketSeeds) seed["id"]!: seed["region"]!};
+    final nameToRegion = {for (final seed in _marketSeeds) seed["name"]!: seed["region"]!};
+    final regionMap = {for (final r in _regions) r: <MarketModel>[]};
+
+    for (final m in markets) {
+      final region = idToRegion[m.id] ?? nameToRegion[m.name];
+      if (region != null) {
+        regionMap[region]!.add(m);
+      } else {
+        regionMap["서울"]!.add(m);
+      }
+    }
+
+    return regionMap;
   }
 
-  List<FoodModel> _getDrinkFoods() {
-    final names = ["다방커피", "모과차", "미숫가루", "수정과", "식혜", "쌍화차", "아이스커피"];
-    return List.generate(
-      7,
-      (index) => _createDummyFood("Drink", index + 1, names[index]),
-    );
-  }
-
-  FoodModel _createDummyFood(String category, int index, String name) {
-    return FoodModel(
-      id: "${category}_food_$index",
+  MarketModel _buildMarketFromSeed(String region, String name, String id) {
+    final placeholders =
+        List.generate(3, (i) => _marketPlaceholder(name, id, variant: i + 1));
+    // 메뉴 ID 형식으로 변경됨 (실제 메뉴 정보는 _convertToMarketModel에서 로드)
+    final mustTryIds = mustTryItemsByMarket[name] ?? const [];
+    return MarketModel(
+      id: id,
       name: name,
-      category: category,
-      imageUrl: _placeholderImage("떡볶이", "ME155"),
-      description:
-          "Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
-      imageUrls: [
-        _placeholderImage("떡볶이", "ME155"),
-        _placeholderImage("김밥", "ME012"),
-        _placeholderImage("닭강정", "ME148"),
+      description: "시장 소개가 준비중입니다.",
+      imageUrls: placeholders,
+      mustTryItems: [
+        for (int i = 0; i < mustTryIds.length; i++)
+          MustTryItem(
+            id: mustTryIds[i],
+            name: "", // 실제 메뉴 정보는 _convertToMarketModel에서 설정
+            description: "",
+            imageUrl: "",
+          )
       ],
-      spiciness: 3,
-      spicinessDescription: "김치만큼 매워요",
-      similarFoods: [
-        SimilarFood(
-          id: "similar_1",
-          name: "Italian Gnocchi",
-          description: "texture",
-        ),
-        SimilarFood(
-          id: "similar_2",
-          name: "Mexican Mole",
-          description: "Sweet-spicy",
-        ),
-      ],
-      contains: ["Gluten", "Fish", "Soy"],
-      mayContain: ["Egg", "Shellfish", "Sesame"],
+      address: "",
+      operatingHours: "",
+      transportation: "",
+      parking: "",
+      restroom: "",
+      mapImageUrl: "",
     );
   }
 
@@ -279,7 +328,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
     CountryFilter(
       id: "country_kr",
       name: "한국",
-      flagImageUrl: null, // 한국 국기 이미지가 없으면 null
+      flagImageUrl: "assets/images/KR.gif", // 한국 국기 이미지가 없으면 null
     ),
     CountryFilter(
       id: "country_th",
@@ -384,613 +433,20 @@ class _ExploreScreenState extends State<ExploreScreen> {
   // 지역별 시장 데이터
   Map<String, List<MarketModel>> get marketsByRegion {
     // API에서 가져온 데이터를 지역별로 분류
+    if (_marketsByRegion.isNotEmpty) {
+      return _marketsByRegion;
+    }
+
     if (_markets.isEmpty) {
-      // 로딩 중이거나 데이터가 없을 때 더미 데이터 반환
-      return {
-        "서울": _getSeoulMarkets(),
-        "경기": _getGyeonggiMarkets(),
-        "인천": _getIncheonMarkets(),
-        "강원": _getGangwonMarkets(),
-        "광주": _getGwangjuMarkets(),
-        "전라도": _getJeollaMarkets(),
-        "경상도": _getGyeongsangMarkets(),
-        "대구": _getDaeguMarkets(),
-        "제주": _getJejuMarkets(),
-      };
+      // 로딩 중이거나 데이터가 없을 때 시드 기반 지역 분류 반환
+      _marketsByRegion = _seedMarketsByRegion();
+      return _marketsByRegion;
     }
 
     // TODO: 시장 데이터에 지역 정보가 있으면 지역별로 분류
-    // 현재는 모든 시장을 "서울"에 표시
-    return {
-      "서울": _markets,
-      "경기": [],
-      "인천": [],
-      "강원": [],
-      "광주": [],
-      "전라도": [],
-      "경상도": [],
-      "대구": [],
-      "제주": [],
-    };
-  }
-
-  List<MarketModel> _getSeoulMarkets() {
-    return [
-      _createDummyMarket(
-        "서울",
-        "광장시장",
-        1,
-        imageUrls: [
-          _toCdn("https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%ED%83%90%EC%83%89_Discover+Sijang/%EA%B4%91%EC%9E%A5%EC%8B%9C%EC%9E%A51_MA0001.png"),
-          _toCdn("https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%ED%83%90%EC%83%89_Discover+Sijang/%EA%B4%91%EC%9E%A5%EC%8B%9C%EC%9E%A52_MA0001.png"),
-          _toCdn("https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%ED%83%90%EC%83%89_Discover+Sijang/%EA%B4%91%EC%9E%A5%EC%8B%9C%EC%9E%A53_MA0001.png"),
-        ],
-        address: "서울특별시 종로구 종로6가 288",
-        mustTryItems: [
-          MustTryItem(
-            id: "item_0",
-            name: "꼬마김밥",
-            description: "시장 입구 근처 포장마차에서 파는 대표",
-            imageUrl:
-                "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%EC%A7%80%EB%8F%84_Musteat-%ED%83%90%EC%83%89_Musteat/%EA%B4%91%EC%9E%A5%EC%8B%9C%EC%9E%A5_%EA%BC%AC%EB%A7%88%EA%B9%80%EB%B0%A5_ME016.png",
-          ),
-          MustTryItem(
-            id: "item_1",
-            name: "빈대떡",
-            description: "시장 입구 근처 포장마차에서 파는 대표",
-            imageUrl:
-                "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%EC%A7%80%EB%8F%84_Musteat-%ED%83%90%EC%83%89_Musteat/%EA%B4%91%EC%9E%A5%EC%8B%9C%EC%9E%A5_%E1%84%87%E1%85%B5%E1%86%AB%E1%84%83%E1%85%A2%E1%84%84%E1%85%A5%E1%86%A8_ME175.png",
-          ),
-          MustTryItem(
-            id: "item_2",
-            name: "육회",
-            description: "시장 입구 근처 포장마차에서 파는 대표",
-            imageUrl:
-                "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%EC%A7%80%EB%8F%84_Musteat-%ED%83%90%EC%83%89_Musteat/%EA%B4%91%EC%9E%A5%EC%8B%9C%EC%9E%A5_%E1%84%8B%E1%85%B2%E1%86%A8%E1%84%92%E1%85%AC_ME197.png",
-          ),
-        ],
-      ),
-      _createDummyMarket(
-        "서울",
-        "망원시장",
-        2,
-        imageUrls: [
-          _toCdn("https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%ED%83%90%EC%83%89_Discover+Sijang/%EB%A7%9D%EC%9B%90%EC%8B%9C%EC%9E%A51_MA0002.png"),
-          _toCdn("https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%ED%83%90%EC%83%89_Discover+Sijang/%EB%A7%9D%EC%9B%90%EC%8B%9C%EC%9E%A52_MA0002.png"),
-          _toCdn("https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%ED%83%90%EC%83%89_Discover+Sijang/%EB%A7%9D%EC%9B%90%EC%8B%9C%EC%9E%A53_MA0002.png"),
-        ],
-        mustTryItems: [
-          MustTryItem(
-            id: "item_0",
-            name: "닭강정",
-            description: "시장 입구 근처 포장마차에서 파는 대표",
-            imageUrl:
-                "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%EC%A7%80%EB%8F%84_Musteat-%ED%83%90%EC%83%89_Musteat/%EB%A7%9D%EC%9B%90%EC%8B%9C%EC%9E%A5_%E1%84%83%E1%85%A1%E1%86%B0%E1%85%A1%E1%86%BC%E1%84%8C%E1%85%A5%E1%86%BC_ME148.png",
-          ),
-          MustTryItem(
-            id: "item_1",
-            name: "떡볶이",
-            description: "시장 입구 근처 포장마차에서 파는 대표",
-            imageUrl:
-                "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%EC%A7%80%EB%8F%84_Musteat-%ED%83%90%EC%83%89_Musteat/%EB%A7%9D%EC%9B%90%EC%8B%9C%EC%9E%A5_%E1%84%84%E1%85%A5%E1%86%A8%E1%84%87%E1%85%A9%E1%86%A9%E1%84%8B%E1%85%B5_ME155.png",
-          ),
-          MustTryItem(
-            id: "item_2",
-            name: "구운옥수수",
-            description: "시장 입구 근처 포장마차에서 파는 대표",
-            imageUrl:
-                "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%EC%A7%80%EB%8F%84_Musteat-%ED%83%90%EC%83%89_Musteat/%EB%A7%9D%EC%9B%90%EC%8B%9C%EC%9E%A5_%E1%84%80%E1%85%AE%E1%84%8B%E1%85%AE%E1%86%AB%E1%84%8B%E1%85%A9%E1%86%A8%E1%84%89%E1%85%AE%E1%84%89%E1%85%AE_ME131.png",
-          ),
-        ],
-      ),
-      _createDummyMarket(
-        "서울",
-        "통인시장",
-        3,
-        imageUrls: [
-          "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%ED%83%90%EC%83%89_Discover+Sijang/%ED%86%B5%EC%9D%B8%EC%8B%9C%EC%9E%A51_MA0003.png",
-          "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%ED%83%90%EC%83%89_Discover+Sijang/%ED%86%B5%EC%9D%B8%EC%8B%9C%EC%9E%A52_MA0003.png",
-          "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%ED%83%90%EC%83%89_Discover+Sijang/%ED%86%B5%EC%9D%B8%EC%8B%9C%EC%9E%A53_MA0003.png",
-        ],
-        mustTryItems: [
-          MustTryItem(
-            id: "item_0",
-            name: "기름떡볶이",
-            description: "시장 입구 근처 포장마차에서 파는 대표",
-            imageUrl:
-                "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%EC%A7%80%EB%8F%84_Musteat-%ED%83%90%EC%83%89_Musteat/%EA%B4%91%EC%9E%A5%EC%8B%9C%EC%9E%A5_%EA%BC%AC%EB%A7%88%EA%B9%80%EB%B0%A5_ME016.png",
-          ),
-          MustTryItem(
-            id: "item_1",
-            name: "닭꼬치",
-            description: "시장 입구 근처 포장마차에서 파는 대표",
-            imageUrl:
-                "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%EC%A7%80%EB%8F%84_Musteat-%ED%83%90%EC%83%89_Musteat/%EA%B4%91%EC%9E%A5%EC%8B%9C%EC%9E%A5_%E1%84%87%E1%85%B5%E1%86%AB%E1%84%89%E1%85%A2%E1%84%84%E1%85%A5%E1%86%A8_ME175.png",
-          ),
-          MustTryItem(
-            id: "item_2",
-            name: "모둠전",
-            description: "시장 입구 근처 포장마차에서 파는 대표",
-            imageUrl:
-                "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%EC%A7%80%EB%8F%84_Musteat-%ED%83%90%EC%83%89_Musteat/%EA%B4%91%EC%9E%A5%EC%8B%9C%EC%9E%A5_%E1%84%8B%E1%85%B2%E1%86%A8%E1%84%92%E1%85%AC_ME197.png",
-          ),
-        ],
-      ),
-      _createDummyMarket(
-        "서울",
-        "서울풍물시장",
-        4,
-        imageUrls: [
-          "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%ED%83%90%EC%83%89_Discover+Sijang/%EC%84%9C%EC%9A%B8%ED%92%8D%EB%AC%BC%EC%8B%9C%EC%9E%A51_MA0004.png",
-          "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%ED%83%90%EC%83%89_Discover+Sijang/%EC%84%9C%EC%9A%B8%ED%92%8D%EB%AC%BC%EC%8B%9C%EC%9E%A52_MA0004.png",
-          "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%ED%83%90%EC%83%89_Discover+Sijang/%EC%84%9C%EC%9A%B8%ED%92%8D%EB%AC%BC%EC%8B%9C%EC%9E%A53_MA0004.png",
-        ],
-        mustTryItems: [
-          MustTryItem(
-            id: "item_0",
-            name: "녹두전",
-            description: "시장 입구 근처 포장마차에서 파는 대표",
-            imageUrl:
-                "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%EC%A7%80%EB%8F%84_Musteat-%ED%83%90%EC%83%89_Musteat/%EA%B4%91%EC%9E%A5%EC%8B%9C%EC%9E%A5_%EA%BC%AC%EB%A7%88%EA%B9%80%EB%B0%A5_ME016.png",
-          ),
-          MustTryItem(
-            id: "item_1",
-            name: "호떡",
-            description: "시장 입구 근처 포장마차에서 파는 대표",
-            imageUrl:
-                "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%EC%A7%80%EB%8F%84_Musteat-%ED%83%90%EC%83%89_Musteat/%EA%B4%91%EC%9E%A5%EC%8B%9C%EC%9E%A5_%E1%84%87%E1%85%B5%E1%86%AB%E1%84%89%E1%85%A2%E1%84%84%E1%85%A5%E1%86%A8_ME175.png",
-          ),
-          MustTryItem(
-            id: "item_2",
-            name: "소머리국밥",
-            description: "시장 입구 근처 포장마차에서 파는 대표",
-            imageUrl:
-                "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%EC%A7%80%EB%8F%84_Musteat-%ED%83%90%EC%83%89_Musteat/%EA%B4%91%EC%9E%A5%EC%8B%9C%EC%9E%A5_%E1%84%8B%E1%85%B2%E1%86%A8%E1%84%92%E1%85%AC_ME197.png",
-          ),
-        ],
-      ),
-    ];
-  }
-
-  List<MarketModel> _getGyeonggiMarkets() {
-    return [
-      _createDummyMarket(
-        "경기",
-        "수원남문로데오시장",
-        1,
-        imageUrls: [
-          "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%ED%83%90%EC%83%89_Discover+Sijang/%EC%88%98%EC%9B%90%EB%82%A8%EB%AC%B8%EB%A1%9C%EB%8D%B0%EC%98%A4%EC%8B%9C%EC%9E%A51_MA0005.png",
-          "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%ED%83%90%EC%83%89_Discover+Sijang/%EC%88%98%EC%9B%90%EB%82%A8%EB%AC%B8%EB%A1%9C%EB%8D%B0%EC%98%A4%EC%8B%9C%EC%9E%A52_MA0005.png",
-          "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%ED%83%90%EC%83%89_Discover+Sijang/%EC%88%98%EC%9B%90%EB%82%A8%EB%AC%B8%EB%A1%9C%EB%8D%B0%EC%98%A4%EC%8B%9C%EC%9E%A53_MA0005.png",
-        ],
-        mustTryItems: [
-          MustTryItem(
-            id: "item_0",
-            name: "순대볶음",
-            description: "시장 입구 근처 포장마차에서 파는 대표",
-            imageUrl:
-                "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%EC%A7%80%EB%8F%84_Musteat-%ED%83%90%EC%83%89_Musteat/%EA%B4%91%EC%9E%A5%EC%8B%9C%EC%9E%A5_%EA%BC%AC%EB%A7%88%EA%B9%80%EB%B0%A5_ME016.png",
-          ),
-          MustTryItem(
-            id: "item_1",
-            name: "꽈배기",
-            description: "시장 입구 근처 포장마차에서 파는 대표",
-            imageUrl:
-                "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%EC%A7%80%EB%8F%84_Musteat-%ED%83%90%EC%83%89_Musteat/%EA%B4%91%EC%9E%A5%EC%8B%9C%EC%9E%A5_%E1%84%87%E1%85%B5%E1%86%AB%E1%84%89%E1%85%A2%E1%84%84%E1%85%A5%E1%86%A8_ME175.png",
-          ),
-          MustTryItem(
-            id: "item_2",
-            name: "만두",
-            description: "시장 입구 근처 포장마차에서 파는 대표",
-            imageUrl:
-                "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%EC%A7%80%EB%8F%84_Musteat-%ED%83%90%EC%83%89_Musteat/%EA%B4%91%EC%9E%A5%EC%8B%9C%EC%9E%A5_%E1%84%8B%E1%85%B2%E1%86%A8%E1%84%92%E1%85%AC_ME197.png",
-          ),
-        ],
-      ),
-    ];
-  }
-
-  List<MarketModel> _getIncheonMarkets() {
-    return [
-      _createDummyMarket(
-        "인천",
-        "신포국제시장",
-        1,
-        imageUrls: [
-          "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%ED%83%90%EC%83%89_Discover+Sijang/%EC%8B%A0%ED%8F%AC%EA%B5%AD%EC%A0%9C%EC%8B%9C%EC%9E%A51_MA0006.png",
-          "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%ED%83%90%EC%83%89_Discover+Sijang/%EC%8B%A0%ED%8F%AC%EA%B5%AD%EC%A0%9C%EC%8B%9C%EC%9E%A52_MA0006.png",
-          "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%ED%83%90%EC%83%89_Discover+Sijang/%EC%8B%A0%ED%8F%AC%EA%B5%AD%EC%A0%9C%EC%8B%9C%EC%9E%A53_MA0006.png",
-        ],
-        mustTryItems: [
-          MustTryItem(
-            id: "item_0",
-            name: "닭강정",
-            description: "시장 입구 근처 포장마차에서 파는 대표",
-            imageUrl:
-                "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%EC%A7%80%EB%8F%84_Musteat-%ED%83%90%EC%83%89_Musteat/%EA%B4%91%EC%9E%A5%EC%8B%9C%EC%9E%A5_%EA%BC%AC%EB%A7%88%EA%B9%80%EB%B0%A5_ME016.png",
-          ),
-          MustTryItem(
-            id: "item_1",
-            name: "공갈빵",
-            description: "시장 입구 근처 포장마차에서 파는 대표",
-            imageUrl:
-                "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%EC%A7%80%EB%8F%84_Musteat-%ED%83%90%EC%83%89_Musteat/%EA%B4%91%EC%9E%A5%EC%8B%9C%EC%9E%A5_%E1%84%87%E1%85%B5%E1%86%AB%E1%84%89%E1%85%A2%E1%84%84%E1%85%A5%E1%86%A8_ME175.png",
-          ),
-          MustTryItem(
-            id: "item_2",
-            name: "쫄면",
-            description: "시장 입구 근처 포장마차에서 파는 대표",
-            imageUrl:
-                "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%EC%A7%80%EB%8F%84_Musteat-%ED%83%90%EC%83%89_Musteat/%EA%B4%91%EC%9E%A5%EC%8B%9C%EC%9E%A5_%E1%84%8B%E1%85%B2%E1%86%A8%E1%84%92%E1%85%AC_ME197.png",
-          ),
-        ],
-      ),
-    ];
-  }
-
-  List<MarketModel> _getGangwonMarkets() {
-    return [
-      _createDummyMarket(
-        "강원",
-        "단양 구경시장",
-        1,
-        imageUrls: [
-          "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%ED%83%90%EC%83%89_Discover+Sijang/%EB%8B%A8%EC%96%91+%EA%B5%AC%EA%B2%BD%EC%8B%9C%EC%9E%A51_MA0007.png",
-          "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%ED%83%90%EC%83%89_Discover+Sijang/%EB%8B%A8%EC%96%91+%EA%B5%AC%EA%B2%BD%EC%8B%9C%EC%9E%A52_MA0007.png",
-          "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%ED%83%90%EC%83%89_Discover+Sijang/%EB%8B%A8%EC%96%91+%EA%B5%AC%EA%B2%BD%EC%8B%9C%EC%9E%A53_MA0007.png",
-        ],
-        mustTryItems: [
-          MustTryItem(
-            id: "item_0",
-            name: "떡갈비",
-            description: "시장 입구 근처 포장마차에서 파는 대표",
-            imageUrl:
-                "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%EC%A7%80%EB%8F%84_Musteat-%ED%83%90%EC%83%89_Musteat/%EA%B4%91%EC%9E%A5%EC%8B%9C%EC%9E%A5_%EA%BC%AC%EB%A7%88%EA%B9%80%EB%B0%A5_ME016.png",
-          ),
-          MustTryItem(
-            id: "item_1",
-            name: "닭강정",
-            description: "시장 입구 근처 포장마차에서 파는 대표",
-            imageUrl:
-                "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%EC%A7%80%EB%8F%84_Musteat-%ED%83%90%EC%83%89_Musteat/%EA%B4%91%EC%9E%A5%EC%8B%9C%EC%9E%A5_%E1%84%87%E1%85%B5%E1%86%AB%E1%84%89%E1%85%A2%E1%84%84%E1%85%A5%E1%86%A8_ME175.png",
-          ),
-          MustTryItem(
-            id: "item_2",
-            name: "만두",
-            description: "시장 입구 근처 포장마차에서 파는 대표",
-            imageUrl:
-                "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%EC%A7%80%EB%8F%84_Musteat-%ED%83%90%EC%83%89_Musteat/%EA%B4%91%EC%9E%A5%EC%8B%9C%EC%9E%A5_%E1%84%8B%E1%85%B2%E1%86%A8%E1%84%92%E1%85%AC_ME197.png",
-          ),
-        ],
-      ),
-      _createDummyMarket(
-        "강원",
-        "속초관광수산시장",
-        2,
-        imageUrls: [
-          "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%ED%83%90%EC%83%89_Discover+Sijang/%EC%86%8D%EC%B4%88%EA%B4%80%EA%B4%91%EC%88%98%EC%82%B0%EC%8B%9C%EC%9E%A51_MA0008.png",
-          "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%ED%83%90%EC%83%89_Discover+Sijang/%EC%86%8D%EC%B4%88%EA%B4%80%EA%B4%91%EC%88%98%EC%82%B0%EC%8B%9C%EC%9E%A52_MA0008.png",
-          "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%ED%83%90%EC%83%89_Discover+Sijang/%EC%86%8D%EC%B4%88%EA%B4%80%EA%B4%91%EC%88%98%EC%82%B0%EC%8B%9C%EC%9E%A53_MA0008.png",
-        ],
-        mustTryItems: [
-          MustTryItem(
-            id: "item_0",
-            name: "닭강정",
-            description: "시장 입구 근처 포장마차에서 파는 대표",
-            imageUrl:
-                "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%EC%A7%80%EB%8F%84_Musteat-%ED%83%90%EC%83%89_Musteat/%EA%B4%91%EC%9E%A5%EC%8B%9C%EC%9E%A5_%EA%BC%AC%EB%A7%88%EA%B9%80%EB%B0%A5_ME016.png",
-          ),
-          MustTryItem(
-            id: "item_1",
-            name: "오징어순대",
-            description: "시장 입구 근처 포장마차에서 파는 대표",
-            imageUrl:
-                "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%EC%A7%80%EB%8F%84_Musteat-%ED%83%90%EC%83%89_Musteat/%EA%B4%91%EC%9E%A5%EC%8B%9C%EC%9E%A5_%E1%84%87%E1%85%B5%E1%86%AB%E1%84%89%E1%85%A2%E1%84%84%E1%85%A5%E1%86%A8_ME175.png",
-          ),
-          MustTryItem(
-            id: "item_2",
-            name: "술빵",
-            description: "시장 입구 근처 포장마차에서 파는 대표",
-            imageUrl:
-                "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%EC%A7%80%EB%8F%84_Musteat-%ED%83%90%EC%83%89_Musteat/%EA%B4%91%EC%9E%A5%EC%8B%9C%EC%9E%A5_%E1%84%8B%E1%85%B2%E1%86%A8%E1%84%92%E1%85%AC_ME197.png",
-          ),
-        ],
-      ),
-      _createDummyMarket(
-        "강원",
-        "정선5일장",
-        3,
-        imageUrls: [
-          "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%ED%83%90%EC%83%89_Discover+Sijang/%EC%A0%95%EC%84%A05%EC%9D%BC%EC%9E%A51_MA0009.png",
-          "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%ED%83%90%EC%83%89_Discover+Sijang/%EC%A0%95%EC%84%A05%EC%9D%BC%EC%9E%A52_MA0009.png",
-          "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%ED%83%90%EC%83%89_Discover+Sijang/%EC%A0%95%EC%84%A05%EC%9D%BC%EC%9E%A53_MA0009.png",
-        ],
-        mustTryItems: [
-          MustTryItem(
-            id: "item_0",
-            name: "곤드레밥",
-            description: "시장 입구 근처 포장마차에서 파는 대표",
-            imageUrl:
-                "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%EC%A7%80%EB%8F%84_Musteat-%ED%83%90%EC%83%89_Musteat/%EA%B4%91%EC%9E%A5%EC%8B%9C%EC%9E%A5_%EA%BC%AC%EB%A7%88%EA%B9%80%EB%B0%A5_ME016.png",
-          ),
-          MustTryItem(
-            id: "item_1",
-            name: "콧등치기국수",
-            description: "시장 입구 근처 포장마차에서 파는 대표",
-            imageUrl:
-                "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%EC%A7%80%EB%8F%84_Musteat-%ED%83%90%EC%83%89_Musteat/%EA%B4%91%EC%9E%A5%EC%8B%9C%EC%9E%A5_%E1%84%87%E1%85%B5%E1%86%AB%E1%84%89%E1%85%A2%E1%84%84%E1%85%A5%E1%86%A8_ME175.png",
-          ),
-          MustTryItem(
-            id: "item_2",
-            name: "장터국밥",
-            description: "시장 입구 근처 포장마차에서 파는 대표",
-            imageUrl:
-                "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%EC%A7%80%EB%8F%84_Musteat-%ED%83%90%EC%83%89_Musteat/%EA%B4%91%EC%9E%A5%EC%8B%9C%EC%9E%A5_%E1%84%8B%E1%85%B2%E1%86%A8%E1%84%92%E1%85%AC_ME197.png",
-          ),
-        ],
-      ),
-    ];
-  }
-
-  List<MarketModel> _getGwangjuMarkets() {
-    return [
-      _createDummyMarket(
-        "광주",
-        "양동시장",
-        1,
-        imageUrls: [
-          "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%ED%83%90%EC%83%89_Discover+Sijang/%EA%B4%91%EC%A3%BC+%EC%96%91%EB%8F%99%EC%8B%9C%EC%9E%A51_MA0010.png",
-          "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%ED%83%90%EC%83%89_Discover+Sijang/%EA%B4%91%EC%A3%BC+%EC%96%91%EB%8F%99%EC%8B%9C%EC%9E%A52_MA0010.png",
-          "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%ED%83%90%EC%83%89_Discover+Sijang/%EA%B4%91%EC%A3%BC+%EC%96%91%EB%8F%99%EC%8B%9C%EC%9E%A53_MA0010.png",
-        ],
-        mustTryItems: [
-          MustTryItem(
-            id: "item_0",
-            name: "옛날통닭",
-            description: "시장 입구 근처 포장마차에서 파는 대표",
-            imageUrl:
-                "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%EC%A7%80%EB%8F%84_Musteat-%ED%83%90%EC%83%89_Musteat/%EA%B4%91%EC%9E%A5%EC%8B%9C%EC%9E%A5_%EA%BC%AC%EB%A7%88%EA%B9%80%EB%B0%A5_ME016.png",
-          ),
-          MustTryItem(
-            id: "item_1",
-            name: "장터국밥",
-            description: "시장 입구 근처 포장마차에서 파는 대표",
-            imageUrl:
-                "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%EC%A7%80%EB%8F%84_Musteat-%ED%83%90%EC%83%89_Musteat/%EA%B4%91%EC%9E%A5%EC%8B%9C%EC%9E%A5_%E1%84%87%E1%85%B5%E1%86%AB%E1%84%89%E1%85%A2%E1%84%84%E1%85%A5%E1%86%A8_ME175.png",
-          ),
-          MustTryItem(
-            id: "item_2",
-            name: "떡볶이",
-            description: "시장 입구 근처 포장마차에서 파는 대표",
-            imageUrl:
-                "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%EC%A7%80%EB%8F%84_Musteat-%ED%83%90%EC%83%89_Musteat/%EA%B4%91%EC%9E%A5%EC%8B%9C%EC%9E%A5_%E1%84%8B%E1%85%B2%E1%86%A8%E1%84%92%E1%85%AC_ME197.png",
-          ),
-        ],
-      ),
-    ];
-  }
-
-  List<MarketModel> _getJeollaMarkets() {
-    return [
-      _createDummyMarket(
-        "전라도",
-        "순천 아랫장",
-        1,
-        imageUrls: [
-          "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%ED%83%90%EC%83%89_Discover+Sijang/%EC%88%9C%EC%B2%9C+%EC%95%84%EB%9E%AB%EC%9E%A51_MA0011.png",
-          "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%ED%83%90%EC%83%89_Discover+Sijang/%EC%88%9C%EC%B2%9C+%EC%95%84%EB%9E%AB%EC%9E%A52_MA0011.png",
-          "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%ED%83%90%EC%83%89_Discover+Sijang/%EC%88%9C%EC%B2%9C+%EC%95%84%EB%9E%AB%EC%9E%A53_MA0011.png",
-        ],
-        mustTryItems: [
-          MustTryItem(
-            id: "item_0",
-            name: "꼬막비빔국수",
-            description: "시장 입구 근처 포장마차에서 파는 대표",
-            imageUrl:
-                "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%EC%A7%80%EB%8F%84_Musteat-%ED%83%90%EC%83%89_Musteat/%EA%B4%91%EC%9E%A5%EC%8B%9C%EC%9E%A5_%EA%BC%AC%EB%A7%88%EA%B9%80%EB%B0%A5_ME016.png",
-          ),
-          MustTryItem(
-            id: "item_1",
-            name: "내장국밥",
-            description: "시장 입구 근처 포장마차에서 파는 대표",
-            imageUrl:
-                "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%EC%A7%80%EB%8F%84_Musteat-%ED%83%90%EC%83%89_Musteat/%EA%B4%91%EC%9E%A5%EC%8B%9C%EC%9E%A5_%E1%84%87%E1%85%B5%E1%86%AB%E1%84%89%E1%85%A2%E1%84%84%E1%85%A5%E1%86%A8_ME175.png",
-          ),
-          MustTryItem(
-            id: "item_2",
-            name: "육전",
-            description: "시장 입구 근처 포장마차에서 파는 대표",
-            imageUrl:
-                "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%EC%A7%80%EB%8F%84_Musteat-%ED%83%90%EC%83%89_Musteat/%EA%B4%91%EC%9E%A5%EC%8B%9C%EC%9E%A5_%E1%84%8B%E1%85%B2%E1%86%A8%E1%84%92%E1%85%AC_ME197.png",
-          ),
-        ],
-      ),
-    ];
-  }
-
-  List<MarketModel> _getGyeongsangMarkets() {
-    return [
-      _createDummyMarket(
-        "경상도",
-        "안동 구시장",
-        1,
-        imageUrls: [
-          "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%ED%83%90%EC%83%89_Discover+Sijang/%EC%95%88%EB%8F%99+%EA%B5%AC%EC%8B%9C%EC%9E%A51_MA0012.png",
-          "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%ED%83%90%EC%83%89_Discover+Sijang/%EC%95%88%EB%8F%99+%EA%B5%AC%EC%8B%9C%EC%9E%A52_MA0012.png",
-          "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%ED%83%90%EC%83%89_Discover+Sijang/%EC%95%88%EB%8F%99+%EA%B5%AC%EC%8B%9C%EC%9E%A53_MA0012.png",
-        ],
-        mustTryItems: [
-          MustTryItem(
-            id: "item_0",
-            name: "찜닭",
-            description: "시장 입구 근처 포장마차에서 파는 대표",
-            imageUrl:
-                "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%EC%A7%80%EB%8F%84_Musteat-%ED%83%90%EC%83%89_Musteat/%EA%B4%91%EC%9E%A5%EC%8B%9C%EC%9E%A5_%EA%BC%AC%EB%A7%88%EA%B9%80%EB%B0%A5_ME016.png",
-          ),
-          MustTryItem(
-            id: "item_1",
-            name: "간고등어",
-            description: "시장 입구 근처 포장마차에서 파는 대표",
-            imageUrl:
-                "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%EC%A7%80%EB%8F%84_Musteat-%ED%83%90%EC%83%89_Musteat/%EA%B4%91%EC%9E%A5%EC%8B%9C%EC%9E%A5_%E1%84%87%E1%85%B5%E1%86%AB%E1%84%89%E1%85%A2%E1%84%84%E1%85%A5%E1%86%A8_ME175.png",
-          ),
-          MustTryItem(
-            id: "item_2",
-            name: "헛제사밥",
-            description: "시장 입구 근처 포장마차에서 파는 대표",
-            imageUrl:
-                "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%EC%A7%80%EB%8F%84_Musteat-%ED%83%90%EC%83%89_Musteat/%EA%B4%91%EC%9E%A5%EC%8B%9C%EC%9E%A5_%E1%84%8B%E1%85%B2%E1%86%A8%E1%84%92%E1%85%AC_ME197.png",
-          ),
-        ],
-      ),
-    ];
-  }
-
-  List<MarketModel> _getDaeguMarkets() {
-    return [
-      _createDummyMarket(
-        "대구",
-        "서문시장",
-        1,
-        imageUrls: [
-          "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%ED%83%90%EC%83%89_Discover+Sijang/%EB%8C%80%EA%B5%AC+%EC%84%9C%EB%AC%B8%EC%8B%9C%EC%9E%A51_MA0013.png",
-          "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%ED%83%90%EC%83%89_Discover+Sijang/%EB%8C%80%EA%B5%AC+%EC%84%9C%EB%AC%B8%EC%8B%9C%EC%9E%A52_MA0013.png",
-          "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%ED%83%90%EC%83%89_Discover+Sijang/%EB%8C%80%EA%B5%AC+%EC%84%9C%EB%AC%B8%EC%8B%9C%EC%9E%A53_MA0013.png",
-        ],
-        mustTryItems: [
-          MustTryItem(
-            id: "item_0",
-            name: "막창구이",
-            description: "시장 입구 근처 포장마차에서 파는 대표",
-            imageUrl:
-                "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%EC%A7%80%EB%8F%84_Musteat-%ED%83%90%EC%83%89_Musteat/%EA%B4%91%EC%9E%A5%EC%8B%9C%EC%9E%A5_%EA%BC%AC%EB%A7%88%EA%B9%80%EB%B0%A5_ME016.png",
-          ),
-          MustTryItem(
-            id: "item_1",
-            name: "납작만두",
-            description: "시장 입구 근처 포장마차에서 파는 대표",
-            imageUrl:
-                "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%EC%A7%80%EB%8F%84_Musteat-%ED%83%90%EC%83%89_Musteat/%EA%B4%91%EC%9E%A5%EC%8B%9C%EC%9E%A5_%E1%84%87%E1%85%B5%E1%86%AB%E1%84%89%E1%85%A2%E1%84%84%E1%85%A5%E1%86%A8_ME175.png",
-          ),
-          MustTryItem(
-            id: "item_2",
-            name: "어묵꼬치",
-            description: "시장 입구 근처 포장마차에서 파는 대표",
-            imageUrl:
-                "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%EC%A7%80%EB%8F%84_Musteat-%ED%83%90%EC%83%89_Musteat/%EA%B4%91%EC%9E%A5%EC%8B%9C%EC%9E%A5_%E1%84%8B%E1%85%B2%E1%86%A8%E1%84%92%E1%85%AC_ME197.png",
-          ),
-        ],
-      ),
-    ];
-  }
-
-  List<MarketModel> _getJejuMarkets() {
-    return [
-      _createDummyMarket(
-        "제주",
-        "동문재래시장",
-        1,
-        imageUrls: [
-          "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%ED%83%90%EC%83%89_Discover+Sijang/%EB%8F%99%EB%AC%B8%EC%9E%AC%EB%9E%98%EC%8B%9C%EC%9E%A51_MA0014.png",
-          "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%ED%83%90%EC%83%89_Discover+Sijang/%EB%8F%99%EB%AC%B8%EC%9E%AC%EB%9E%98%EC%8B%9C%EC%9E%A52_MA0014.png",
-          "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%ED%83%90%EC%83%89_Discover+Sijang/%EB%8F%99%EB%AC%B8%EC%9E%AC%EB%9E%98%EC%8B%9C%EC%9E%A53_MA0014.png",
-        ],
-        mustTryItems: [
-          MustTryItem(
-            id: "item_0",
-            name: "오메기떡",
-            description: "시장 입구 근처 포장마차에서 파는 대표",
-            imageUrl:
-                "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%EC%A7%80%EB%8F%84_Musteat-%ED%83%90%EC%83%89_Musteat/%EA%B4%91%EC%9E%A5%EC%8B%9C%EC%9E%A5_%EA%BC%AC%EB%A7%88%EA%B9%80%EB%B0%A5_ME016.png",
-          ),
-          MustTryItem(
-            id: "item_1",
-            name: "회국수",
-            description: "시장 입구 근처 포장마차에서 파는 대표",
-            imageUrl:
-                "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%EC%A7%80%EB%8F%84_Musteat-%ED%83%90%EC%83%89_Musteat/%EA%B4%91%EC%9E%A5%EC%8B%9C%EC%9E%A5_%E1%84%87%E1%85%B5%E1%86%AB%E1%84%89%E1%85%A2%E1%84%84%E1%85%A5%E1%86%A8_ME175.png",
-          ),
-          MustTryItem(
-            id: "item_2",
-            name: "갈치조림",
-            description: "시장 입구 근처 포장마차에서 파는 대표",
-            imageUrl:
-                "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%EC%A7%80%EB%8F%84_Musteat-%ED%83%90%EC%83%89_Musteat/%EA%B4%91%EC%9E%A5%EC%8B%9C%EC%9E%A5_%E1%84%8B%E1%85%B2%E1%86%A8%E1%84%92%E1%85%AC_ME197.png",
-          ),
-        ],
-      ),
-      _createDummyMarket(
-        "제주",
-        "서귀포 매일올레시장",
-        2,
-        imageUrls: [
-          "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%ED%83%90%EC%83%89_Discover+Sijang/%EC%84%9C%EA%B7%80%ED%8F%AC%EB%A7%A4%EC%9D%BC%EC%98%AC%EB%A0%88%EC%8B%9C%EC%9E%A51_MA0015.png",
-          "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%ED%83%90%EC%83%89_Discover+Sijang/%EC%84%9C%EA%B7%80%ED%8F%AC%EB%A7%A4%EC%9D%BC%EC%98%AC%EB%A0%88%EC%8B%9C%EC%9E%A52_MA0015.png",
-          "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%ED%83%90%EC%83%89_Discover+Sijang/%EC%84%9C%EA%B7%80%ED%8F%AC%EB%A7%A4%EC%9D%BC%EC%98%AC%EB%A0%88%EC%8B%9C%EC%9E%A53_MA0015.png",
-        ],
-        mustTryItems: [
-          MustTryItem(
-            id: "item_0",
-            name: "오메기떡",
-            description: "시장 입구 근처 포장마차에서 파는 대표",
-            imageUrl:
-                "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%EC%A7%80%EB%8F%84_Musteat-%ED%83%90%EC%83%89_Musteat/%EA%B4%91%EC%9E%A5%EC%8B%9C%EC%9E%A5_%EA%BC%AC%EB%A7%88%EA%B9%80%EB%B0%A5_ME016.png",
-          ),
-          MustTryItem(
-            id: "item_1",
-            name: "딸기찹쌀떡",
-            description: "시장 입구 근처 포장마차에서 파는 대표",
-            imageUrl:
-                "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%EC%A7%80%EB%8F%84_Musteat-%ED%83%90%EC%83%89_Musteat/%EA%B4%91%EC%9E%A5%EC%8B%9C%EC%9E%A5_%E1%84%87%E1%85%B5%E1%86%AB%E1%84%89%E1%85%A2%E1%84%84%E1%85%A5%E1%86%A8_ME175.png",
-          ),
-          MustTryItem(
-            id: "item_2",
-            name: "닭꼬치",
-            description: "시장 입구 근처 포장마차에서 파는 대표",
-            imageUrl:
-                "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%EC%A7%80%EB%8F%84_Musteat-%ED%83%90%EC%83%89_Musteat/%EA%B4%91%EC%9E%A5%EC%8B%9C%EC%9E%A5_%E1%84%8B%E1%85%B2%E1%86%A8%E1%84%92%E1%85%AC_ME197.png",
-          ),
-        ],
-      ),
-    ];
-  }
-
-  MarketModel _createDummyMarket(
-    String region,
-    String marketName,
-    int index, {
-    List<String>? imageUrls,
-    List<MustTryItem>? mustTryItems,
-    String? address,
-  }) {
-    return MarketModel(
-      id: "${region}_market_$index",
-      name: marketName,
-      description:
-          "Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
-      imageUrls: imageUrls ??
-          [
-            "https://placehold.co/362x244",
-            "https://placehold.co/279x233",
-            "https://placehold.co/279x233",
-          ],
-      mustTryItems: mustTryItems ??
-          List.generate(
-            3,
-            (i) => MustTryItem(
-              id: "item_$i",
-              name: "Tteokbokki",
-              description: "시장 입구 근처 포장마차에서 파는 대표",
-              imageUrl: "https://placehold.co/117x77",
-            ),
-          ),
-      address: address ?? "더미 주소",
-      operatingHours: "영업시간과 휴무일이 들어감",
-      transportation: "더미 교통 정보",
-      parking: "더미 주차 정보",
-      restroom: "더미 화장실 정보",
-      mapImageUrl: "https://placehold.co/309x140",
-    );
+    // 현재는 지역 정보가 없으므로 시드 이름 매핑 → 없으면 균등 분배
+    _marketsByRegion = _assignMarketsByRegion(_markets);
+    return _marketsByRegion;
   }
 
   // 스크롤 컨트롤러
@@ -1002,6 +458,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
   @override
   void initState() {
     super.initState();
+    _trendBannerController = PageController(viewportFraction: 0.9);
     _loadData();
   }
 
@@ -1047,13 +504,18 @@ class _ExploreScreenState extends State<ExploreScreen> {
       // 4. 카테고리별 메뉴 조회 (기존)
       final categories = ["Meals", "Snacks", "Sweets", "Drink"];
       final foodsByCategory = <String, List<MenuItemModel>>{};
+      final menuIdToModel = <String, MenuItemModel>{};
       for (final category in categories) {
         try {
-          final menus = await _apiRepository.menuService.getMenuItems(
-            category: category,
-            limit: 20,
-          );
-          foodsByCategory[category] = menus;
+        final menus = await _apiRepository.menuService.getMenuItems(
+            category: _categoryParamForApi(category),
+          limit: 20,
+        );
+        foodsByCategory[category] = menus;
+          // 메뉴 ID로 매핑 (must try용)
+          for (final menu in menus) {
+            menuIdToModel[menu.id] = menu;
+          }
         } catch (e) {
           debugPrint("[Explore] getMenuItems error for $category: $e");
           foodsByCategory[category] = [];
@@ -1062,10 +524,13 @@ class _ExploreScreenState extends State<ExploreScreen> {
 
       if (mounted) {
         setState(() {
+          _menuIdToModel = menuIdToModel;
           _markets =
               markets.map((m) => _convertToMarketModel(m, locale)).toList();
+          _marketsByRegion = _assignMarketsByRegion(_markets);
           _savedBasedMenus = savedBased;
           _foodsByCategory = foodsByCategory;
+          _userLocale = locale;
           _isLoading = false;
         });
         debugPrint(
@@ -1140,7 +605,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
           (s) => MenuItemModel(
             id: s["id"]!,
             name: s["name"]!,
-            repImageUrl: _placeholderImage(s["name"]!, s["id"]!),
+            repImageUrl: null,
             description: "",
             category: "Meals",
             spiceLevel: 3,
@@ -1172,12 +637,48 @@ class _ExploreScreenState extends State<ExploreScreen> {
   MarketModel _convertToMarketModel(
       api_models.MarketModel apiMarket, String locale) {
     // API MarketModel을 화면용 MarketModel로 변환
+    final baseNameKo = apiMarket.name; // locale 비의존 (경로용)
+    final placeholders = List.generate(
+      3,
+      (i) => _marketPlaceholder(baseNameKo, apiMarket.id, variant: i + 1),
+    );
+    final imageUrls = (apiMarket.silhouetteUrl != null &&
+            apiMarket.silhouetteUrl!.isNotEmpty)
+        ? [
+            _toCdn(apiMarket.silhouetteUrl!),
+            ...placeholders.skip(1),
+          ]
+        : placeholders;
+
+    // Must try 메뉴 로드 (메뉴 ID 형식)
+    final mustTryIds = mustTryItemsByMarket[apiMarket.name] ?? [];
+    final mustTryItems = mustTryIds.map((menuId) {
+      final menuModel = _menuIdToModel[menuId];
+      if (menuModel == null) {
+        return MustTryItem(
+          id: menuId,
+          name: "",
+          description: "",
+          imageUrl: "",
+        );
+      }
+      final baseName = menuModel.name; // 한국어 원본 이름
+      final imageUrl = _placeholderImage(baseName, menuId, variant: 1);
+      final displayName = menuModel.getNameByLocale(locale);
+      return MustTryItem(
+        id: menuId,
+        name: displayName,
+        description: "",
+        imageUrl: imageUrl,
+      );
+    }).toList();
+
     return MarketModel(
       id: apiMarket.id,
       name: apiMarket.getNameByLocale(locale),
       description: apiMarket.getDescriptionByLocale(locale) ?? '',
-      imageUrls: [apiMarket.silhouetteUrl ?? 'https://placehold.co/362x244'],
-      mustTryItems: [], // TODO: Must eat 메뉴 조회 필요
+      imageUrls: imageUrls,
+      mustTryItems: mustTryItems,
       address: '', // TODO: MarketInfo에서 주소 가져오기
       operatingHours: '',
       transportation: '',
@@ -1272,14 +773,18 @@ class _ExploreScreenState extends State<ExploreScreen> {
     ResponsiveHelper responsive,
     TextTheme textTheme,
   ) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // 상단 컨텐츠 (제목, 필터) - 박스 없이
-        ResponsivePadding(
+    return ResponsivePadding(
           mobilePadding: 16,
           tabletPadding: 24,
           desktopPadding: 32,
+      child: Container(
+        decoration: BoxDecoration(
+          color: const Color(0xFFF8FAFC), // Figma 배경색
+          borderRadius: BorderRadius.circular(12),
+        ),
+        padding: EdgeInsets.all(
+          responsive.responsivePadding(mobilePadding: 16),
+        ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -1291,29 +796,21 @@ class _ExploreScreenState extends State<ExploreScreen> {
                     tabletSize: 18,
                     desktopSize: 20,
                   ),
+                fontWeight: FontWeight.w600, // Semi Bold
+                fontFamily: 'Inter',
                 ),
               ),
               const SizedBox(height: 12),
               _buildFilterChips(responsive, textTheme),
+            const SizedBox(height: 12),
+            // 국적/나이 기반 Top3 가로 스크롤
+            _buildNationalityAgeRow(responsive, textTheme),
+            const SizedBox(height: 12),
+            // 찜 기반 추천
+            _buildSavedBasedRow(responsive, textTheme),
             ],
           ),
         ),
-        // 국적/나이 기반 Top3 가로 스크롤
-        ResponsivePadding(
-          mobilePadding: 16,
-          tabletPadding: 24,
-          desktopPadding: 32,
-          child: _buildNationalityAgeRow(responsive, textTheme),
-        ),
-        const SizedBox(height: 12),
-        // 찜 기반 추천
-        ResponsivePadding(
-          mobilePadding: 16,
-          tabletPadding: 24,
-          desktopPadding: 32,
-          child: _buildSavedBasedRow(responsive, textTheme),
-        ),
-      ],
     );
   }
 
@@ -1345,14 +842,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
           // 필터 변경 시 배너 리셋
           currentTrendBannerIndex = 0;
         });
-        _loadTrendBanners();
-        if (_trendBannerController.hasClients) {
-          _trendBannerController.animateToPage(
-            0,
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOut,
-          );
-        }
+        _loadTrendBanners(); // 내부에서 animateToPage(0) 호출
       },
       isOpen: showCountryDropdown,
       onToggle: () {
@@ -1381,14 +871,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
           currentTrendBannerIndex = 0;
         });
         // 필터 변경 시 트렌드 배너 다시 로드
-        _loadTrendBanners();
-        if (_trendBannerController.hasClients) {
-          _trendBannerController.animateToPage(
-            0,
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOut,
-          );
-        }
+        _loadTrendBanners(); // 내부에서 animateToPage(0) 호출
       },
       isOpen: showAgeDropdown,
       onToggle: () {
@@ -1410,28 +893,144 @@ class _ExploreScreenState extends State<ExploreScreen> {
     final items = _nationalAgeMenus;
     if (items.isEmpty) return const SizedBox.shrink();
 
+    final screenWidth = responsive.width;
+    final horizontalPadding = responsive.responsivePadding(
+      mobilePadding: 16,
+      tabletPadding: 24,
+      desktopPadding: 32,
+    ) * 2;
+    final cardWidth = screenWidth - horizontalPadding;
+    final cardHeight = (cardWidth * 233.25) / 311; // Figma 비율 유지
+
     return SizedBox(
-      height: responsive.isMobile ? 180 : 200,
+      height: cardHeight,
       child: PageView.builder(
         itemCount: items.length,
-        controller: PageController(viewportFraction: 0.9),
+        controller: _trendBannerController,
         padEnds: true,
+        onPageChanged: (index) {
+          setState(() {
+            currentTrendBannerIndex = index;
+          });
+        },
         itemBuilder: (context, index) {
           final menu = items[index];
           return Padding(
             padding: EdgeInsets.symmetric(
               horizontal: responsive.responsivePadding(mobilePadding: 8),
             ),
-            child: _buildMenuCard(
+            child: _buildTrendMenuCard(
               responsive,
               textTheme,
               menu,
-              rank: null, // 순위/설명 비노출
-              hideDescription: true,
-              expandImage: true, // 이미지가 거의 찬 컨테이너 형태
+              cardWidth,
+              cardHeight,
             ),
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildTrendMenuCard(
+    ResponsiveHelper responsive,
+    TextTheme textTheme,
+    MenuItemModel menu,
+    double width,
+    double height,
+  ) {
+    return GestureDetector(
+      onTap: () {
+        final food = _convertMenuItemToFoodModel(menu);
+        context.push('/explore/food/${food.id}', extra: {'food': food});
+      },
+      child: Container(
+        width: width,
+        height: height,
+      decoration: BoxDecoration(
+        color: AppColors.imagePlaceholder,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Stack(
+        children: [
+            // 이미지
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Image.network(
+                _menuImageUrl(menu),
+                width: width,
+                height: height,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                return Container(
+                  width: width,
+                  height: height,
+                  color: AppColors.imagePlaceholder,
+                );
+              },
+            ),
+          ),
+          // 그라데이션 오버레이 (하단)
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              height: height * 0.38, // Figma 비율
+            decoration: BoxDecoration(
+                borderRadius: const BorderRadius.only(
+                  bottomLeft: Radius.circular(12),
+                  bottomRight: Radius.circular(12),
+                ),
+              gradient: LinearGradient(
+                  begin: Alignment.bottomCenter,
+                  end: Alignment.topCenter,
+                colors: [
+                    Colors.black.withOpacity(0.89),
+                    Colors.black.withOpacity(0.0),
+                ],
+              ),
+            ),
+          ),
+          ),
+          // 텍스트 오버레이
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: Padding(
+              padding: EdgeInsets.all(
+                responsive.responsivePadding(mobilePadding: 12),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    menu.name,
+                    style: TextStyle(
+                      fontSize: responsive.responsiveFontSize(mobileSize: 32),
+                      fontWeight: FontWeight.w500, // Medium
+                    color: Colors.white,
+                      fontFamily: 'Inter',
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    "지금 가장 많이 선택되고 있는 실시간 인기 메뉴예요.",
+                    style: TextStyle(
+                      fontSize: responsive.responsiveFontSize(mobileSize: 12),
+                      fontWeight: FontWeight.w500, // Medium
+                    color: Colors.white.withOpacity(0.9),
+                      fontFamily: 'Inter',
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+        ),
       ),
     );
   }
@@ -1454,6 +1053,8 @@ class _ExploreScreenState extends State<ExploreScreen> {
               tabletSize: 18,
               desktopSize: 20,
             ),
+            fontWeight: FontWeight.w500, // Medium
+            fontFamily: 'Inter',
           ),
         ),
         const SizedBox(height: 12),
@@ -1465,12 +1066,10 @@ class _ExploreScreenState extends State<ExploreScreen> {
                 padding: EdgeInsets.only(
                   right: isLast ? 0 : responsive.responsivePadding(mobilePadding: 10),
                 ),
-                child: _buildMenuCard(
+                child: _buildSmallMenuCard(
                   responsive,
                   textTheme,
                   menu,
-                  rank: null,
-                  hideDescription: true,
                 ),
               ),
             );
@@ -1480,139 +1079,70 @@ class _ExploreScreenState extends State<ExploreScreen> {
     );
   }
 
-  Widget _buildMenuCard(
+  Widget _buildSmallMenuCard(
     ResponsiveHelper responsive,
     TextTheme textTheme,
-    MenuItemModel menu, {
-    int? rank,
-    bool hideDescription = false,
-    bool expandImage = false,
-  }) {
-    final cardWidth = responsive.isMobile ? 240.0 : 280.0;
-    final cardHeight = responsive.isMobile ? 120.0 : 140.0;
-    return Container(
-      width: cardWidth,
-      height: cardHeight,
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          // 썸네일
-          Container(
-            width: expandImage ? (responsive.isMobile ? 140 : 160) : (responsive.isMobile ? 110 : 120),
-            height: cardHeight,
-            decoration: BoxDecoration(
-              color: AppColors.imagePlaceholder,
-              borderRadius: const BorderRadius.horizontal(
-                left: Radius.circular(12),
+    MenuItemModel menu,
+  ) {
+    return GestureDetector(
+      onTap: () {
+        final food = _convertMenuItemToFoodModel(menu);
+        context.push('/explore/food/${food.id}', extra: {'food': food});
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          children: [
+            // 이미지
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: AppColors.imagePlaceholder,
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(999),
+                child: Image.network(
+                  _menuImageUrl(menu),
+                  width: 40,
+                  height: 40,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Container(
+                      width: 40,
+                      height: 40,
+                      color: AppColors.imagePlaceholder,
+                    );
+                  },
+                ),
               ),
             ),
-            child: ClipRRect(
-              borderRadius: const BorderRadius.horizontal(
-                left: Radius.circular(12),
-              ),
-              child: Image.network(
-                _menuImageUrl(menu),
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    color: AppColors.imagePlaceholder,
-                    child: Icon(
-                      Icons.image,
-                      color: AppColors.inactiveText,
-                      size: responsive.responsiveIconSize(mobileSize: 28),
-                    ),
-                  );
-                },
+            const SizedBox(width: 8),
+            // 메뉴 이름
+            Expanded(
+              child: Text(
+                menu.name,
+                style: TextStyle(
+                  fontSize: responsive.responsiveFontSize(mobileSize: 12),
+                  fontWeight: FontWeight.w500, // Medium
+                  color: AppColors.mainText,
+                  fontFamily: 'Inter',
+                ),
               ),
             ),
-          ),
-          // 텍스트 영역
-          Expanded(
-            child: Padding(
-              padding: EdgeInsets.all(
-                responsive.responsivePadding(mobilePadding: 12),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Row(
-                    children: [
-                      if (rank != null)
-                        Container(
-                          width: 22,
-                          height: 22,
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            color: AppColors.primary,
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            "$rank",
-                            style: textTheme.bodySmall?.copyWith(
-                              color: AppColors.white,
-                              fontWeight: FontWeight.w700,
-                              fontSize:
-                                  responsive.responsiveFontSize(mobileSize: 11),
-                            ),
-                          ),
-                        ),
-                      if (rank != null)
-                        SizedBox(
-                          width: responsive.responsivePadding(mobilePadding: 8),
-                        ),
-                      Expanded(
-                        child: Text(
-                          menu.name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: textTheme.bodyMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                            fontSize:
-                                responsive.responsiveFontSize(mobileSize: 14),
-                            color: AppColors.mainText,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (!hideDescription) ...[
-                    const SizedBox(height: 6),
-                    Text(
-                      menu.description ?? "",
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: textTheme.bodySmall?.copyWith(
-                        fontSize: responsive.responsiveFontSize(mobileSize: 12),
-                        color: AppColors.inactiveText,
-                        height: 1.35,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
   String _menuImageUrl(MenuItemModel menu) {
-    if (menu.repImageUrl != null && menu.repImageUrl!.isNotEmpty) {
-      return _toCdn(menu.repImageUrl!);
-    }
-    return _placeholderImage(menu.name, menu.id);
+    // rep_image_url 미사용, 항상 placeholder variant 1
+    return _placeholderImage(menu.name, menu.id, variant: 1);
   }
 
   String _toCdn(String url) {
@@ -1634,15 +1164,22 @@ class _ExploreScreenState extends State<ExploreScreen> {
     if (url == null || url.isEmpty) {
       return fallback ?? _placeholderImage("떡볶이", "ME155");
     }
+    // rep_image_url 미사용이지만, 혹시 들어올 경우에도 CDN으로만 정규화
     return _toCdn(url);
   }
 
   String _placeholderImage(String name, String id, {int variant = 1}) {
     final encodedName = Uri.encodeComponent(name);
-    final clampedVariant = variant < 1
-        ? 1
-        : (variant > 3 ? 3 : variant); // 파일명은 1~3 변형만 존재
-    return "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Menu_all/${encodedName}/${encodedName}${clampedVariant}_${id}.png";
+    final clamped = variant < 1 ? 1 : (variant > 3 ? 3 : variant);
+    // 경로 규칙: placeholders/Menu_all/{name}/{name}{variant}_{id}.png
+    return "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Menu_all/${encodedName}/${encodedName}${clamped}_${id}.png";
+  }
+
+  String _marketPlaceholder(String name, String id, {int variant = 1}) {
+    final encodedName = Uri.encodeComponent(name);
+    final clamped = variant < 1 ? 1 : (variant > 3 ? 3 : variant);
+    return _toCdn(
+        "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%ED%83%90%EC%83%89_Discover+Sijang/${encodedName}${clamped}_${id}.png");
   }
 
   Widget _buildKoreanStreetFoodSection(
@@ -1662,6 +1199,8 @@ class _ExploreScreenState extends State<ExploreScreen> {
               tabletSize: 18,
               desktopSize: 20,
             ),
+            fontWeight: FontWeight.w600, // Semi Bold
+            fontFamily: 'Inter',
           ),
         ),
         const SizedBox(height: 12),
@@ -1707,9 +1246,10 @@ class _ExploreScreenState extends State<ExploreScreen> {
                 category,
                 style: textTheme.bodyMedium?.copyWith(
                   fontSize: responsive.responsiveFontSize(mobileSize: 13),
-                  fontWeight: FontWeight.w500,
+                  fontWeight: FontWeight.w500, // Thin
                   color:
                       isSelected ? AppColors.mainText : AppColors.inactiveText,
+                  fontFamily: 'Inter',
                 ),
               ),
             ),
@@ -1853,6 +1393,11 @@ class _ExploreScreenState extends State<ExploreScreen> {
     double cardWidth,
     double cardHeight,
   ) {
+    final primaryImage = (food.imageUrls.isNotEmpty ? food.imageUrls.first : food.imageUrl);
+    final imageUrl = (primaryImage.isNotEmpty)
+        ? primaryImage
+        : _placeholderImage(food.baseName, food.id);
+
     return GestureDetector(
       onTap: () {
         context.push(
@@ -1872,7 +1417,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
             ClipRRect(
               borderRadius: BorderRadius.circular(6),
               child: Image.network(
-                _resolveImage(food.imageUrl),
+                _resolveImage(imageUrl, fallback: _placeholderImage(food.baseName, food.id)),
                 width: cardWidth,
                 height: cardHeight,
                 fit: BoxFit.cover,
@@ -1901,8 +1446,9 @@ class _ExploreScreenState extends State<ExploreScreen> {
                   food.name,
                   style: TextStyle(
                     fontSize: responsive.responsiveFontSize(mobileSize: 11),
-                    fontWeight: FontWeight.w500,
+                    fontWeight: FontWeight.w500, // Thin
                     color: Colors.white,
+                    fontFamily: 'Inter',
                   ),
                 ),
               ),
@@ -1930,6 +1476,8 @@ class _ExploreScreenState extends State<ExploreScreen> {
               tabletSize: 18,
               desktopSize: 20,
             ),
+            fontWeight: FontWeight.w600, // Semi Bold
+            fontFamily: 'Inter',
           ),
         ),
         const SizedBox(height: 12),
@@ -1974,9 +1522,10 @@ class _ExploreScreenState extends State<ExploreScreen> {
                 region,
                 style: textTheme.bodyMedium?.copyWith(
                   fontSize: responsive.responsiveFontSize(mobileSize: 13),
-                  fontWeight: FontWeight.w500,
+                  fontWeight: FontWeight.w500, // Medium
                   color:
                       isSelected ? AppColors.mainText : AppColors.inactiveText,
+                  fontFamily: 'Inter',
                 ),
               ),
             ),
@@ -2073,6 +1622,8 @@ class _ExploreScreenState extends State<ExploreScreen> {
     double cardWidth,
     double cardHeight,
   ) {
+    final firstImage =
+        market.imageUrls.isNotEmpty ? market.imageUrls.first : _marketPlaceholder(market.name, market.id, variant: 1);
     return GestureDetector(
       onTap: () {
         context.push(
@@ -2092,10 +1643,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
             ClipRRect(
               borderRadius: BorderRadius.circular(6),
               child: Image.network(
-                _resolveImage(
-                  market.imageUrls.isNotEmpty ? market.imageUrls[0] : null,
-                  fallback: _placeholderImage("김밥", "ME012"),
-                ),
+                _resolveImage(firstImage, fallback: firstImage),
                 width: double.infinity,
                 height: cardHeight,
                 fit: BoxFit.cover,
@@ -2124,8 +1672,9 @@ class _ExploreScreenState extends State<ExploreScreen> {
                   market.name,
                   style: TextStyle(
                     fontSize: responsive.responsiveFontSize(mobileSize: 11),
-                    fontWeight: FontWeight.w500,
+                    fontWeight: FontWeight.w500, // Thin
                     color: Colors.white,
+                    fontFamily: 'Inter',
                   ),
                 ),
               ),

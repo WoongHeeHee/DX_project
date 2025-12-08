@@ -35,12 +35,12 @@ class _SearchResultScreenState extends State<SearchResultScreen> {
             padding: EdgeInsets.all(
               responsive.responsivePadding(mobilePadding: 16),
             ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.start,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildHeader(responsive, textTheme),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildHeader(responsive, textTheme),
                 SizedBox(height: responsive.responsivePadding(mobilePadding: 8)),
                 Container(
                   width: double.infinity,
@@ -56,32 +56,32 @@ class _SearchResultScreenState extends State<SearchResultScreen> {
                     ],
                   ),
                   child: ResponsivePadding(
-                    mobilePadding: 16,
-                    tabletPadding: 24,
-                    desktopPadding: 32,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      mainAxisAlignment: MainAxisAlignment.start,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
+                mobilePadding: 16,
+                tabletPadding: 24,
+                desktopPadding: 32,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
                         const SizedBox(height: 12),
-                        _buildTitle(responsive, textTheme),
+                    _buildTitle(responsive, textTheme),
                         const SizedBox(height: 16),
-                        _buildImageSection(responsive, textTheme),
+                    _buildImageSection(responsive, textTheme),
                         const SizedBox(height: 16),
-                        _buildMenuNameAndFavorite(responsive, textTheme),
-                        const SizedBox(height: 4),
-                        _buildDescription(responsive, textTheme),
+                    _buildMenuNameAndFavorite(responsive, textTheme),
+                    const SizedBox(height: 4),
+                    _buildDescription(responsive, textTheme),
                         const SizedBox(height: 16),
-                        _buildNearestMarketButton(responsive, textTheme),
-                        SizedBox(
+                    _buildNearestMarketButton(responsive, textTheme),
+                    SizedBox(
                           height: responsive.responsivePadding(mobilePadding: 16),
-                        ),
-                      ],
                     ),
-                  ),
+                  ],
+                    ),
                 ),
-              ],
+              ),
+            ],
             ),
           ),
         ),
