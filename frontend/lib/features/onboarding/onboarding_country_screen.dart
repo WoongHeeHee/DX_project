@@ -45,7 +45,7 @@ class _OnboardingCountryScreenState extends State<OnboardingCountryScreen> {
     CountryFilter(
       id: "country_kr",
       name: "한국",
-      flagImageUrl: null,
+      flagImageUrl: "assets/images/KR.gif",
     ),
     CountryFilter(
       id: "country_th",
