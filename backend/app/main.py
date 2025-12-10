@@ -2,9 +2,10 @@
 시장 탐방 서비스 FastAPI 메인 애플리케이션
 """
 
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 import uvicorn
 import logging
 
@@ -24,6 +25,34 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc"
 )
+
+# Cloudflare 터널을 통한 HTTPS 요청을 올바르게 처리하기 위한 미들웨어
+@app.middleware("http")
+async def trust_proxy_headers(request: Request, call_next):
+    """프록시(Cloudflare) 헤더를 신뢰하여 HTTPS 요청을 올바르게 처리"""
+    # Cloudflare 터널을 통해 들어온 요청의 경우, X-Forwarded-Proto 헤더를 확인
+    forwarded_proto = request.headers.get("X-Forwarded-Proto", "")
+    forwarded_host = request.headers.get("X-Forwarded-Host", "")
+    
+    # HTTPS 요청인 경우 URL을 HTTPS로 설정
+    if forwarded_proto == "https" or forwarded_proto == "http" and forwarded_host:
+        # 요청 URL을 업데이트하여 HTTPS를 유지
+        if hasattr(request, 'url') and request.url.scheme == "http":
+            # URL 객체는 불변이므로, 새로운 URL을 생성하여 사용
+            # 실제로는 응답 헤더에서 처리
+            pass
+    
+    response = await call_next(request)
+    
+    # HTTPS 요청인 경우 Location 헤더를 HTTPS로 변환
+    if forwarded_proto == "https":
+        location = response.headers.get("Location")
+        if location and location.startswith("http://"):
+            # HTTP 리다이렉트를 HTTPS로 변환
+            response.headers["Location"] = location.replace("http://", "https://", 1)
+            logger.info(f"리다이렉트 URL을 HTTPS로 변환: {location} -> {response.headers['Location']}")
+    
+    return response
 
 # CORS 설정
 allowed_origins = settings.get_allowed_origins_list()

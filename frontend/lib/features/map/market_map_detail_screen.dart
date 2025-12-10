@@ -413,21 +413,21 @@ class _MarketMapDetailScreenState extends State<MarketMapDetailScreen> {
           name: "꼬마김밥",
           description: "",
           imageUrl:
-              "https://market-explorer-photos.s3.ap-southeast-2.amazonaws.com/placeholders/Market_all/%EC%A7%80%EB%8F%84_Musteat-%ED%83%90%EC%83%89_Musteat/%EA%B4%91%EC%9E%A5%EC%8B%9C%EC%9E%A5_%EA%BC%AC%EB%A7%88%EA%B9%80%EB%B0%A5_ME016.png",
+              "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%EC%A7%80%EB%8F%84_Musteat-%ED%83%90%EC%83%89_Musteat/%EA%B4%91%EC%9E%A5%EC%8B%9C%EC%9E%A5_%EA%BC%AC%EB%A7%88%EA%B9%80%EB%B0%A5_ME016.png",
         ),
         MustTryItem(
           id: "2",
           name: "빈대떡",
           description: "",
           imageUrl:
-              "https://market-explorer-photos.s3.ap-southeast-2.amazonaws.com/placeholders/Market_all/%EC%A7%80%EB%8F%84_Musteat-%ED%83%90%EC%83%89_Musteat/%EA%B4%91%EC%9E%A5%EC%8B%9C%EC%9E%A5_%E1%84%87%E1%85%B5%E1%86%AB%E1%84%83%E1%85%A2%E1%84%84%E1%85%A5%E1%86%A8_ME175.png",
+              "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%EC%A7%80%EB%8F%84_Musteat-%ED%83%90%EC%83%89_Musteat/%EA%B4%91%EC%9E%A5%EC%8B%9C%EC%9E%A5_%E1%84%87%E1%85%B5%E1%86%AB%E1%84%83%E1%85%A2%E1%84%84%E1%85%A5%E1%86%A8_ME175.png",
         ),
         MustTryItem(
           id: "3",
           name: "육회",
           description: "",
           imageUrl:
-              "https://market-explorer-photos.s3.ap-southeast-2.amazonaws.com/placeholders/Market_all/%EC%A7%80%EB%8F%84_Musteat-%ED%83%90%EC%83%89_Musteat/%EA%B4%91%EC%9E%A5%EC%8B%9C%EC%9E%A5_%E1%84%8B%E1%85%B2%E1%86%A8%E1%84%92%E1%85%AC_ME197.png",
+              "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%EC%A7%80%EB%8F%84_Musteat-%ED%83%90%EC%83%89_Musteat/%EA%B4%91%EC%9E%A5%EC%8B%9C%EC%9E%A5_%E1%84%8B%E1%85%B2%E1%86%A8%E1%84%92%E1%85%AC_ME197.png",
         ),
       ];
     } else if (marketName.contains("망원")) {
@@ -437,21 +437,21 @@ class _MarketMapDetailScreenState extends State<MarketMapDetailScreen> {
           name: "떡볶이",
           description: "",
           imageUrl:
-              "https://market-explorer-photos.s3.ap-southeast-2.amazonaws.com/placeholders/Market_all/%EC%A7%80%EB%8F%84_Musteat-%ED%83%90%EC%83%89_Musteat/%EB%A7%9D%EC%9B%90%EC%8B%9C%EC%9E%A5_%E1%84%84%E1%85%A5%E1%86%A8%E1%84%87%E1%85%A9%E1%86%A9%E1%84%8B%E1%85%B5_ME155.png",
+              "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%EC%A7%80%EB%8F%84_Musteat-%ED%83%90%EC%83%89_Musteat/%EB%A7%9D%EC%9B%90%EC%8B%9C%EC%9E%A5_%E1%84%84%E1%85%A5%E1%86%A8%E1%84%87%E1%85%A9%E1%86%A9%E1%84%8B%E1%85%B5_ME155.png",
         ),
         MustTryItem(
           id: "2",
           name: "닭강정",
           description: "",
           imageUrl:
-              "https://market-explorer-photos.s3.ap-southeast-2.amazonaws.com/placeholders/Market_all/%EC%A7%80%EB%8F%84_Musteat-%ED%83%90%EC%83%89_Musteat/%EB%A7%9D%EC%9B%90%EC%8B%9C%EC%9E%A5_%E1%84%83%E1%85%A1%E1%86%B0%E1%84%80%E1%85%A1%E1%86%BC%E1%84%8C%E1%85%A5%E1%86%BC_ME148.png",
+              "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%EC%A7%80%EB%8F%84_Musteat-%ED%83%90%EC%83%89_Musteat/%EB%A7%9D%EC%9B%90%EC%8B%9C%EC%9E%A5_%E1%84%83%E1%85%A1%E1%86%B0%E1%84%80%E1%85%A1%E1%86%BC%E1%84%8C%E1%85%A5%E1%86%BC_ME148.png",
         ),
         MustTryItem(
           id: "3",
           name: "구운옥수수",
           description: "",
           imageUrl:
-              "https://market-explorer-photos.s3.ap-southeast-2.amazonaws.com/placeholders/Market_all/%EC%A7%80%EB%8F%84_Musteat-%ED%83%90%EC%83%89_Musteat/%EB%A7%9D%EC%9B%90%EC%8B%9C%EC%9E%A5_%E1%84%80%E1%85%AE%E1%84%8B%E1%85%AE%E1%86%AB%E1%84%8B%E1%85%A9%E1%86%A8%E1%84%89%E1%85%AE%E1%84%89%E1%85%AE_ME131.png",
+              "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%EC%A7%80%EB%8F%84_Musteat-%ED%83%90%EC%83%89_Musteat/%EB%A7%9D%EC%9B%90%EC%8B%9C%EC%9E%A5_%E1%84%80%E1%85%AE%E1%84%8B%E1%85%AE%E1%86%AB%E1%84%8B%E1%85%A9%E1%86%A8%E1%84%89%E1%85%AE%E1%84%89%E1%85%AE_ME131.png",
         ),
       ];
     } else if (marketName.contains("통인")) {
@@ -461,21 +461,21 @@ class _MarketMapDetailScreenState extends State<MarketMapDetailScreen> {
           name: "기름떡볶이",
           description: "",
           imageUrl:
-              "https://market-explorer-photos.s3.ap-southeast-2.amazonaws.com/placeholders/Market_all/%EC%A7%80%EB%8F%84_Musteat-%ED%83%90%EC%83%89_Musteat/%ED%86%B5%EC%9D%B8%EC%8B%9C%EC%9E%A5_%E1%84%80%E1%85%B5%E1%84%85%E1%85%B3%E1%86%B7%E1%84%84%E1%85%A5%E1%86%A8%E1%84%87%E1%85%A9%E1%86%A9%E1%84%8B%E1%85%B5_ME134.png",
+              "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%EC%A7%80%EB%8F%84_Musteat-%ED%83%90%EC%83%89_Musteat/%ED%86%B5%EC%9D%B8%EC%8B%9C%EC%9E%A5_%E1%84%80%E1%85%B5%E1%84%85%E1%85%B3%E1%86%B7%E1%84%84%E1%85%A5%E1%86%A8%E1%84%87%E1%85%A9%E1%86%A9%E1%84%8B%E1%85%B5_ME134.png",
         ),
         MustTryItem(
           id: "2",
           name: "닭꼬치",
           description: "",
           imageUrl:
-              "https://market-explorer-photos.s3.ap-southeast-2.amazonaws.com/placeholders/Market_all/%EC%A7%80%EB%8F%84_Musteat-%ED%83%90%EC%83%89_Musteat/%ED%86%B5%EC%9D%B8%EC%8B%9C%EC%9E%A5_%E1%84%83%E1%85%A1%E1%86%B0%E1%84%81%E1%85%A9%E1%84%8E%E1%85%B5_ME149.png",
+              "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%EC%A7%80%EB%8F%84_Musteat-%ED%83%90%EC%83%89_Musteat/%ED%86%B5%EC%9D%B8%EC%8B%9C%EC%9E%A5_%E1%84%83%E1%85%A1%E1%86%B0%E1%84%81%E1%85%A9%E1%84%8E%E1%85%B5_ME149.png",
         ),
         MustTryItem(
           id: "3",
           name: "모둠전",
           description: "",
           imageUrl:
-              "https://market-explorer-photos.s3.ap-southeast-2.amazonaws.com/placeholders/Market_all/%EC%A7%80%EB%8F%84_Musteat-%ED%83%90%EC%83%89_Musteat/%ED%86%B5%EC%9D%B8%EC%8B%9C%EC%9E%A5_%E1%84%86%E1%85%A9%E1%84%83%E1%85%AE%E1%86%B7%E1%84%8C%E1%85%A5%E1%86%AB_ME166.png",
+              "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%EC%A7%80%EB%8F%84_Musteat-%ED%83%90%EC%83%89_Musteat/%ED%86%B5%EC%9D%B8%EC%8B%9C%EC%9E%A5_%E1%84%86%E1%85%A9%E1%84%83%E1%85%AE%E1%86%B7%E1%84%8C%E1%85%A5%E1%86%AB_ME166.png",
         ),
       ];
     } else if (marketName.contains("서울풍물") || marketName.contains("풍물")) {
@@ -485,21 +485,21 @@ class _MarketMapDetailScreenState extends State<MarketMapDetailScreen> {
           name: "녹두전",
           description: "",
           imageUrl:
-              "https://market-explorer-photos.s3.ap-southeast-2.amazonaws.com/placeholders/Market_all/%EC%A7%80%EB%8F%84_Musteat-%ED%83%90%EC%83%89_Musteat/%EC%84%9C%EC%9A%B8%ED%92%8D%EB%AC%BC%EC%8B%9C%EC%9E%A5_%E1%84%82%E1%85%A9%E1%86%A8%E1%84%83%E1%85%AE%E1%84%8C%E1%85%A5%E1%86%AB_ME147.png",
+              "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%EC%A7%80%EB%8F%84_Musteat-%ED%83%90%EC%83%89_Musteat/%EC%84%9C%EC%9A%B8%ED%92%8D%EB%AC%BC%EC%8B%9C%EC%9E%A5_%E1%84%82%E1%85%A9%E1%86%A8%E1%84%83%E1%85%AE%E1%84%8C%E1%85%A5%E1%86%AB_ME147.png",
         ),
         MustTryItem(
           id: "2",
           name: "소머리국밥",
           description: "",
           imageUrl:
-              "https://market-explorer-photos.s3.ap-southeast-2.amazonaws.com/placeholders/Market_all/%EC%A7%80%EB%8F%84_Musteat-%ED%83%90%EC%83%89_Musteat/%EC%84%9C%EC%9A%B8%ED%92%8D%EB%AC%BC%EC%8B%9C%EC%9E%A5_%E1%84%89%E1%85%A9%E1%84%86%E1%85%A5%E1%84%85%E1%85%B5%E1%84%80%E1%85%AE%E1%86%A8%E1%84%87%E1%85%A1%E1%86%B8_ME343.png",
+              "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%EC%A7%80%EB%8F%84_Musteat-%ED%83%90%EC%83%89_Musteat/%EC%84%9C%EC%9A%B8%ED%92%8D%EB%AC%BC%EC%8B%9C%EC%9E%A5_%E1%84%89%E1%85%A9%E1%84%86%E1%85%A5%E1%84%85%E1%85%B5%E1%84%80%E1%85%AE%E1%86%A8%E1%84%87%E1%85%A1%E1%86%B8_ME343.png",
         ),
         MustTryItem(
           id: "3",
           name: "호떡",
           description: "",
           imageUrl:
-              "https://market-explorer-photos.s3.ap-southeast-2.amazonaws.com/placeholders/Market_all/%EC%A7%80%EB%8F%84_Musteat-%ED%83%90%EC%83%89_Musteat/%EC%84%9C%EC%9A%B8%ED%92%8D%EB%AC%BC%EC%8B%9C%EC%9E%A5_%E1%84%92%E1%85%A9%E1%84%84%E1%85%A5%E1%86%A8_ME299.png",
+              "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%EC%A7%80%EB%8F%84_Musteat-%ED%83%90%EC%83%89_Musteat/%EC%84%9C%EC%9A%B8%ED%92%8D%EB%AC%BC%EC%8B%9C%EC%9E%A5_%E1%84%92%E1%85%A9%E1%84%84%E1%85%A5%E1%86%A8_ME299.png",
         ),
       ];
     }
@@ -511,21 +511,21 @@ class _MarketMapDetailScreenState extends State<MarketMapDetailScreen> {
         name: "꼬마김밥",
         description: "",
         imageUrl:
-            "https://market-explorer-photos.s3.ap-southeast-2.amazonaws.com/placeholders/Market_all/%EC%A7%80%EB%8F%84_Musteat-%ED%83%90%EC%83%89_Musteat/%EA%B4%91%EC%9E%A5%EC%8B%9C%EC%9E%A5_%EA%BC%AC%EB%A7%88%EA%B9%80%EB%B0%A5_ME016.png",
+            "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%EC%A7%80%EB%8F%84_Musteat-%ED%83%90%EC%83%89_Musteat/%EA%B4%91%EC%9E%A5%EC%8B%9C%EC%9E%A5_%EA%BC%AC%EB%A7%88%EA%B9%80%EB%B0%A5_ME016.png",
       ),
       MustTryItem(
         id: "2",
         name: "빈대떡",
         description: "",
         imageUrl:
-            "https://market-explorer-photos.s3.ap-southeast-2.amazonaws.com/placeholders/Market_all/%EC%A7%80%EB%8F%84_Musteat-%ED%83%90%EC%83%89_Musteat/%EA%B4%91%EC%9E%A5%EC%8B%9C%EC%9E%A5_%E1%84%87%E1%85%B5%E1%86%AB%E1%84%83%E1%85%A2%E1%84%84%E1%85%A5%E1%86%A8_ME175.png",
+            "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%EC%A7%80%EB%8F%84_Musteat-%ED%83%90%EC%83%89_Musteat/%EA%B4%91%EC%9E%A5%EC%8B%9C%EC%9E%A5_%E1%84%87%E1%85%B5%E1%86%AB%E1%84%83%E1%85%A2%E1%84%84%E1%85%A5%E1%86%A8_ME175.png",
       ),
       MustTryItem(
         id: "3",
         name: "육회",
         description: "",
         imageUrl:
-            "https://market-explorer-photos.s3.ap-southeast-2.amazonaws.com/placeholders/Market_all/%EC%A7%80%EB%8F%84_Musteat-%ED%83%90%EC%83%89_Musteat/%EA%B4%91%EC%9E%A5%EC%8B%9C%EC%9E%A5_%E1%84%8B%E1%85%B2%E1%86%A8%E1%84%92%E1%85%AC_ME197.png",
+            "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%EC%A7%80%EB%8F%84_Musteat-%ED%83%90%EC%83%89_Musteat/%EA%B4%91%EC%9E%A5%EC%8B%9C%EC%9E%A5_%E1%84%8B%E1%85%B2%E1%86%A8%E1%84%92%E1%85%AC_ME197.png",
       ),
     ];
   }

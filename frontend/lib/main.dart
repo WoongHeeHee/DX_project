@@ -65,9 +65,10 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 서비스 인스턴스 생성
-    final apiService = ApiService();
-    final authService = AuthService(apiService);
+    // ApiRepository에서 서비스 인스턴스 가져오기 (중복 생성 방지)
+    final apiRepository = ApiRepository();
+    final apiService = apiRepository.apiService;
+    final authService = apiRepository.authService;
 
     // 라우터 생성
     final router = AppRouter(authService: authService).router;

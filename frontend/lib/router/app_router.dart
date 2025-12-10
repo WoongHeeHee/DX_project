@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
+import 'dart:html' as html if (dart.library.html) 'dart:html';
 import '../features/auth/login_screen.dart';
 import '../features/auth/auth_callback_screen.dart';
 import '../features/onboarding/onboarding_language_screen.dart';
@@ -312,34 +313,77 @@ class AppRouter {
       if (state.uri.path == '/auth/callback') {
         return null;
       }
-      
+
       // 인증 및 온보딩 체크는 각 화면에서 처리
       return null;
     },
-    
+
     // 에러 핸들러: 라우트를 찾을 수 없는 경우 처리
     errorBuilder: (context, state) {
       debugPrint('=== GoRouter 에러: 경로를 찾을 수 없음 ===');
       debugPrint('전체 URI: ${state.uri}');
       debugPrint('Path: ${state.uri.path}');
       debugPrint('Query: ${state.uri.query}');
-      debugPrint('Fragment: ${state.uri.fragment.isNotEmpty ? state.uri.fragment.substring(0, 100) + "..." : "없음"}');
-      
+      debugPrint(
+          'Fragment: ${state.uri.fragment.isNotEmpty ? state.uri.fragment.substring(0, 100) + "..." : "없음"}');
+
+      // 웹 환경에서 window.location을 직접 확인 (GoRouter가 프래그먼트를 제대로 파싱하지 못할 수 있음)
+      if (kIsWeb) {
+        try {
+          final windowLocation = html.window.location;
+          final windowHash = windowLocation.hash;
+
+          debugPrint('window.location.href: ${windowLocation.href}');
+          debugPrint(
+              'window.location.hash: ${windowHash.isNotEmpty ? windowHash.substring(0, 100) + "..." : "없음"}');
+
+          // 프래그먼트에 id_token이 있는 경우 (정상적인 OAuth 응답)
+          if (windowHash.isNotEmpty && windowHash.contains('id_token=')) {
+            debugPrint(
+                '✅ window.location.hash에서 id_token 발견, /auth/callback으로 리디렉션');
+            // 프래그먼트를 포함한 올바른 URI로 리디렉션
+            final callbackUri = Uri(
+              path: '/auth/callback',
+              fragment: windowHash.startsWith('#')
+                  ? windowHash.substring(1)
+                  : windowHash,
+            );
+            return AuthCallbackScreen(uri: callbackUri);
+          }
+        } catch (e) {
+          debugPrint('window.location 확인 실패: $e');
+        }
+      }
+
+      // state.uri의 프래그먼트에 id_token이 있는 경우
+      if (state.uri.fragment.isNotEmpty &&
+          state.uri.fragment.contains('id_token=')) {
+        debugPrint('✅ state.uri.fragment에서 id_token 발견, /auth/callback으로 리디렉션');
+        final callbackUri = Uri(
+          path: '/auth/callback',
+          fragment: state.uri.fragment,
+        );
+        return AuthCallbackScreen(uri: callbackUri);
+      }
+
       // id_token이 경로에 포함된 경우 (잘못된 redirect) - Google Cloud Console 설정 문제
-      if (state.uri.path.contains('id_token') || state.uri.path.startsWith('id_token')) {
+      if (state.uri.path.contains('id_token') ||
+          state.uri.path.startsWith('id_token')) {
         debugPrint('⚠️ 경고: id_token이 경로로 인식되었습니다.');
         debugPrint('⚠️ Google Cloud Console의 redirect URI 설정을 확인하세요.');
-        debugPrint('⚠️ 올바른 설정: http://localhost:50000/auth/callback');
-        
+        debugPrint('⚠️ 올바른 설정: https://sijanggo.com/auth/callback');
+
         // id_token을 추출하여 /auth/callback으로 리디렉션 시도
         final pathParts = state.uri.path.split('id_token=');
         if (pathParts.length > 1) {
           final idTokenPart = pathParts[1].split('&')[0].split('#')[0];
-          debugPrint('⚠️ 경로에서 id_token 추출 시도: ${idTokenPart.substring(0, 20)}...');
-          return AuthCallbackScreen(uri: Uri.parse('/auth/callback?id_token=$idTokenPart'));
+          debugPrint(
+              '⚠️ 경로에서 id_token 추출 시도: ${idTokenPart.substring(0, 20)}...');
+          return AuthCallbackScreen(
+              uri: Uri.parse('/auth/callback?id_token=$idTokenPart'));
         }
       }
-      
+
       // 기본 에러 화면
       return Scaffold(
         body: Center(
@@ -348,9 +392,11 @@ class AppRouter {
             children: [
               const Icon(Icons.error_outline, size: 64, color: Colors.red),
               const SizedBox(height: 16),
-              Text('페이지를 찾을 수 없습니다', style: Theme.of(context).textTheme.headlineSmall),
+              Text('페이지를 찾을 수 없습니다',
+                  style: Theme.of(context).textTheme.headlineSmall),
               const SizedBox(height: 8),
-              Text('경로: ${state.uri.path}', style: Theme.of(context).textTheme.bodyMedium),
+              Text('경로: ${state.uri.path}',
+                  style: Theme.of(context).textTheme.bodyMedium),
               const SizedBox(height: 24),
               ElevatedButton(
                 onPressed: () => context.go('/login'),
@@ -363,4 +409,3 @@ class AppRouter {
     },
   );
 }
-

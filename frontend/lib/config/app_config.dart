@@ -14,24 +14,27 @@ class AppConfig {
       try {
         final mobileUrl = dotenv.env['MOBILE_API_BASE_URL'];
         if (mobileUrl != null && mobileUrl.isNotEmpty) {
-          debugPrint('모바일 환경 - .env에서 MOBILE_API_BASE_URL 사용: $mobileUrl');
+          debugPrint('[AppConfig] 모바일 환경 - .env에서 MOBILE_API_BASE_URL 사용: $mobileUrl');
           return mobileUrl;
         }
       } catch (e) {
-        debugPrint('dotenv에서 MOBILE_API_BASE_URL 읽기 실패: $e');
+        debugPrint('[AppConfig] dotenv에서 MOBILE_API_BASE_URL 읽기 실패: $e');
       }
       
       // .env에 없으면 하드코딩된 IP 사용 (fallback)
-      debugPrint('모바일 환경 - 하드코딩된 서버 IP 사용: http://192.168.0.149:8000');
+      debugPrint('[AppConfig] 모바일 환경 - 하드코딩된 서버 IP 사용: http://192.168.0.149:8000');
       return 'http://192.168.0.149:8000';
     }
     
     // 웹 환경: window.ENV를 먼저 확인
     if (kIsWeb) {
+      debugPrint('[AppConfig] 웹 환경 감지됨 - window.ENV 확인 중...');
       final webApiUrl = WebEnvHelper.getApiBaseUrl();
       if (webApiUrl != null && webApiUrl.isNotEmpty) {
-        debugPrint('웹 환경 - window.ENV에서 API_BASE_URL 사용: $webApiUrl');
+        debugPrint('[AppConfig] ✅ 웹 환경 - window.ENV에서 API_BASE_URL 사용: $webApiUrl');
         return webApiUrl;
+      } else {
+        debugPrint('[AppConfig] ⚠️ 웹 환경 - window.ENV에서 API_BASE_URL을 찾을 수 없습니다.');
       }
     }
     
@@ -39,14 +42,20 @@ class AppConfig {
     try {
       final envUrl = dotenv.env['API_BASE_URL'];
       if (envUrl != null && envUrl.isNotEmpty) {
-        debugPrint('데스크톱/웹 환경 - .env에서 API_BASE_URL 사용: $envUrl');
+        debugPrint('[AppConfig] 데스크톱/웹 환경 - .env에서 API_BASE_URL 사용: $envUrl');
         return envUrl;
       }
     } catch (e) {
-      debugPrint('dotenv에서 API_BASE_URL 읽기 실패: $e');
+      debugPrint('[AppConfig] dotenv에서 API_BASE_URL 읽기 실패: $e');
     }
     
-    debugPrint('기본값 사용: http://localhost:8000');
+    // 웹 환경에서 window.ENV가 없을 때 경고
+    if (kIsWeb) {
+      debugPrint('[AppConfig] ⚠️ 웹 환경에서 window.ENV.API_BASE_URL을 찾을 수 없어 기본값 사용');
+      debugPrint('[AppConfig] 💡 index.html의 스크립트가 올바르게 실행되었는지 브라우저 콘솔에서 확인하세요.');
+    }
+    
+    debugPrint('[AppConfig] 기본값 사용: http://localhost:8000');
     return 'http://localhost:8000'; // 데스크톱/웹 기본값
   }
   static int get apiTimeout {

@@ -46,7 +46,9 @@ class AuthService {
       );
 
       // 응답 상태 코드 확인
-      if (response.statusCode == null || response.statusCode! < 200 || response.statusCode! >= 300) {
+      if (response.statusCode == null ||
+          response.statusCode! < 200 ||
+          response.statusCode! >= 300) {
         throw Exception('서버 응답 오류: 상태 코드 ${response.statusCode}');
       }
 
@@ -54,7 +56,7 @@ class AuthService {
       debugPrint('Google 로그인 응답 상태 코드: ${response.statusCode}');
       debugPrint('Google 로그인 응답 데이터 타입: ${response.data.runtimeType}');
       debugPrint('Google 로그인 응답 데이터: ${response.data}');
-      
+
       if (response.data == null) {
         throw Exception('서버 응답이 비어있습니다.');
       }
@@ -67,17 +69,41 @@ class AuthService {
         // JSON 문자열인 경우 파싱 시도
         throw Exception('응답이 JSON 문자열입니다. 서버 설정을 확인하세요: ${response.data}');
       } else {
-        throw Exception('예상치 못한 응답 형식: ${response.data.runtimeType}, 데이터: ${response.data}');
+        throw Exception(
+            '예상치 못한 응답 형식: ${response.data.runtimeType}, 데이터: ${response.data}');
       }
 
       debugPrint('파싱할 데이터: $responseData');
-      debugPrint('access_token 키 존재 여부: ${responseData.containsKey("access_token")}');
+      debugPrint(
+          'access_token 키 존재 여부: ${responseData.containsKey("access_token")}');
       debugPrint('모든 키: ${responseData.keys.toList()}');
-      
-      final tokenData = TokenResponse.fromJson(responseData);
-      await _apiService.setAuthToken(tokenData.accessToken);
 
-      return tokenData;
+      // 응답 데이터 검증
+      if (!responseData.containsKey('access_token')) {
+        debugPrint('⚠️ 백엔드 응답에 access_token이 없습니다!');
+        debugPrint('응답 구조:');
+        responseData.forEach((key, value) {
+          final valueStr = value.toString();
+          final preview = valueStr.length > 100
+              ? '${valueStr.substring(0, 100)}...'
+              : valueStr;
+          debugPrint('  - $key (${value.runtimeType}): $preview');
+        });
+        throw Exception(
+            '백엔드 응답에 access_token이 없습니다. 응답 키: ${responseData.keys.toList()}, 전체 응답: $responseData');
+      }
+
+      try {
+        final tokenData = TokenResponse.fromJson(responseData);
+        await _apiService.setAuthToken(tokenData.accessToken);
+        debugPrint('✅ 토큰 파싱 및 저장 성공');
+        return tokenData;
+      } catch (e, stackTrace) {
+        debugPrint('❌ TokenResponse.fromJson 실패: $e');
+        debugPrint('스택 트레이스: $stackTrace');
+        debugPrint('응답 데이터: $responseData');
+        rethrow;
+      }
     } catch (e, stackTrace) {
       debugPrint('Google 로그인 처리 오류: $e');
       debugPrint('스택 트레이스: $stackTrace');
@@ -104,4 +130,3 @@ class AuthService {
     await _apiService.logout();
   }
 }
-
