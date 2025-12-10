@@ -416,6 +416,11 @@ class _ExploreScreenState extends State<ExploreScreen> {
       name: "몽골",
       flagImageUrl: "assets/images/MN.gif",
     ),
+    CountryFilter(
+      id: "country_other",
+      name: "기타",
+      flagImageUrl: null,
+    ),
   ];
 
   // 연령 리스트
@@ -471,7 +476,12 @@ class _ExploreScreenState extends State<ExploreScreen> {
     try {
       // 0. 사용자 정보로 초기 선택값 설정
       final user = await _apiRepository.userService.getCurrentUser();
-      _koreanName = user.koreanName ?? user.displayName;
+      // korean_name이 "\n"을 포함하면 한국 이름만 추출 (영어 발음은 차후 활용 예정)
+      if (user.koreanName != null && user.koreanName!.contains('\n')) {
+        _koreanName = user.koreanName!.split('\n')[0];
+      } else {
+        _koreanName = user.koreanName ?? user.displayName;
+      }
 
       // 국가 매핑
       final matchedCountry =
@@ -795,7 +805,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                "Now Trend",
+                "Now Trend yaho",
                 style: textTheme.titleMedium?.copyWith(
                   fontSize: responsive.responsiveFontSize(
                     mobileSize: 16,

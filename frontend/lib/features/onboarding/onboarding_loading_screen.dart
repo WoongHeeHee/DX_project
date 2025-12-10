@@ -63,10 +63,11 @@ class _OnboardingLoadingScreenState extends State<OnboardingLoadingScreen> {
 
       // 임시: 서버 연결 없이 더미 데이터 사용
       await Future.delayed(const Duration(seconds: 2)); // 로딩 시간 시뮬레이션
-      
+
       // 입력 이름에 따라 더미 한국 이름 생성
       final dummyKoreanName = _generateDummyKoreanName(widget.inputName);
-      final dummyEnglishPronunciation = _generateDummyEnglishPronunciation(widget.inputName);
+      final dummyEnglishPronunciation =
+          _generateDummyEnglishPronunciation(widget.inputName);
 
       if (mounted) {
         // 로딩 완료 후 이름 확인 화면으로 이동
@@ -86,8 +87,9 @@ class _OnboardingLoadingScreenState extends State<OnboardingLoadingScreen> {
       if (mounted) {
         // 에러 발생 시에도 더미 데이터로 진행
         final dummyKoreanName = _generateDummyKoreanName(widget.inputName);
-        final dummyEnglishPronunciation = _generateDummyEnglishPronunciation(widget.inputName);
-        
+        final dummyEnglishPronunciation =
+            _generateDummyEnglishPronunciation(widget.inputName);
+
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
@@ -105,21 +107,42 @@ class _OnboardingLoadingScreenState extends State<OnboardingLoadingScreen> {
   // 더미 한국 이름 생성 (입력 이름의 첫 글자를 기반으로)
   String _generateDummyKoreanName(String inputName) {
     if (inputName.isEmpty) return "김민수";
-    
+
     // 간단한 매핑 (실제로는 서버에서 생성)
     final nameMap = {
-      'a': '김', 'b': '이', 'c': '박', 'd': '최', 'e': '정',
-      'f': '강', 'g': '조', 'h': '윤', 'i': '장', 'j': '임',
-      'k': '한', 'l': '오', 'm': '서', 'n': '신', 'o': '권',
-      'p': '황', 'q': '안', 'r': '송', 's': '류', 't': '전',
-      'u': '홍', 'v': '고', 'w': '문', 'x': '양', 'y': '손', 'z': '배',
+      'a': '김',
+      'b': '이',
+      'c': '박',
+      'd': '최',
+      'e': '정',
+      'f': '강',
+      'g': '조',
+      'h': '윤',
+      'i': '장',
+      'j': '임',
+      'k': '한',
+      'l': '오',
+      'm': '서',
+      'n': '신',
+      'o': '권',
+      'p': '황',
+      'q': '안',
+      'r': '송',
+      's': '류',
+      't': '전',
+      'u': '홍',
+      'v': '고',
+      'w': '문',
+      'x': '양',
+      'y': '손',
+      'z': '배',
     };
-    
+
     final firstChar = inputName.toLowerCase().substring(0, 1);
     final surname = nameMap[firstChar] ?? '김';
     final givenNames = ['민수', '지영', '현우', '서연', '준호', '수진', '동현', '예진'];
     final givenName = givenNames[inputName.length % givenNames.length];
-    
+
     return '$surname$givenName';
   }
 
@@ -157,6 +180,10 @@ class _OnboardingLoadingScreenState extends State<OnboardingLoadingScreen> {
     final double progress = currentStep / totalSteps;
 
     return ResponsivePadding(
+      mobileEdgeInsets: EdgeInsets.only(
+        top: responsive.responsivePadding(mobilePadding: 16),
+        bottom: responsive.responsivePadding(mobilePadding: 0),
+      ),
       child: LayoutBuilder(
         builder: (context, constraints) {
           final double containerWidth = constraints.maxWidth;
@@ -216,4 +243,3 @@ class _OnboardingLoadingScreenState extends State<OnboardingLoadingScreen> {
     );
   }
 }
-

@@ -30,8 +30,7 @@ Copy-Item .env.example .env
 API_BASE_URL=http://localhost:8000
 GOOGLE_CLIENT_ID=your-client-id
 GOOGLE_REDIRECT_URI=http://localhost:8080/auth/callback
-NAVER_MAP_CLIENT_ID=your-naver-map-client-id
-NAVER_MAP_CLIENT_SECRET=your-naver-map-client-secret
+GOOGLE_MAPS_API_KEY=your-google-maps-api-key
 IMAGE_BASE_URL=http://localhost:9000/market-explorer-photos
 ```
 
@@ -100,7 +99,7 @@ frontend/
 ### 향후 구현 필요
 - API 연동 완성 (각 화면에서 실제 데이터 가져오기)
 - 이미지 업로드 및 표시
-- 지도 API 연동 (네이버맵)
+- 지도 API 연동 (Google Maps)
 - 검색 기능
 - 다이어리 작성
 - 핀한 가게 관리
@@ -112,7 +111,7 @@ frontend/
 
 1. **환경 변수**: `.env` 파일은 Git에 커밋하지 마세요 (`.gitignore`에 포함됨)
 2. **Google OAuth**: 웹용 클라이언트 ID가 필요합니다
-3. **지도 API**: 네이버맵 API 키가 필요합니다
+3. **지도 API**: Google Maps API 키가 필요합니다
 4. **백엔드 연동**: 백엔드 서버가 실행 중이어야 합니다
 
 ## 문제 해결

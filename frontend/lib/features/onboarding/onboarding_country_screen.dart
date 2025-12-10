@@ -30,107 +30,107 @@ class _OnboardingCountryScreenState extends State<OnboardingCountryScreen> {
     CountryFilter(
       id: "country_jp",
       name: "일본",
-      flagImageUrl: "assets/designs/images/JP.gif",
+      flagImageUrl: "assets/images/JP.gif",
     ),
     CountryFilter(
       id: "country_us",
       name: "미국",
-      flagImageUrl: "assets/designs/images/US.gif",
+      flagImageUrl: "assets/images/US.gif",
     ),
     CountryFilter(
       id: "country_cn",
       name: "중국",
-      flagImageUrl: "assets/designs/images/CN.gif",
+      flagImageUrl: "assets/images/CN.gif",
     ),
     CountryFilter(
       id: "country_kr",
       name: "한국",
-      flagImageUrl: null,
+      flagImageUrl: "assets/images/KR.png",
     ),
     CountryFilter(
       id: "country_th",
       name: "태국",
-      flagImageUrl: "assets/designs/images/TH.gif",
+      flagImageUrl: "assets/images/TH.gif",
     ),
     CountryFilter(
       id: "country_vn",
       name: "베트남",
-      flagImageUrl: "assets/designs/images/VN.gif",
+      flagImageUrl: "assets/images/VN.gif",
     ),
     CountryFilter(
       id: "country_sg",
       name: "싱가포르",
-      flagImageUrl: "assets/designs/images/SG.gif",
+      flagImageUrl: "assets/images/SG.gif",
     ),
     CountryFilter(
       id: "country_my",
       name: "말레이시아",
-      flagImageUrl: "assets/designs/images/MY.gif",
+      flagImageUrl: "assets/images/MY.gif",
     ),
     CountryFilter(
       id: "country_id",
       name: "인도네시아",
-      flagImageUrl: "assets/designs/images/ID.gif",
+      flagImageUrl: "assets/images/ID.gif",
     ),
     CountryFilter(
       id: "country_ph",
       name: "필리핀",
-      flagImageUrl: "assets/designs/images/PH.gif",
+      flagImageUrl: "assets/images/PH.gif",
     ),
     CountryFilter(
       id: "country_in",
       name: "인도",
-      flagImageUrl: "assets/designs/images/IN.gif",
+      flagImageUrl: "assets/images/IN.gif",
     ),
     CountryFilter(
       id: "country_tw",
       name: "대만",
-      flagImageUrl: "assets/designs/images/TW.gif",
+      flagImageUrl: "assets/images/TW.png",
     ),
     CountryFilter(
       id: "country_hk",
       name: "홍콩",
-      flagImageUrl: "assets/designs/images/HK.gif",
+      flagImageUrl: "assets/images/HK.png",
     ),
     CountryFilter(
       id: "country_au",
       name: "호주",
-      flagImageUrl: "assets/designs/images/AU.gif",
+      flagImageUrl: "assets/images/AU.gif",
     ),
     CountryFilter(
       id: "country_ca",
       name: "캐나다",
-      flagImageUrl: "assets/designs/images/CA.gif",
+      flagImageUrl: "assets/images/CA.gif",
     ),
     CountryFilter(
       id: "country_gb",
       name: "영국",
-      flagImageUrl: "assets/designs/images/GB.gif",
+      flagImageUrl: "assets/images/GB.gif",
     ),
     CountryFilter(
       id: "country_fr",
       name: "프랑스",
-      flagImageUrl: "assets/designs/images/FR.gif",
+      flagImageUrl: "assets/images/FR.gif",
     ),
     CountryFilter(
       id: "country_de",
       name: "독일",
-      flagImageUrl: "assets/designs/images/DE.gif",
+      flagImageUrl: "assets/images/DE.gif",
     ),
     CountryFilter(
       id: "country_ru",
       name: "러시아",
-      flagImageUrl: "assets/designs/images/RU.gif",
+      flagImageUrl: "assets/images/RU.gif",
     ),
     CountryFilter(
       id: "country_mx",
       name: "멕시코",
-      flagImageUrl: "assets/designs/images/MX.gif",
+      flagImageUrl: "assets/images/MX.gif",
     ),
     CountryFilter(
       id: "country_mn",
       name: "몽골",
-      flagImageUrl: "assets/designs/images/MN.gif",
+      flagImageUrl: "assets/images/MN.gif",
     ),
     CountryFilter(
       id: "country_other",
@@ -180,6 +180,10 @@ class _OnboardingCountryScreenState extends State<OnboardingCountryScreen> {
     final double progress = currentStep / totalSteps;
 
     return ResponsivePadding(
+      mobileEdgeInsets: EdgeInsets.only(
+        top: responsive.responsivePadding(mobilePadding: 16),
+        bottom: responsive.responsivePadding(mobilePadding: 0),
+      ),
       child: LayoutBuilder(
         builder: (context, constraints) {
           final double containerWidth = constraints.maxWidth;
@@ -301,6 +305,10 @@ class _OnboardingCountryScreenState extends State<OnboardingCountryScreen> {
     TextTheme textTheme,
   ) {
     return ResponsivePadding(
+      mobileEdgeInsets: EdgeInsets.only(
+        top: responsive.responsivePadding(mobilePadding: 0),
+        bottom: responsive.responsivePadding(mobilePadding: 40),
+      ),
       child: SizedBox(
         width: double.infinity,
         height: 60,
@@ -342,4 +350,3 @@ class _OnboardingCountryScreenState extends State<OnboardingCountryScreen> {
     );
   }
 }
-

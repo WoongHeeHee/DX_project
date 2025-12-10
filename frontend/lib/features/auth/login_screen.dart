@@ -1,8 +1,11 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/widgets/responsive_helper.dart';
 import '../../core/widgets/responsive_padding.dart';
 import '../../core/theme/app_colors.dart';
+import '../../data/repositories/api_repository.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -13,20 +16,61 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
+  final _apiRepository = ApiRepository();
+  Timer? _timeoutTimer;
+
+  @override
+  void dispose() {
+    _timeoutTimer?.cancel();
+    super.dispose();
+  }
 
   Future<void> _handleGoogleSignIn() async {
-    // 일단 로그인 시도 없이 바로 온보딩 화면으로 이동
-    context.go('/onboarding/language');
-
-    // TODO: 실제 로그인 기능 구현 시 아래 코드 사용
-    /*
+    debugPrint('═══════════════════════════════════════════════════');
+    debugPrint('🔐 Google 로그인 버튼 클릭됨');
+    debugPrint('═══════════════════════════════════════════════════');
+    
     setState(() {
       _isLoading = true;
     });
 
     try {
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      final success = await authProvider.signInWithGoogle();
+      // 웹 환경: GoogleAuthServiceWeb이 전체 페이지 리디렉션을 수행
+      // 리디렉션 후 /auth/callback에서 AuthCallbackScreen이 처리
+      // 모바일 환경: GoogleAuthServiceMobile이 직접 id_token을 받아서 처리
+      debugPrint('🚀 authService.googleLogin() 호출 시작...');
+      
+      // 웹 환경에서 리디렉션 대기 시 타임아웃 설정
+      if (kIsWeb) {
+        _timeoutTimer = Timer(const Duration(seconds: 30), () {
+          if (mounted && _isLoading) {
+            setState(() {
+              _isLoading = false;
+            });
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('로그인 타임아웃이 발생했습니다. 다시 시도해주세요.'),
+                duration: const Duration(seconds: 3),
+              ),
+            );
+          }
+        });
+      }
+      
+      await _apiRepository.authService.googleLogin();
+      _timeoutTimer?.cancel();
+      debugPrint('⚠️ authService.googleLogin() 완료 - 이는 웹 환경에서는 예상치 못한 동작입니다.');
+
+      // 웹 환경에서는 리디렉션이 발생하므로 여기까지 도달하지 않음
+      // 모바일 환경에서만 여기까지 도달
+      if (!mounted) return;
+
+      // 모바일 환경: 로그인 성공 후 사용자 정보 확인
+      final user = await _apiRepository.authService.getCurrentUser();
+      
+      // 온보딩 완료 여부 확인
+      final isOnboardingComplete =
+          user.country != null && user.birthYyyyMm != null;
 
       setState(() {
         _isLoading = false;
@@ -34,29 +78,50 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (!mounted) return;
 
-      if (success) {
-        // 로그인 성공 시 온보딩 첫 화면으로 이동
-        context.go('/onboarding/language');
+      if (isOnboardingComplete) {
+        context.go('/map');
       } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(authProvider.error ?? '로그인에 실패했습니다.'),
-            ),
-          );
-        }
+        context.go('/onboarding/language');
       }
     } catch (e) {
+      _timeoutTimer?.cancel();
+      debugPrint('═══════════════════════════════════════════════════');
+      debugPrint('❌ Google 로그인 오류 발생');
+      debugPrint('에러 타입: ${e.runtimeType}');
+      debugPrint('에러 메시지: $e');
+      debugPrint('═══════════════════════════════════════════════════');
+      
+      // 웹 환경에서 리디렉션 예외는 정상적인 동작이므로 무시
+      if (kIsWeb && (e.toString().contains('리디렉션') || 
+                     e.toString().contains('Google 로그인 리디렉션'))) {
+        debugPrint('✅ 웹 환경 리디렉션 예외 - 정상 동작입니다. 리디렉션 대기 중...');
+        // 리디렉션이 곧 발생할 것이므로 로딩 상태 유지 (타임아웃은 위에서 설정됨)
+        return;
+      }
+      
       setState(() {
         _isLoading = false;
       });
-      
-      if (mounted) {
-        // 에러가 발생해도 온보딩 화면으로 이동
-        context.go('/onboarding/language');
+
+      if (!mounted) return;
+
+      // 사용자가 로그인을 취소한 경우는 에러 메시지를 표시하지 않음
+      if (e.toString().contains('취소') || 
+          e.toString().contains('cancel') ||
+          e.toString().toLowerCase().contains('user cancelled')) {
+        debugPrint('ℹ️ 사용자가 로그인을 취소했습니다.');
+        return;
       }
+
+      // 에러 메시지 표시
+      debugPrint('⚠️ 에러 메시지를 사용자에게 표시합니다.');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('로그인에 실패했습니다. 다시 시도해주세요.'),
+          duration: const Duration(seconds: 3),
+        ),
+      );
     }
-    */
   }
 
   @override

@@ -39,7 +39,7 @@ class _OnboardingAgeScreenState extends State<OnboardingAgeScreen> {
     final now = DateTime.now();
     final currentYear = now.year;
     final currentMonth = now.month;
-    
+
     showDialog(
       context: context,
       builder: (context) => _YearMonthPickerDialog(
@@ -89,6 +89,10 @@ class _OnboardingAgeScreenState extends State<OnboardingAgeScreen> {
     final double progress = currentStep / totalSteps;
 
     return ResponsivePadding(
+      mobileEdgeInsets: EdgeInsets.only(
+        top: responsive.responsivePadding(mobilePadding: 16),
+        bottom: responsive.responsivePadding(mobilePadding: 0),
+      ),
       child: LayoutBuilder(
         builder: (context, constraints) {
           final double containerWidth = constraints.maxWidth;
@@ -209,8 +213,9 @@ class _OnboardingAgeScreenState extends State<OnboardingAgeScreen> {
         width: double.infinity,
         constraints: BoxConstraints(
           // 국가 선택 박스처럼 높이를 1.5배로 설정
-          minHeight: ((textSize * 1.25) + 
-              (responsive.responsivePadding(mobilePadding: 12) * 2)) * 1.5,
+          minHeight: ((textSize * 1.25) +
+                  (responsive.responsivePadding(mobilePadding: 12) * 2)) *
+              1.5,
         ),
         padding: EdgeInsets.symmetric(
           horizontal: responsive.responsivePadding(mobilePadding: 16),
@@ -230,9 +235,7 @@ class _OnboardingAgeScreenState extends State<OnboardingAgeScreen> {
           children: [
             Expanded(
               child: Text(
-                hasSelection
-                    ? _formatDate()
-                    : "출생연도·월 선택하기",
+                hasSelection ? _formatDate() : "출생연도·월 선택하기",
                 style: textTheme.bodyMedium?.copyWith(
                   fontSize: textSize,
                   fontWeight: hasSelection ? FontWeight.w600 : FontWeight.w500,
@@ -260,6 +263,10 @@ class _OnboardingAgeScreenState extends State<OnboardingAgeScreen> {
     TextTheme textTheme,
   ) {
     return ResponsivePadding(
+      mobileEdgeInsets: EdgeInsets.only(
+        top: responsive.responsivePadding(mobilePadding: 0),
+        bottom: responsive.responsivePadding(mobilePadding: 40),
+      ),
       child: SizedBox(
         width: double.infinity,
         height: 60,
@@ -334,16 +341,17 @@ class _YearMonthPickerDialogState extends State<_YearMonthPickerDialog> {
     super.initState();
     _selectedYear = widget.initialYear;
     _selectedMonth = widget.initialMonth;
-    
+
     // 년도 리스트 생성 (1925년부터 현재 년도까지)
     final years = List.generate(
       widget.maxYear - 1925 + 1,
       (index) => 1925 + index,
     ).reversed.toList();
-    
+
     final yearIndex = years.indexOf(_selectedYear);
-    _yearController = FixedExtentScrollController(initialItem: yearIndex >= 0 ? yearIndex : 0);
-    
+    _yearController = FixedExtentScrollController(
+        initialItem: yearIndex >= 0 ? yearIndex : 0);
+
     final monthIndex = _selectedMonth - 1;
     _monthController = FixedExtentScrollController(initialItem: monthIndex);
   }
@@ -359,16 +367,16 @@ class _YearMonthPickerDialogState extends State<_YearMonthPickerDialog> {
   Widget build(BuildContext context) {
     final responsive = context.responsive;
     final textTheme = Theme.of(context).textTheme;
-    
+
     // 년도 리스트 생성 (1925년부터 현재 년도까지)
     final years = List.generate(
       widget.maxYear - 1925 + 1,
       (index) => 1925 + index,
     ).reversed.toList();
-    
+
     // 월 리스트 생성
     final months = List.generate(12, (index) => index + 1);
-    
+
     // 현재 선택된 년도가 최대 년도인 경우, 최대 월까지만 표시
     final availableMonths = _selectedYear == widget.maxYear
         ? months.where((m) => m <= widget.maxMonth).toList()
@@ -405,7 +413,8 @@ class _YearMonthPickerDialogState extends State<_YearMonthPickerDialog> {
                       Text(
                         "년도",
                         style: textTheme.bodyMedium?.copyWith(
-                          fontSize: responsive.responsiveFontSize(mobileSize: 14),
+                          fontSize:
+                              responsive.responsiveFontSize(mobileSize: 14),
                           fontWeight: FontWeight.w500,
                           color: AppColors.inactiveText,
                         ),
@@ -453,7 +462,8 @@ class _YearMonthPickerDialogState extends State<_YearMonthPickerDialog> {
                                 child: Text(
                                   "$year",
                                   style: textTheme.bodyLarge?.copyWith(
-                                    fontSize: responsive.responsiveFontSize(mobileSize: 18),
+                                    fontSize: responsive.responsiveFontSize(
+                                        mobileSize: 18),
                                     fontWeight: isSelected
                                         ? FontWeight.w600
                                         : FontWeight.w400,
@@ -481,7 +491,8 @@ class _YearMonthPickerDialogState extends State<_YearMonthPickerDialog> {
                       Text(
                         "월",
                         style: textTheme.bodyMedium?.copyWith(
-                          fontSize: responsive.responsiveFontSize(mobileSize: 14),
+                          fontSize:
+                              responsive.responsiveFontSize(mobileSize: 14),
                           fontWeight: FontWeight.w500,
                           color: AppColors.inactiveText,
                         ),
@@ -512,7 +523,8 @@ class _YearMonthPickerDialogState extends State<_YearMonthPickerDialog> {
                           },
                           childDelegate: ListWheelChildBuilderDelegate(
                             builder: (context, index) {
-                              if (index < 0 || index >= availableMonths.length) {
+                              if (index < 0 ||
+                                  index >= availableMonths.length) {
                                 return null;
                               }
                               final month = availableMonths[index];
@@ -521,7 +533,8 @@ class _YearMonthPickerDialogState extends State<_YearMonthPickerDialog> {
                                 child: Text(
                                   "$month월",
                                   style: textTheme.bodyLarge?.copyWith(
-                                    fontSize: responsive.responsiveFontSize(mobileSize: 18),
+                                    fontSize: responsive.responsiveFontSize(
+                                        mobileSize: 18),
                                     fontWeight: isSelected
                                         ? FontWeight.w600
                                         : FontWeight.w400,
@@ -548,7 +561,9 @@ class _YearMonthPickerDialogState extends State<_YearMonthPickerDialog> {
               children: [
                 Expanded(
                   child: SizedBox(
-                    height: responsive.responsivePadding(mobilePadding: 14) * 2 * 1.5,
+                    height: responsive.responsivePadding(mobilePadding: 14) *
+                        2 *
+                        1.5,
                     child: ElevatedButton(
                       onPressed: () {
                         Navigator.of(context).pop();
@@ -562,7 +577,8 @@ class _YearMonthPickerDialogState extends State<_YearMonthPickerDialog> {
                         elevation: 0,
                         shadowColor: Colors.transparent,
                         padding: EdgeInsets.symmetric(
-                          vertical: responsive.responsivePadding(mobilePadding: 14),
+                          vertical:
+                              responsive.responsivePadding(mobilePadding: 14),
                         ),
                       ),
                       child: Text(
@@ -580,7 +596,9 @@ class _YearMonthPickerDialogState extends State<_YearMonthPickerDialog> {
                 ),
                 Expanded(
                   child: SizedBox(
-                    height: responsive.responsivePadding(mobilePadding: 14) * 2 * 1.5,
+                    height: responsive.responsivePadding(mobilePadding: 14) *
+                        2 *
+                        1.5,
                     child: ElevatedButton(
                       onPressed: () {
                         widget.onSelected(_selectedYear, _selectedMonth);
@@ -595,7 +613,8 @@ class _YearMonthPickerDialogState extends State<_YearMonthPickerDialog> {
                         elevation: 0,
                         shadowColor: Colors.transparent,
                         padding: EdgeInsets.symmetric(
-                          vertical: responsive.responsivePadding(mobilePadding: 14),
+                          vertical:
+                              responsive.responsivePadding(mobilePadding: 14),
                         ),
                       ),
                       child: Text(
@@ -616,4 +635,3 @@ class _YearMonthPickerDialogState extends State<_YearMonthPickerDialog> {
     );
   }
 }
-

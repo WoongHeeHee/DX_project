@@ -40,8 +40,7 @@ flutter run -d chrome --web-port=8080
 
 `.env` 파일을 열어서 실제 API 키로 수정하세요:
 - `GOOGLE_CLIENT_ID`: Google OAuth 클라이언트 ID
-- `KAKAO_MAP_API_KEY`: 카카오맵 API 키 (선택사항)
-- `NAVER_MAP_CLIENT_ID`: 네이버맵 클라이언트 ID (선택사항)
+- `GOOGLE_MAPS_API_KEY`: Google Maps API 키 (선택사항)
 
 ### 4. 문제 해결
 

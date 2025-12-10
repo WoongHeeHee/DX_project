@@ -108,11 +108,36 @@
     
     // Google 로그인 전체 페이지 리디렉션 (Flutter에서 호출)
     window.triggerGoogleSignIn = function() {
-      console.log('Google 로그인 시작 - 전체 페이지 리디렉션');
+      console.log('═══════════════════════════════════════════════════');
+      console.log('🔐 Google 로그인 시작 - 전체 페이지 리디렉션');
+      console.log('═══════════════════════════════════════════════════');
+      
+      // 환경 정보 로깅
+      console.log('📍 현재 환경 정보:');
+      console.log('  - hostname:', window.location.hostname);
+      console.log('  - origin:', window.location.origin);
+      console.log('  - protocol:', window.location.protocol);
+      console.log('  - pathname:', window.location.pathname);
+      
+      // window.ENV 확인
+      if (!window.ENV) {
+        console.error('❌ window.ENV가 설정되지 않았습니다!');
+        console.error('💡 index.html의 스크립트가 올바르게 실행되었는지 확인하세요.');
+        window.postMessage({
+          type: 'GOOGLE_SIGN_IN_ERROR',
+          error: 'window.ENV가 설정되지 않았습니다.'
+        }, '*');
+        return;
+      }
+      
+      console.log('✅ window.ENV 확인:', window.ENV);
       
       const clientId = window.ENV?.GOOGLE_CLIENT_ID || '';
+      console.log('🔑 Google Client ID:', clientId ? clientId.substring(0, 20) + '...' : '(없음)');
+      
       if (!clientId || clientId.trim() === '') {
-        console.error('Google Client ID가 설정되지 않았습니다.');
+        console.error('❌ Google Client ID가 설정되지 않았습니다.');
+        console.error('💡 index.html의 window.ENV.GOOGLE_CLIENT_ID를 확인하세요.');
         window.postMessage({
           type: 'GOOGLE_SIGN_IN_ERROR',
           error: 'Google Client ID가 설정되지 않았습니다.'
@@ -122,7 +147,11 @@
       
       // redirect URI는 반드시 절대 경로 형태로 설정
       const redirectUri = window.location.origin + '/auth/callback';
-      console.log('Redirect URI:', redirectUri);
+      console.log('🔄 Redirect URI:', redirectUri);
+      console.log('⚠️ 중요: Google Cloud Console에서 다음 redirect URI가 승인되어 있어야 합니다:');
+      console.log('   ', redirectUri);
+      console.log('💡 Google Cloud Console → APIs & Services → Credentials → OAuth 2.0 Client IDs');
+      console.log('   → Authorized redirect URIs에 위 URI를 추가하세요.');
       
       const nonce = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
       
@@ -136,15 +165,23 @@
         `&nonce=${nonce}` +
         `&prompt=select_account`;
       
-      console.log('Google 로그인 URL로 전체 페이지 리디렉션:', url);
-      console.log('⚠️ 중요: Google Cloud Console에서 다음 redirect URI가 승인되어 있어야 합니다:', redirectUri);
+      console.log('🌐 Google 로그인 URL로 전체 페이지 리디렉션 시작');
+      console.log('   URL (일부):', url.substring(0, 100) + '...');
       
       // 현재 nonce를 저장하여 리디렉션 후 확인
       sessionStorage.setItem('google_oauth_nonce', nonce);
       sessionStorage.setItem('google_oauth_redirect', 'true');
+      sessionStorage.setItem('google_oauth_redirect_uri', redirectUri);
       
-      // 전체 페이지 리디렉션 (팝업 없이)
-      window.location.href = url;
+      console.log('✅ 리디렉션 준비 완료. Google OAuth 페이지로 이동합니다...');
+      console.log('═══════════════════════════════════════════════════');
+      
+      // 리디렉션 전에 약간의 지연을 두어 로그가 출력되도록 함
+      setTimeout(function() {
+        console.log('🚀 window.location.href 변경 시작 - 리디렉션 발생');
+        // 전체 페이지 리디렉션 (팝업 없이)
+        window.location.href = url;
+      }, 100);
     };
     
     // 페이지 로드 시 URL이 잘못된 형태로 오는 경우 정규화

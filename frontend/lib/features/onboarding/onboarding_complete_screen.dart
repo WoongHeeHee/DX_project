@@ -29,7 +29,7 @@ class _OnboardingCompleteScreenState extends State<OnboardingCompleteScreen> {
     // 5초 후 홈 화면으로 이동
     Timer(const Duration(seconds: 5), () {
       if (mounted) {
-        context.go('/explore');
+        context.go('/map');
       }
     });
   }

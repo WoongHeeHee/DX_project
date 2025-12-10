@@ -42,14 +42,23 @@ class _AuthCallbackScreenState extends State<AuthCallbackScreen> {
     await Future.delayed(const Duration(milliseconds: 100));
 
     try {
+      debugPrint('═══════════════════════════════════════════════════');
+      debugPrint('🔄 AuthCallbackScreen: Google OAuth 콜백 처리 시작');
+      debugPrint('═══════════════════════════════════════════════════');
+      
       // GoRouter의 state.uri가 있으면 우선 사용, 없으면 window.location 사용
       Uri uri;
       if (widget.uri != null) {
         uri = widget.uri!;
+        debugPrint('📍 widget.uri 사용: ${uri.toString()}');
       } else if (kIsWeb) {
         final currentUrl = html.window.location.href;
         uri = Uri.parse(currentUrl);
-        debugPrint('현재 URL: $currentUrl');
+        debugPrint('📍 window.location.href 사용: $currentUrl');
+        debugPrint('   - origin: ${html.window.location.origin}');
+        debugPrint('   - pathname: ${html.window.location.pathname}');
+        debugPrint('   - search: ${html.window.location.search}');
+        debugPrint('   - hash: ${html.window.location.hash.substring(0, html.window.location.hash.length > 100 ? 100 : html.window.location.hash.length)}...');
       } else {
         throw Exception('웹 환경에서만 사용할 수 있습니다.');
       }
@@ -92,15 +101,34 @@ class _AuthCallbackScreenState extends State<AuthCallbackScreen> {
 
       if (idToken == null || idToken.isEmpty) {
         debugPrint('❌ id_token을 찾을 수 없습니다.');
-        debugPrint('URI: $uri');
-        debugPrint('hasFragment: ${uri.hasFragment}');
-        debugPrint('fragment: ${uri.fragment}');
-        debugPrint('queryParameters: ${uri.queryParameters}');
+        debugPrint('═══════════════════════════════════════════════════');
+        debugPrint('🔍 디버깅 정보:');
+        debugPrint('   - URI: $uri');
+        debugPrint('   - hasFragment: ${uri.hasFragment}');
+        debugPrint('   - fragment (일부): ${uri.fragment.substring(0, uri.fragment.length > 200 ? 200 : uri.fragment.length)}...');
+        debugPrint('   - queryParameters: ${uri.queryParameters}');
+        debugPrint('   - window.location.href: ${kIsWeb ? html.window.location.href : "N/A"}');
+        debugPrint('═══════════════════════════════════════════════════');
+        debugPrint('💡 가능한 원인:');
+        debugPrint('   1. Google Cloud Console에 redirect URI가 등록되지 않았을 수 있습니다.');
+        debugPrint('   2. 현재 redirect URI: ${kIsWeb ? html.window.location.origin + "/auth/callback" : "N/A"}');
+        debugPrint('   3. Google Cloud Console → APIs & Services → Credentials');
+        debugPrint('      → OAuth 2.0 Client IDs → Authorized redirect URIs 확인');
+        debugPrint('═══════════════════════════════════════════════════');
+        
         setState(() {
           _isProcessing = false;
-          _errorMessage = 'id_token을 받을 수 없습니다. 로그인을 다시 시도해주세요.';
+          final redirectUri = kIsWeb ? html.window.location.origin + '/auth/callback' : 'N/A';
+          _errorMessage = 'id_token을 받을 수 없습니다.\n\n'
+              '가능한 원인:\n'
+              '1. Google Cloud Console에 redirect URI가 등록되지 않았습니다.\n'
+              '2. 현재 redirect URI: $redirectUri\n\n'
+              '해결 방법:\n'
+              'Google Cloud Console → APIs & Services → Credentials\n'
+              '→ OAuth 2.0 Client IDs → Authorized redirect URIs\n'
+              '→ 위 redirect URI를 추가하세요.';
         });
-        await Future.delayed(const Duration(seconds: 3));
+        await Future.delayed(const Duration(seconds: 5));
         if (mounted) {
           context.go('/login');
         }

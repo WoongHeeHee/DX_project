@@ -35,6 +35,7 @@ import '../features/report/report_camera_screen.dart';
 import '../features/report/report_loading_screen.dart';
 import '../features/report/report_shop_select_screen.dart';
 import '../features/report/report_complete_screen.dart';
+import '../features/my/my_page_screen.dart';
 import '../data/services/auth_service.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -290,6 +291,10 @@ class AppRouter {
           final returnPath = extra?['returnPath'] as String?;
           return CameraSuccessScreen(returnPath: returnPath);
         },
+      ),
+      GoRoute(
+        path: '/my',
+        builder: (context, state) => const MyPageScreen(),
       ),
     ],
     redirect: (context, state) {

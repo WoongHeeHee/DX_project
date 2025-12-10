@@ -72,6 +72,10 @@ class _OnboardingNameScreenState extends State<OnboardingNameScreen> {
     final double progress = currentStep / totalSteps;
 
     return ResponsivePadding(
+      mobileEdgeInsets: EdgeInsets.only(
+        top: responsive.responsivePadding(mobilePadding: 16),
+        bottom: responsive.responsivePadding(mobilePadding: 0),
+      ),
       child: LayoutBuilder(
         builder: (context, constraints) {
           final double containerWidth = constraints.maxWidth;
@@ -121,6 +125,9 @@ class _OnboardingNameScreenState extends State<OnboardingNameScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            SizedBox(
+              height: responsive.responsivePadding(mobilePadding: 20),
+            ),
             // STEP 2 · Name
             Text(
               "STEP 2 · Name",
@@ -145,7 +152,7 @@ class _OnboardingNameScreenState extends State<OnboardingNameScreen> {
               ),
             ),
             SizedBox(
-              height: responsive.responsivePadding(mobilePadding: 30),
+              height: responsive.responsivePadding(mobilePadding: 20),
             ),
             // 이름 입력 필드
             _buildNameInputField(responsive, textTheme),
@@ -246,6 +253,10 @@ class _OnboardingNameScreenState extends State<OnboardingNameScreen> {
     TextTheme textTheme,
   ) {
     return ResponsivePadding(
+      mobileEdgeInsets: EdgeInsets.only(
+        top: responsive.responsivePadding(mobilePadding: 0),
+        bottom: responsive.responsivePadding(mobilePadding: 40),
+      ),
       child: SizedBox(
         width: double.infinity,
         height: 60,
@@ -286,4 +297,3 @@ class _OnboardingNameScreenState extends State<OnboardingNameScreen> {
     );
   }
 }
-

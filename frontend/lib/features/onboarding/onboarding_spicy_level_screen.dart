@@ -109,6 +109,10 @@ class _OnboardingSpicyLevelScreenState extends State<OnboardingSpicyLevelScreen>
     final double progress = currentStep / totalSteps;
 
     return ResponsivePadding(
+      mobileEdgeInsets: EdgeInsets.only(
+        top: responsive.responsivePadding(mobilePadding: 16),
+        bottom: responsive.responsivePadding(mobilePadding: 0),
+      ),
       child: LayoutBuilder(
         builder: (context, constraints) {
           final double containerWidth = constraints.maxWidth;
@@ -427,6 +431,10 @@ class _OnboardingSpicyLevelScreenState extends State<OnboardingSpicyLevelScreen>
     TextTheme textTheme,
   ) {
     return ResponsivePadding(
+      mobileEdgeInsets: EdgeInsets.only(
+        top: responsive.responsivePadding(mobilePadding: 0),
+        bottom: responsive.responsivePadding(mobilePadding: 40),
+      ),
       child: SizedBox(
         width: double.infinity,
         height: 60,
@@ -469,4 +477,3 @@ class _OnboardingSpicyLevelScreenState extends State<OnboardingSpicyLevelScreen>
     );
   }
 }
-

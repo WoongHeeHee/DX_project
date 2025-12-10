@@ -79,6 +79,10 @@ class _OnboardingLanguageScreenState extends State<OnboardingLanguageScreen> {
     final double progress = currentStep / totalSteps;
 
     return ResponsivePadding(
+      mobileEdgeInsets: EdgeInsets.only(
+        top: responsive.responsivePadding(mobilePadding: 16),
+        bottom: responsive.responsivePadding(mobilePadding: 0),
+      ),
       child: LayoutBuilder(
         builder: (context, constraints) {
           final double containerWidth = constraints.maxWidth;
@@ -128,6 +132,9 @@ class _OnboardingLanguageScreenState extends State<OnboardingLanguageScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            SizedBox(
+              height: responsive.responsivePadding(mobilePadding: 20),
+            ),
             // STEP 1 · Language
             Text(
               "STEP 1 · Language",
@@ -139,7 +146,20 @@ class _OnboardingLanguageScreenState extends State<OnboardingLanguageScreen> {
               ),
             ),
             SizedBox(
-              height: responsive.responsivePadding(mobilePadding: 50),
+              height: responsive.responsivePadding(mobilePadding: 40),
+            ),
+            // 타이틀 (headlineLarge)
+            Text(
+              "어떤 언어가 편하신가요?",
+              style: textTheme.headlineLarge?.copyWith(
+                fontSize: responsive.responsiveFontSize(mobileSize: 26),
+                fontWeight: FontWeight.w600,
+                height: 1.3,
+                color: AppColors.mainText,
+              ),
+            ),
+            SizedBox(
+              height: responsive.responsivePadding(mobilePadding: 20),
             ),
             // 언어 선택 카드들
             Column(
@@ -226,6 +246,10 @@ class _OnboardingLanguageScreenState extends State<OnboardingLanguageScreen> {
     TextTheme textTheme,
   ) {
     return ResponsivePadding(
+      mobileEdgeInsets: EdgeInsets.only(
+        top: responsive.responsivePadding(mobilePadding: 0),
+        bottom: responsive.responsivePadding(mobilePadding: 40),
+      ),
       child: SizedBox(
         width: double.infinity,
         height: 60,
@@ -279,4 +303,3 @@ class LanguageOption {
     required this.greeting,
   });
 }
-

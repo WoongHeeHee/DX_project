@@ -97,23 +97,6 @@ class AppConfig {
     }
   }
 
-  // 지도 API
-  static String get naverMapClientId {
-    try {
-      return dotenv.env['NAVER_MAP_CLIENT_ID'] ?? '';
-    } catch (e) {
-      return '';
-    }
-  }
-  
-  static String get naverMapClientSecret {
-    try {
-      return dotenv.env['NAVER_MAP_CLIENT_SECRET'] ?? '';
-    } catch (e) {
-      return '';
-    }
-  }
-
   // Google Maps API
   static String get googleMapsApiKey {
     // 웹 환경: window.ENV를 먼저 확인

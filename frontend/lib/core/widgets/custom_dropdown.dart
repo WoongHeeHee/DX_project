@@ -1,5 +1,6 @@
 // lib/core/widgets/custom_dropdown.dart
 
+import "dart:math" as math;
 import "package:flutter/material.dart";
 import "package:market_explorer_frontend/core/theme/app_colors.dart";
 import "package:market_explorer_frontend/core/widgets/responsive_helper.dart";
@@ -90,44 +91,122 @@ class _CustomDropdownState<T> extends State<CustomDropdown<T>> {
   }
 
   OverlayEntry _createOverlayEntry() {
-    final RenderBox? renderBox =
-        _buttonKey.currentContext?.findRenderObject() as RenderBox?;
-    final size = renderBox?.size ?? Size.zero;
-    final offset = renderBox?.localToGlobal(Offset.zero) ?? Offset.zero;
-    // 버튼의 실제 너비를 사용 (width가 지정되지 않았거나 double.infinity인 경우)
-    final dropdownWidth =
-        (widget.width != null &&
+    final BuildContext? buttonContext = _buttonKey.currentContext;
+    if (buttonContext == null) {
+      return OverlayEntry(builder: (context) => const SizedBox.shrink());
+    }
+
+    final RenderBox? renderBox = buttonContext.findRenderObject() as RenderBox?;
+    if (renderBox == null || !renderBox.hasSize) {
+      return OverlayEntry(builder: (context) => const SizedBox.shrink());
+    }
+
+    // Container의 실제 렌더링 크기와 위치
+    final size = renderBox.size;
+    final offset = renderBox.localToGlobal(Offset.zero);
+
+    // 드롭다운 메뉴의 너비 계산
+    final dropdownWidth = (widget.width != null &&
             widget.width != double.infinity &&
             widget.width! > 0)
         ? widget.width!.toDouble()
-        : size.width > 0
-        ? size.width
-        : 200.0;
+        : size.width;
+
+    // 화면 크기 가져오기 (buttonContext에서 가져오기 - 모바일 웹 호환성)
+    final mediaQuery = MediaQuery.of(buttonContext);
+    final screenSize = mediaQuery.size;
+    final screenWidth = screenSize.width;
+    final screenHeight = screenSize.height;
+    final padding = mediaQuery.padding;
+
+    // 드롭다운 위치 계산 (화면 경계 처리)
+    double left = offset.dx;
+    double top = offset.dy + size.height + 4;
+
+    // 오른쪽 경계 체크
+    if (left + dropdownWidth > screenWidth - padding.right) {
+      left = screenWidth - dropdownWidth - padding.right - 8; // 여백 8px
+    }
+
+    // 왼쪽 경계 체크
+    if (left < padding.left) {
+      left = padding.left + 8; // 여백 8px
+    }
+
+    // 아래쪽 경계 체크 및 위로 열기
+    final estimatedHeight = widget.maxHeight ?? 300;
+    final availableBottom = screenHeight - padding.bottom;
+    if (top + estimatedHeight > availableBottom) {
+      // 위로 열기
+      top = offset.dy - estimatedHeight - 4;
+      // 위쪽 경계 체크
+      if (top < padding.top) {
+        top = padding.top + 8; // 여백 8px
+        // 높이를 화면에 맞게 조정
+      }
+    }
+
+    // 최대 너비 제한 (레이아웃 안정성)
+    final maxDropdownWidth = math.min(
+      dropdownWidth,
+      screenWidth - padding.left - padding.right - 16,
+    );
 
     return OverlayEntry(
-      builder: (context) => Stack(
-        children: [
-          // 전체 화면을 덮는 투명한 영역 (외부 클릭 감지용)
-          Positioned.fill(
-            child: GestureDetector(
-              onTap: () {
-                widget.onToggle();
-              },
-              child: Container(color: Colors.transparent),
+      builder: (overlayContext) {
+        // OverlayEntry 내부에서도 MediaQuery를 다시 가져와서 동적으로 업데이트
+        final overlayMediaQuery = MediaQuery.of(overlayContext);
+        final overlayScreenSize = overlayMediaQuery.size;
+        final overlayPadding = overlayMediaQuery.padding;
+
+        // 위치 재계산 (OverlayEntry 내부 context 사용)
+        double finalLeft = left;
+        double finalTop = top;
+
+        // 오른쪽 경계 재체크
+        if (finalLeft + maxDropdownWidth > overlayScreenSize.width - overlayPadding.right) {
+          finalLeft = overlayScreenSize.width - maxDropdownWidth - overlayPadding.right - 8;
+        }
+
+        // 왼쪽 경계 재체크
+        if (finalLeft < overlayPadding.left) {
+          finalLeft = overlayPadding.left + 8;
+        }
+
+        // 아래쪽 경계 재체크
+        final overlayAvailableBottom = overlayScreenSize.height - overlayPadding.bottom;
+        if (finalTop + estimatedHeight > overlayAvailableBottom) {
+          finalTop = offset.dy - estimatedHeight - 4;
+          if (finalTop < overlayPadding.top) {
+            finalTop = overlayPadding.top + 8;
+          }
+        }
+
+        return Stack(
+          children: [
+            // 전체 화면을 덮는 투명한 영역 (외부 클릭 감지용)
+            Positioned.fill(
+              child: GestureDetector(
+                onTap: () {
+                  widget.onToggle();
+                },
+                child: Container(color: Colors.transparent),
+              ),
             ),
-          ),
-          // 드롭다운 메뉴
-          Positioned(
-            left: offset.dx,
-            top: offset.dy + size.height + 4,
-            child: Material(
-              color: Colors.transparent,
-              elevation: 8,
-              child: _buildDropdownMenu(context, dropdownWidth),
+            // 드롭다운 메뉴
+            Positioned(
+              left: finalLeft,
+              top: finalTop,
+              child: Material(
+                color: Colors.transparent,
+                elevation: 8,
+                shadowColor: Colors.black.withOpacity(0.1),
+                child: _buildDropdownMenu(overlayContext, maxDropdownWidth),
+              ),
             ),
-          ),
-        ],
-      ),
+          ],
+        );
+      },
     );
   }
 
@@ -139,17 +218,16 @@ class _CustomDropdownState<T> extends State<CustomDropdown<T>> {
     final hasSelection = widget.selectedValue != null;
 
     return GestureDetector(
-      key: _buttonKey,
+      key: _buttonKey, // key를 GestureDetector에 배치
       onTap: widget.onToggle,
       child: Container(
         width: widget.width != null ? widget.width : double.infinity,
         constraints: widget.useTextFieldStyle
             ? BoxConstraints(
                 // TextField의 실제 높이를 1.5배로 설정
-                // 텍스트 크기(16px) * line height(1.25) + padding(12px * 2) = 약 44px
-                // 1.5배 = 약 66px
-                minHeight: ((textSize * 1.25) + 
-                    (responsive.responsivePadding(mobilePadding: 12) * 2)) * 1.5,
+                minHeight: ((textSize * 1.25) +
+                        (responsive.responsivePadding(mobilePadding: 12) * 2)) *
+                    1.5,
               )
             : null,
         padding: widget.useTextFieldStyle
@@ -178,9 +256,8 @@ class _CustomDropdownState<T> extends State<CustomDropdown<T>> {
           ),
         ),
         child: Row(
-          mainAxisSize: widget.width != null
-              ? MainAxisSize.min
-              : MainAxisSize.max,
+          mainAxisSize:
+              widget.width != null ? MainAxisSize.min : MainAxisSize.max,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             // 이미지가 있는 경우 표시
@@ -233,9 +310,8 @@ class _CustomDropdownState<T> extends State<CustomDropdown<T>> {
                           ? AppColors.mainText
                           : AppColors.inactiveText)
                       : AppColors.subText,
-                  letterSpacing: widget.useTextFieldStyle && !hasSelection
-                      ? 0.5
-                      : 0,
+                  letterSpacing:
+                      widget.useTextFieldStyle && !hasSelection ? 0.5 : 0,
                 ),
               ),
             ),
@@ -277,6 +353,7 @@ class _CustomDropdownState<T> extends State<CustomDropdown<T>> {
         ),
         child: GridView.builder(
           shrinkWrap: true,
+          physics: const ClampingScrollPhysics(), // 스크롤 물리 개선
           padding: EdgeInsets.all(
             responsive.responsivePadding(mobilePadding: 12),
           ),
@@ -289,8 +366,7 @@ class _CustomDropdownState<T> extends State<CustomDropdown<T>> {
           itemCount: widget.items.length,
           itemBuilder: (context, index) {
             final item = widget.items[index];
-            final isSelected =
-                widget.selectedValue != null &&
+            final isSelected = widget.selectedValue != null &&
                 _isEqual(widget.selectedValue as T, item);
 
             return InkWell(
@@ -323,7 +399,8 @@ class _CustomDropdownState<T> extends State<CustomDropdown<T>> {
                       Builder(
                         builder: (context) {
                           final imageUrl = widget.getImageUrl!(item);
-                          final textSize = responsive.responsiveFontSize(mobileSize: 16);
+                          final textSize =
+                              responsive.responsiveFontSize(mobileSize: 16);
                           final flagHeight = textSize * 1.25; // 폰트 높이에 맞춤
                           final flagWidth = flagHeight * 1.5; // 국기 비율 유지 (3:2)
                           return Container(
@@ -343,13 +420,13 @@ class _CustomDropdownState<T> extends State<CustomDropdown<T>> {
                                       fit: BoxFit.cover,
                                       errorBuilder:
                                           (context, error, stackTrace) {
-                                            debugPrint(
-                                              "❌ 국기 이미지 로드 실패: $imageUrl",
-                                            );
-                                            return Container(
-                                              color: AppColors.white,
-                                            );
-                                          },
+                                        debugPrint(
+                                          "❌ 국기 이미지 로드 실패: $imageUrl",
+                                        );
+                                        return Container(
+                                          color: AppColors.white,
+                                        );
+                                      },
                                     ),
                                   )
                                 : null,
@@ -368,9 +445,8 @@ class _CustomDropdownState<T> extends State<CustomDropdown<T>> {
                           fontSize: responsive.responsiveFontSize(
                             mobileSize: 16,
                           ),
-                          fontWeight: isSelected
-                              ? FontWeight.w600
-                              : FontWeight.w400,
+                          fontWeight:
+                              isSelected ? FontWeight.w600 : FontWeight.w400,
                           color: isSelected
                               ? AppColors.mainText
                               : AppColors.subText,

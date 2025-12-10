@@ -56,6 +56,10 @@ class _OnboardingNameConfirmScreenState
     final double progress = currentStep / totalSteps;
 
     return ResponsivePadding(
+      mobileEdgeInsets: EdgeInsets.only(
+        top: responsive.responsivePadding(mobilePadding: 16),
+        bottom: responsive.responsivePadding(mobilePadding: 0),
+      ),
       child: LayoutBuilder(
         builder: (context, constraints) {
           final double containerWidth = constraints.maxWidth;
@@ -119,7 +123,7 @@ class _OnboardingNameConfirmScreenState
           ),
           // 타이틀 (headlineLarge)
           Text(
-            "당신의 이름은 무엇인가요?",
+            "당신의 한국 이름입니다!",
             style: textTheme.headlineLarge?.copyWith(
               fontSize: responsive.responsiveFontSize(mobileSize: 26),
               fontWeight: FontWeight.w600,
@@ -167,6 +171,10 @@ class _OnboardingNameConfirmScreenState
 
   Widget _buildBottomButton(ResponsiveHelper responsive, TextTheme textTheme) {
     return ResponsivePadding(
+      mobileEdgeInsets: EdgeInsets.only(
+        top: responsive.responsivePadding(mobilePadding: 0),
+        bottom: responsive.responsivePadding(mobilePadding: 40),
+      ),
       child: SizedBox(
         width: double.infinity,
         height: 60,
@@ -192,7 +200,7 @@ class _OnboardingNameConfirmScreenState
             animationDuration: Duration.zero,
           ),
           child: Text(
-            "enter",
+            "Enter",
             style: textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w600,
               color: AppColors.white,
@@ -203,4 +211,3 @@ class _OnboardingNameConfirmScreenState
     );
   }
 }
-

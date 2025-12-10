@@ -85,6 +85,10 @@ class _OnboardingStyleScreenState extends State<OnboardingStyleScreen> {
     final double progress = currentStep / totalSteps;
 
     return ResponsivePadding(
+      mobileEdgeInsets: EdgeInsets.only(
+        top: responsive.responsivePadding(mobilePadding: 16),
+        bottom: responsive.responsivePadding(mobilePadding: 0),
+      ),
       child: LayoutBuilder(
         builder: (context, constraints) {
           final double containerWidth = constraints.maxWidth;
@@ -198,8 +202,9 @@ class _OnboardingStyleScreenState extends State<OnboardingStyleScreen> {
                 vertical: responsive.responsivePadding(mobilePadding: 28),
               ),
               decoration: BoxDecoration(
-                color:
-                    isSelected ? AppColors.primary.withOpacity(0.1) : AppColors.white,
+                color: isSelected
+                    ? AppColors.primary.withOpacity(0.1)
+                    : AppColors.white,
                 border: isSelected
                     ? null
                     : Border.all(
@@ -234,6 +239,10 @@ class _OnboardingStyleScreenState extends State<OnboardingStyleScreen> {
     TextTheme textTheme,
   ) {
     return ResponsivePadding(
+      mobileEdgeInsets: EdgeInsets.only(
+        top: responsive.responsivePadding(mobilePadding: 0),
+        bottom: responsive.responsivePadding(mobilePadding: 40),
+      ),
       child: SizedBox(
         width: double.infinity,
         height: 60,
@@ -317,4 +326,3 @@ class _OnboardingStyleScreenState extends State<OnboardingStyleScreen> {
     );
   }
 }
-

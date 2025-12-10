@@ -11,15 +11,34 @@ class AuthService {
   AuthService(this._apiService) : _googleAuthService = GoogleAuthService();
 
   /// Google 로그인 (id_token 방식)
+  /// 웹 환경: GoogleAuthServiceWeb이 전체 페이지 리디렉션을 수행하므로 null 반환
+  /// 모바일 환경: id_token을 받아서 백엔드에 전달
   Future<TokenResponse> googleLogin() async {
     try {
+      debugPrint('[AuthService] Google 로그인 시작...');
+      
       // Google에서 id_token 받기
       final idToken = await _googleAuthService.signIn();
+      
+      debugPrint('[AuthService] signIn() 완료, idToken: ${idToken != null ? "있음" : "null"}');
+      
+      // 웹 환경: 리디렉션이 발생했으므로 null 반환 (실제로는 여기까지 도달하지 않음)
       if (idToken == null || idToken.isEmpty) {
-        throw Exception('Google 로그인이 취소되었거나 id_token을 받을 수 없습니다.');
+        if (kIsWeb) {
+          // 웹 환경에서는 리디렉션이 발생했으므로 특별한 예외를 던짐
+          // 이 예외는 login_screen에서 리디렉션 대기로 처리됨
+          debugPrint('[AuthService] 웹 환경: 리디렉션 발생 - 예외 던짐');
+          throw Exception('Google 로그인 리디렉션 중...');
+        } else {
+          // 모바일 환경에서는 사용자가 취소한 경우
+          debugPrint('[AuthService] 모바일 환경: id_token 없음 - 사용자 취소로 간주');
+          throw Exception('Google 로그인이 취소되었거나 id_token을 받을 수 없습니다.');
+        }
       }
 
-      // 백엔드에 id_token 전달
+      debugPrint('[AuthService] 모바일 환경: id_token 받음, 백엔드에 전송...');
+      
+      // 모바일 환경: 백엔드에 id_token 전달
       final response = await _apiService.post(
         '/auth/google',
         data: {
@@ -29,8 +48,14 @@ class AuthService {
 
       final tokenData = TokenResponse.fromJson(response.data);
       await _apiService.setAuthToken(tokenData.accessToken);
+      debugPrint('[AuthService] 모바일 환경: 로그인 성공');
       return tokenData;
     } catch (e) {
+      debugPrint('[AuthService] Google 로그인 오류: $e');
+      // 리디렉션 예외는 그대로 전달 (login_screen에서 처리)
+      if (kIsWeb && e.toString().contains('리디렉션')) {
+        rethrow;
+      }
       throw Exception('Google 로그인 처리 중 오류 발생: $e');
     }
   }
