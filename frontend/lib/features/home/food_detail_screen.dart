@@ -4,6 +4,7 @@ import "package:flutter/material.dart";
 import "../../core/theme/app_colors.dart";
 import "../../core/widgets/responsive_helper.dart";
 import "../../core/widgets/loading_overlay.dart";
+import "../../core/widgets/drag_only_scroll_behavior.dart";
 import "../../data/repositories/api_repository.dart";
 import "../../data/models/menu_models.dart";
 import "models/food_model.dart";
@@ -139,8 +140,11 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
       child: Scaffold(
         backgroundColor: AppColors.white,
         body: SafeArea(
-          child: SingleChildScrollView(
-          child: Column(
+          child: ScrollConfiguration(
+            behavior: DragOnlyScrollBehavior(),
+            child: SingleChildScrollView(
+              physics: const ClampingScrollPhysics(),
+              child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildBackButton(responsive),
@@ -150,7 +154,8 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
               _buildSimilarFoodsSection(responsive, textTheme),
               _buildAllergySection(responsive, textTheme),
             ],
-          ),
+              ),
+            ),
           ),
         ),
       ),
@@ -204,9 +209,11 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
           SizedBox(
             width: double.infinity,
             height: carouselHeight,
-            child: PageView.builder(
-              itemCount: images.length,
-              onPageChanged: (index) {
+            child: ScrollConfiguration(
+              behavior: DragOnlyScrollBehavior(),
+              child: PageView.builder(
+                itemCount: images.length,
+                onPageChanged: (index) {
                 setState(() {
                   currentImageIndex = index;
                 });
@@ -234,6 +241,7 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
                   ),
                 );
               },
+              ),
             ),
           ),
           const SizedBox(height: 8),

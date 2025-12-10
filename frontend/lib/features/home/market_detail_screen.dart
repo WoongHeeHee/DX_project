@@ -5,6 +5,7 @@ import "package:go_router/go_router.dart";
 import "../../core/theme/app_colors.dart";
 import "../../core/widgets/responsive_helper.dart";
 import "../../core/widgets/loading_overlay.dart";
+import "../../core/widgets/drag_only_scroll_behavior.dart";
 import "../../data/repositories/api_repository.dart";
 import "../../data/models/market_models.dart" as api_models;
 import "../../data/models/menu_models.dart";
@@ -85,8 +86,11 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
       child: Scaffold(
         backgroundColor: Colors.white, // #FFFFFF
         body: SafeArea(
-          child: SingleChildScrollView(
-          child: Column(
+          child: ScrollConfiguration(
+            behavior: DragOnlyScrollBehavior(),
+            child: SingleChildScrollView(
+              physics: const ClampingScrollPhysics(),
+              child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildBackButton(responsive),
@@ -95,7 +99,8 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
               _buildMustTrySection(responsive, textTheme),
               _buildLocationSection(responsive, textTheme),
             ],
-          ),
+              ),
+            ),
           ),
         ),
       ),
@@ -145,9 +150,11 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
           SizedBox(
             width: double.infinity,
             height: carouselHeight,
-            child: PageView.builder(
-              itemCount: images.length,
-              onPageChanged: (index) {
+            child: ScrollConfiguration(
+              behavior: DragOnlyScrollBehavior(),
+              child: PageView.builder(
+                itemCount: images.length,
+                onPageChanged: (index) {
                 setState(() {
                   currentImageIndex = index;
                 });
@@ -173,6 +180,7 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
                   ),
                 );
               },
+              ),
             ),
           ),
           const SizedBox(height: 8),

@@ -7,6 +7,7 @@ import "../../core/widgets/responsive_helper.dart";
 import "../../core/widgets/responsive_padding.dart";
 import "../../core/widgets/custom_dropdown.dart";
 import "../../core/widgets/loading_overlay.dart";
+import "../../core/widgets/drag_only_scroll_behavior.dart";
 import "../../widgets/bottom_navigation_bar.dart";
 import "../../data/repositories/api_repository.dart";
 import "../../data/models/market_models.dart" as api_models;
@@ -740,9 +741,13 @@ class _ExploreScreenState extends State<ExploreScreen> {
                 });
               }
             },
-            child: SingleChildScrollView(
-              controller: _scrollController,
-              child: Column(
+            child: ScrollConfiguration(
+              // 마우스 휠 스크롤 비활성화, 드래그만 허용
+              behavior: DragOnlyScrollBehavior(),
+              child: SingleChildScrollView(
+                controller: _scrollController,
+                physics: const ClampingScrollPhysics(),
+                child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildNowTrendSection(responsive, textTheme),
@@ -765,6 +770,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
             ),
           ),
         ),
+      ),
       ),
     );
   }
@@ -904,11 +910,14 @@ class _ExploreScreenState extends State<ExploreScreen> {
 
     return SizedBox(
       height: cardHeight,
-      child: PageView.builder(
-        itemCount: items.length,
-        controller: _trendBannerController,
-        padEnds: true,
-        onPageChanged: (index) {
+      child: ScrollConfiguration(
+        // 마우스 휠 스크롤 비활성화, 드래그만 허용
+        behavior: DragOnlyScrollBehavior(),
+        child: PageView.builder(
+          itemCount: items.length,
+          controller: _trendBannerController,
+          padEnds: true,
+          onPageChanged: (index) {
           setState(() {
             currentTrendBannerIndex = index;
           });
@@ -928,6 +937,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
             ),
           );
         },
+        ),
       ),
     );
   }
@@ -1216,9 +1226,13 @@ class _ExploreScreenState extends State<ExploreScreen> {
     TextTheme textTheme,
     List<String> categories,
   ) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
+    return ScrollConfiguration(
+      // 마우스 휠 스크롤 비활성화, 드래그만 허용
+      behavior: DragOnlyScrollBehavior(),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        physics: const ClampingScrollPhysics(),
+        child: Row(
         children: categories.map((category) {
           final isSelected = category == selectedCategory;
           return GestureDetector(
@@ -1255,6 +1269,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
             ),
           );
         }).toList(),
+        ),
       ),
     );
   }
@@ -1278,15 +1293,18 @@ class _ExploreScreenState extends State<ExploreScreen> {
       children: [
         SizedBox(
           height: gridHeight,
-          child: PageView.builder(
-            key: ValueKey(selectedCategory), // 카테고리 변경 시 PageView 리셋
-            itemCount: totalPages,
-            onPageChanged: (page) {
-              setState(() {
-                currentFoodPage = page;
-              });
-            },
-            itemBuilder: (context, pageIndex) {
+          child: ScrollConfiguration(
+            // 마우스 휠 스크롤 비활성화, 드래그만 허용
+            behavior: DragOnlyScrollBehavior(),
+            child: PageView.builder(
+              key: ValueKey(selectedCategory), // 카테고리 변경 시 PageView 리셋
+              itemCount: totalPages,
+              onPageChanged: (page) {
+                setState(() {
+                  currentFoodPage = page;
+                });
+              },
+              itemBuilder: (context, pageIndex) {
               final startIndex = pageIndex * itemsPerPage;
               final endIndex = (startIndex + itemsPerPage > foods.length)
                   ? foods.length
@@ -1296,6 +1314,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
               // 2x2 그리드로 표시
               return _buildFoodGridPage(responsive, pageFoods);
             },
+            ),
           ),
         ),
         const SizedBox(height: 8),
@@ -1493,10 +1512,14 @@ class _ExploreScreenState extends State<ExploreScreen> {
     TextTheme textTheme,
     List<String> regions,
   ) {
-    return SingleChildScrollView(
-      key: _regionTabsKey,
-      scrollDirection: Axis.horizontal,
-      child: Row(
+    return ScrollConfiguration(
+      // 마우스 휠 스크롤 비활성화, 드래그만 허용
+      behavior: DragOnlyScrollBehavior(),
+      child: SingleChildScrollView(
+        key: _regionTabsKey,
+        scrollDirection: Axis.horizontal,
+        physics: const ClampingScrollPhysics(),
+        child: Row(
         children: regions.map((region) {
           final isSelected = region == selectedRegion;
           return GestureDetector(
@@ -1531,6 +1554,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
             ),
           );
         }).toList(),
+        ),
       ),
     );
   }

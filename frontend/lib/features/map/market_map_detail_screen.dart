@@ -13,8 +13,6 @@ import "../../data/repositories/api_repository.dart";
 import "../home/models/market_model.dart";
 import "models/store_model.dart";
 
-// 웹에서 JavaScript 함수 호출을 위한 import
-import 'dart:js' as js;
 
 class MarketMapDetailScreen extends StatefulWidget {
   final MarketModel market;
@@ -49,11 +47,6 @@ class _MarketMapDetailScreenState extends State<MarketMapDetailScreen> {
     _lastSize = _midSize;
     _savedStores = _getSavedStoresForMarket();
     _loadPhotoLocations();
-    
-    // 초기 바텀시트 상태를 JavaScript에 전달
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _updateBottomSheetState(_midSize);
-    });
   }
 
   Future<void> _loadPhotoLocations() async {
@@ -147,9 +140,6 @@ class _MarketMapDetailScreenState extends State<MarketMapDetailScreen> {
 
     final currentSize = _draggableController.size;
 
-    // JavaScript에 바텀시트 상태 전달 (웹에서만)
-    _updateBottomSheetState(currentSize);
-
     // 크기가 변경되면 타이머 리셋
     if ((currentSize - _lastSize).abs() > 0.01) {
       _lastSize = currentSize;
@@ -171,18 +161,6 @@ class _MarketMapDetailScreenState extends State<MarketMapDetailScreen> {
           );
         }
       });
-    }
-  }
-
-  /// 바텀시트 상태를 JavaScript에 전달하여 지도 제스처 차단
-  void _updateBottomSheetState(double size) {
-    if (kIsWeb) {
-      try {
-        final isOpen = size > _minSize;
-        js.context.callMethod('setBottomSheetState', [isOpen, size]);
-      } catch (e) {
-        debugPrint('JavaScript 함수 호출 실패: $e');
-      }
     }
   }
 

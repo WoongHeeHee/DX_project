@@ -1,7 +1,6 @@
 // lib/features/map/store_list_screen.dart
 
 import "dart:async";
-import "package:flutter/foundation.dart";
 import "package:flutter/material.dart";
 import "package:google_maps_flutter/google_maps_flutter.dart";
 import "../../core/widgets/responsive_helper.dart";
@@ -11,8 +10,6 @@ import "../../core/widgets/google_map_widget.dart";
 import "../home/models/market_model.dart";
 import "models/store_model.dart";
 
-// 웹에서 JavaScript 함수 호출을 위한 import
-import 'dart:js' as js;
 
 class StoreListScreen extends StatefulWidget {
   final MarketModel market;
@@ -94,9 +91,6 @@ class _StoreListScreenState extends State<StoreListScreen> {
     _updateStoreMarkers();
     
     // 초기 바텀시트 상태를 JavaScript에 전달
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _updateBottomSheetState(_midSize);
-    });
   }
 
   void _updateStoreMarkers() {
@@ -163,9 +157,6 @@ class _StoreListScreenState extends State<StoreListScreen> {
 
     final currentSize = _draggableController.size;
 
-    // JavaScript에 바텀시트 상태 전달 (웹에서만)
-    _updateBottomSheetState(currentSize);
-
     if ((currentSize - _lastSize).abs() > 0.01) {
       _lastSize = currentSize;
       _snapTimer?.cancel();
@@ -184,18 +175,6 @@ class _StoreListScreenState extends State<StoreListScreen> {
           );
         }
       });
-    }
-  }
-
-  /// 바텀시트 상태를 JavaScript에 전달하여 지도 제스처 차단
-  void _updateBottomSheetState(double size) {
-    if (kIsWeb) {
-      try {
-        final isOpen = size > _minSize;
-        js.context.callMethod('setBottomSheetState', [isOpen, size]);
-      } catch (e) {
-        debugPrint('JavaScript 함수 호출 실패: $e');
-      }
     }
   }
 

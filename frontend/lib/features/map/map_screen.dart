@@ -6,6 +6,7 @@ import "../../core/widgets/responsive_helper.dart";
 import "../../core/widgets/responsive_padding.dart";
 import "../../core/theme/app_colors.dart";
 import "../../core/widgets/loading_overlay.dart";
+import "../../core/widgets/drag_only_scroll_behavior.dart";
 import "../../data/repositories/api_repository.dart";
 import "../home/models/market_model.dart";
 import "../../widgets/bottom_navigation_bar.dart";
@@ -302,28 +303,32 @@ class _MapScreenState extends State<MapScreen> {
   Widget _buildWheelPickerCards(ResponsiveHelper responsive, TextTheme textTheme) {
     return SizedBox(
       height: responsive.isMobile ? 330 : 380,
-      child: PageView.builder(
-        controller: _cardPageController,
-        onPageChanged: (index) {
-          setState(() {
-            _currentCardIndex = index;
-          });
-        },
-        itemCount: _markets.length,
-        itemBuilder: (context, index) {
-          final market = _markets[index];
-          final isSelected = index == _currentCardIndex;
-          
-          return Padding(
-            padding: EdgeInsets.symmetric(
-              horizontal: responsive.responsivePadding(mobilePadding: 16),
-            ),
-            child: Opacity(
-              opacity: isSelected ? 1.0 : 0.6,
-              child: _buildMarketCard(responsive, textTheme, market, isSelected),
-            ),
-          );
-        },
+      child: ScrollConfiguration(
+        // 마우스 휠 스크롤 비활성화, 드래그만 허용
+        behavior: DragOnlyScrollBehavior(),
+        child: PageView.builder(
+          controller: _cardPageController,
+          onPageChanged: (index) {
+            setState(() {
+              _currentCardIndex = index;
+            });
+          },
+          itemCount: _markets.length,
+          itemBuilder: (context, index) {
+            final market = _markets[index];
+            final isSelected = index == _currentCardIndex;
+            
+            return Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: responsive.responsivePadding(mobilePadding: 16),
+              ),
+              child: Opacity(
+                opacity: isSelected ? 1.0 : 0.6,
+                child: _buildMarketCard(responsive, textTheme, market, isSelected),
+              ),
+            );
+          },
+        ),
       ),
     );
   }
