@@ -1,13 +1,14 @@
-// lib/features/onboarding/onboarding_style_screen.dart
+﻿// lib/features/onboarding/onboarding_style_screen.dart
 
 import "package:flutter/material.dart";
-import "package:go_router/go_router.dart";
 import "../../core/widgets/responsive_helper.dart";
 import "../../core/widgets/responsive_padding.dart";
 import "../../core/theme/app_colors.dart";
 import "../../core/utils/onboarding_data.dart";
 import "../../data/repositories/api_repository.dart";
 import "../../core/widgets/loading_overlay.dart";
+import "../../core/widgets/error_screen.dart";
+import "onboarding_complete_screen.dart";
 
 class OnboardingStyleScreen extends StatefulWidget {
   final String? userName; // 사용자 이름
@@ -16,9 +17,6 @@ class OnboardingStyleScreen extends StatefulWidget {
   final String? birthYyyyMm; // 생년월 (YYYY-MM)
   final int? spiceLevel; // 매운맛 레벨 (1-5)
   final String? locale; // locale (ko, en, zh, ja)
-  final String? inputName; // 입력받은 이름
-  final String? koreanName; // 생성된 한국 이름
-  final String? englishPronunciation; // 영어 발음
 
   const OnboardingStyleScreen({
     super.key,
@@ -28,9 +26,6 @@ class OnboardingStyleScreen extends StatefulWidget {
     this.birthYyyyMm,
     this.spiceLevel,
     this.locale,
-    this.inputName,
-    this.koreanName,
-    this.englishPronunciation,
   });
 
   @override
@@ -198,20 +193,19 @@ class _OnboardingStyleScreenState extends State<OnboardingStyleScreen> {
             },
             child: Container(
               width: double.infinity,
-              padding: EdgeInsets.only(
-                left: responsive.responsivePadding(mobilePadding: 16),
-                right: responsive.responsivePadding(mobilePadding: 16),
-                top: responsive.responsivePadding(mobilePadding: 16),
-                bottom: responsive.responsivePadding(mobilePadding: 16),
+              padding: EdgeInsets.symmetric(
+                horizontal: responsive.responsivePadding(mobilePadding: 12),
+                vertical: responsive.responsivePadding(mobilePadding: 28),
               ),
               decoration: BoxDecoration(
-                color: AppColors.white,
-                border: Border.all(
-                  color: isSelected
-                      ? AppColors.mainText.withOpacity(0.5)
-                      : const Color(0xFFF7F7F8),
-                  width: 1,
-                ),
+                color:
+                    isSelected ? AppColors.primary.withOpacity(0.1) : AppColors.white,
+                border: isSelected
+                    ? null
+                    : Border.all(
+                        color: const Color(0xFFF7F7F8),
+                        width: 1,
+                      ),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Row(
@@ -222,8 +216,7 @@ class _OnboardingStyleScreenState extends State<OnboardingStyleScreen> {
                     style,
                     style: textTheme.bodyMedium?.copyWith(
                       fontSize: textSize,
-                      fontWeight:
-                          isSelected ? FontWeight.w600 : FontWeight.w500,
+                      fontWeight: FontWeight.w600,
                       color: AppColors.mainText,
                     ),
                   ),
@@ -261,31 +254,7 @@ class _OnboardingStyleScreenState extends State<OnboardingStyleScreen> {
                   OnboardingData.getAdventureFromStyle(_selectedStyle!);
               final koreanExperience = OnboardingData.getKoreanExperience();
 
-              // 디버그: 전달되는 값 확인
-              debugPrint('=== 온보딩 완료 데이터 확인 ===');
-              debugPrint('inputName: ${widget.inputName}');
-              debugPrint('koreanName: ${widget.koreanName}');
-              debugPrint('englishPronunciation: ${widget.englishPronunciation}');
-
-              // korean_name을 (한글이름, 영어발음) 형식으로 생성
-              String? koreanNameFormatted;
-              if (widget.koreanName != null && widget.englishPronunciation != null) {
-                koreanNameFormatted = '(${widget.koreanName}, ${widget.englishPronunciation})';
-                debugPrint('koreanNameFormatted: $koreanNameFormatted');
-              } else if (widget.koreanName != null) {
-                koreanNameFormatted = '(${widget.koreanName}, )';
-                debugPrint('koreanNameFormatted (발음 없음): $koreanNameFormatted');
-              } else {
-                debugPrint('경고: koreanName이 null입니다!');
-              }
-
-              if (widget.inputName == null || widget.inputName!.isEmpty) {
-                debugPrint('경고: inputName이 null이거나 비어있습니다!');
-              }
-
               await _apiRepository.userService.completeOnboarding(
-                displayName: widget.inputName,
-                koreanName: koreanNameFormatted,
                 country: countryCode ?? 'JP',
                 birthYyyyMm: widget.birthYyyyMm ?? '1990-01',
                 spiceLevel: widget.spiceLevel ?? 3,
@@ -295,30 +264,26 @@ class _OnboardingStyleScreenState extends State<OnboardingStyleScreen> {
               );
 
               if (mounted) {
-                context.push(
-                  '/onboarding/complete',
-                  extra: {
-                    'userName': widget.userName,
-                    'countryName': widget.countryName,
-                  },
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => OnboardingCompleteScreen(
+                      userName: widget.userName,
+                      countryName: widget.countryName,
+                    ),
+                  ),
                 );
               }
             } catch (e) {
               if (mounted) {
-                showDialog(
-                  context: context,
-                  builder: (BuildContext dialogContext) {
-                    return AlertDialog(
-                      title: const Text('오류'),
-                      content: const Text('온보딩 완료에 실패했습니다. 다시 시도해주세요.'),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.of(dialogContext).pop(),
-                          child: const Text('확인'),
-                        ),
-                      ],
-                    );
-                  },
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ErrorScreen(
+                      message: '온보딩 완료에 실패했습니다. 다시 시도해주세요.',
+                      onRetry: () => Navigator.pop(context),
+                    ),
+                  ),
                 );
               }
             } finally {
@@ -352,3 +317,4 @@ class _OnboardingStyleScreenState extends State<OnboardingStyleScreen> {
     );
   }
 }
+

@@ -1,13 +1,194 @@
-// lib/features/report/report_guide_screen.dart
-
-import "package:flutter/material.dart";
+﻿import "package:flutter/material.dart";
 import "package:go_router/go_router.dart";
+import "package:image_picker/image_picker.dart";
 import "../../core/widgets/responsive_helper.dart";
 import "../../core/widgets/responsive_padding.dart";
 import "../../core/theme/app_colors.dart";
+import "../../utils/permissions.dart";
 
-class ReportGuideScreen extends StatelessWidget {
+class ReportGuideScreen extends StatefulWidget {
   const ReportGuideScreen({super.key});
+
+  @override
+  State<ReportGuideScreen> createState() => _ReportGuideScreenState();
+}
+
+class _ReportGuideScreenState extends State<ReportGuideScreen> {
+  final ImagePicker _picker = ImagePicker();
+  bool _isLoading = false;
+
+  Future<void> _showImageSourceDialog() async {
+    final responsive = context.responsive;
+    final textTheme = Theme.of(context).textTheme;
+
+    final ImageSource? source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return SafeArea(
+          child: Container(
+            decoration: BoxDecoration(
+              color: AppColors.white,
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(20),
+                topRight: Radius.circular(20),
+              ),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  leading: Icon(
+                    Icons.camera_alt,
+                    size: responsive.responsiveIconSize(mobileSize: 24),
+                    color: AppColors.primary,
+                  ),
+                  title: Text(
+                    "카메라로 촬영",
+                    style: textTheme.titleMedium?.copyWith(
+                      fontSize: responsive.responsiveFontSize(mobileSize: 16),
+                      color: AppColors.mainText,
+                    ),
+                  ),
+                  onTap: () => Navigator.pop(context, ImageSource.camera),
+                ),
+                ListTile(
+                  leading: Icon(
+                    Icons.photo_library,
+                    size: responsive.responsiveIconSize(mobileSize: 24),
+                    color: AppColors.primary,
+                  ),
+                  title: Text(
+                    "갤러리에서 선택",
+                    style: textTheme.titleMedium?.copyWith(
+                      fontSize: responsive.responsiveFontSize(mobileSize: 16),
+                      color: AppColors.mainText,
+                    ),
+                  ),
+                  onTap: () => Navigator.pop(context, ImageSource.gallery),
+                ),
+                SizedBox(
+                    height: responsive.responsivePadding(mobilePadding: 8)),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    if (source != null && mounted) {
+      await _handleImageSelection(source);
+    }
+  }
+
+  Future<void> _handleImageSelection(ImageSource source) async {
+    try {
+      setState(() {
+        _isLoading = true;
+      });
+
+      // 위치 권한 확인
+      final position = await PermissionHelper.getCurrentPosition();
+      if (position == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("위치 권한이 필요합니다.")),
+          );
+        }
+        setState(() {
+          _isLoading = false;
+        });
+        return;
+      }
+
+      // 약간의 지연을 두고 이미지 선택 (플러그인 초기화 대기)
+      await Future.delayed(const Duration(milliseconds: 100));
+
+      final XFile? image = await _picker.pickImage(
+        source: source,
+        imageQuality: 85,
+      );
+
+      if (image != null && mounted) {
+        // TODO: 서버 연결 시 주석 해제
+        // // 사진 업로드
+        // final photoService = Provider.of<PhotoService>(context, listen: false);
+        // try {
+        //   final imageBytes = await image.readAsBytes();
+        //   final now = DateTime.now();
+        //
+        //   // 업로드 초기화
+        //   final uploadInit = await photoService.initPhotoUpload(
+        //     lat: position.latitude,
+        //     lng: position.longitude,
+        //     takenAt: now,
+        //     isMember: false,
+        //   );
+        //
+        //   // S3에 업로드
+        //   await photoService.uploadPhotoToS3(
+        //     presignedUrl: uploadInit.presignedUrl,
+        //     imageBytes: imageBytes,
+        //   );
+        //
+        //   // 업로드 완료 알림
+        //   await photoService.completePhotoUpload(
+        //     uploadToken: uploadInit.uploadToken,
+        //     s3Key: uploadInit.s3Key,
+        //     lat: position.latitude,
+        //     lng: position.longitude,
+        //     takenAt: now,
+        //   );
+        //
+        //   if (mounted) {
+        //     // 로딩 화면으로 이동 (모델 판별 시간 벌기)
+        //     context.push("/report/loading", extra: {
+        //       "image": image,
+        //       "lat": position.latitude,
+        //       "lng": position.longitude,
+        //     });
+        //   }
+        // } catch (e) {
+        //   if (mounted) {
+        //     ScaffoldMessenger.of(context).showSnackBar(
+        //       SnackBar(content: Text("사진 업로드 실패: $e")),
+        //     );
+        //   }
+        // } finally {
+        //   if (mounted) {
+        //     setState(() {
+        //       _isLoading = false;
+        //     });
+        //   }
+        // }
+
+        // 임시: 서버 연결 없이 바로 로딩 화면으로 이동
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+          context.push("/report/loading", extra: {
+            "image": image,
+            "lat": position.latitude,
+            "lng": position.longitude,
+          });
+        }
+      } else {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("이미지 선택 실패: $e")),
+        );
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -17,169 +198,116 @@ class ReportGuideScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.white,
       body: SafeArea(
-        child: ResponsivePadding(
-          mobilePadding: 16,
-          tabletPadding: 24,
-          desktopPadding: 32,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // 뒤로가기 버튼
-              IconButton(
-                icon: const Icon(Icons.arrow_back),
-                onPressed: () => context.pop(),
-                color: AppColors.mainText,
-              ),
-              SizedBox(height: responsive.responsivePadding(mobilePadding: 20)),
-              // 제목
-              Text(
-                "가게 제보하기",
-                style: textTheme.headlineLarge?.copyWith(
-                  fontSize: responsive.responsiveFontSize(mobileSize: 26),
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.mainText,
-                ),
-              ),
-              SizedBox(height: responsive.responsivePadding(mobilePadding: 20)),
-              // 안내 문구
-              Expanded(
-                child: SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        "프로젝트 설명",
-                        style: textTheme.titleMedium?.copyWith(
-                          fontSize: responsive.responsiveFontSize(mobileSize: 18),
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.mainText,
-                        ),
+        child: _isLoading
+            ? const Center(
+                child: CircularProgressIndicator(),
+              )
+            : Column(
+                children: [
+                  Expanded(
+                    child: ResponsivePadding(
+                      child: Column(
+                        children: [
+                          Expanded(
+                            child: _buildContent(context, textTheme),
+                          ),
+                        ],
                       ),
-                      SizedBox(height: responsive.responsivePadding(mobilePadding: 12)),
-                      Text(
-                        "Apex 시장은 전국 시장의 최신 정보를 제공하는 서비스입니다.\n"
-                        "여러분이 직접 촬영한 사진을 통해 시장의 생생한 정보를 공유해주세요.",
-                        style: textTheme.bodyMedium?.copyWith(
-                          fontSize: responsive.responsiveFontSize(mobileSize: 14),
-                          color: AppColors.subText,
-                          height: 1.5,
-                        ),
-                      ),
-                      SizedBox(height: responsive.responsivePadding(mobilePadding: 24)),
-                      Text(
-                        "제보 안내",
-                        style: textTheme.titleMedium?.copyWith(
-                          fontSize: responsive.responsiveFontSize(mobileSize: 18),
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.mainText,
-                        ),
-                      ),
-                      SizedBox(height: responsive.responsivePadding(mobilePadding: 12)),
-                      _buildGuideItem(
-                        responsive,
-                        textTheme,
-                        "1. 위치 권한 허용",
-                        "현재 위치를 확인하여 주변 가게를 찾습니다.",
-                      ),
-                      SizedBox(height: responsive.responsivePadding(mobilePadding: 12)),
-                      _buildGuideItem(
-                        responsive,
-                        textTheme,
-                        "2. 사진 촬영",
-                        "가게 사진을 촬영해주세요.",
-                      ),
-                      SizedBox(height: responsive.responsivePadding(mobilePadding: 12)),
-                      _buildGuideItem(
-                        responsive,
-                        textTheme,
-                        "3. 가게 선택",
-                        "촬영한 위치 주변의 가게를 선택해주세요.",
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              // 촬영 시작 버튼
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () async {
-                    // 위치 및 카메라 권한 요청
-                    // TODO: 실제 권한 요청 로직 구현
-                    context.push('/report/camera');
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    padding: EdgeInsets.symmetric(
-                      vertical: responsive.responsivePadding(mobilePadding: 16),
                     ),
                   ),
-                  child: Text(
-                    "촬영 시작",
-                    style: textTheme.labelLarge?.copyWith(
-                      fontSize: responsive.responsiveFontSize(mobileSize: 16),
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.white,
-                    ),
+                  _buildBottomButton(context, responsive, textTheme),
+                  SizedBox(
+                    height: responsive.responsivePadding(mobilePadding: 40),
                   ),
-                ),
+                ],
               ),
-              SizedBox(height: responsive.responsivePadding(mobilePadding: 16)),
-            ],
-          ),
-        ),
       ),
     );
   }
 
-  Widget _buildGuideItem(
+  Widget _buildContent(BuildContext context, TextTheme textTheme) {
+    final responsive = context.responsive;
+
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          SizedBox(
+            width: responsive.responsiveFontSize(mobileSize: 330),
+            child: Image.asset(
+              "assets/designs/images/lg_slogan_login.png",
+              fit: BoxFit.contain,
+              errorBuilder: (context, error, stackTrace) {
+                return Text(
+                  "이미지를 불러올 수 없습니다",
+                  style: textTheme.bodyMedium?.copyWith(
+                    color: AppColors.subText,
+                  ),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 40),
+          RichText(
+            textAlign: TextAlign.center,
+            text: TextSpan(
+              style: textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w400,
+                color: AppColors.mainText,
+              ),
+              children: [
+                const TextSpan(
+                  text: "영업 중인 가게를 촬영해주세요! \n\n ",
+                ),
+                TextSpan(
+                  text: "음식 위주로 촬영",
+                  style: textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.mainText,
+                  ),
+                ),
+                const TextSpan(
+                  text: "하시면 \n 더 정확한 정보를 제공할 수 있습니다.",
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBottomButton(
+    BuildContext context,
     ResponsiveHelper responsive,
     TextTheme textTheme,
-    String title,
-    String description,
   ) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          width: 24,
-          height: 24,
-          decoration: BoxDecoration(
-            color: AppColors.primary,
-            shape: BoxShape.circle,
+    return ResponsivePadding(
+      child: SizedBox(
+        width: double.infinity,
+        height: 60,
+        child: ElevatedButton(
+          onPressed: _isLoading ? null : _showImageSourceDialog,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.primary,
+            foregroundColor: AppColors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            elevation: 0,
+            shadowColor: Colors.transparent,
+            splashFactory: NoSplash.splashFactory,
+            animationDuration: Duration.zero,
           ),
-          child: Icon(
-            Icons.check,
-            size: 16,
-            color: AppColors.white,
-          ),
-        ),
-        SizedBox(width: responsive.responsivePadding(mobilePadding: 12)),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: textTheme.titleSmall?.copyWith(
-                  fontSize: responsive.responsiveFontSize(mobileSize: 16),
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.mainText,
-                ),
-              ),
-              SizedBox(height: responsive.responsivePadding(mobilePadding: 4)),
-              Text(
-                description,
-                style: textTheme.bodySmall?.copyWith(
-                  fontSize: responsive.responsiveFontSize(mobileSize: 14),
-                  color: AppColors.subText,
-                  height: 1.4,
-                ),
-              ),
-            ],
+          child: Text(
+            "촬영하기",
+            style: textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+              color: AppColors.white,
+            ),
           ),
         ),
-      ],
+      ),
     );
   }
 }

@@ -1,11 +1,10 @@
-// lib/features/report/report_camera_screen.dart
-
-import "package:flutter/material.dart";
-import "package:go_router/go_router.dart";
-import "package:image_picker/image_picker.dart";
-import "../../core/widgets/responsive_helper.dart";
-import "../../core/widgets/responsive_padding.dart";
-import "../../core/theme/app_colors.dart";
+﻿import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
+import 'dart:io';
+import '../../data/services/photo_service.dart';
+import '../../utils/permissions.dart';
 
 class ReportCameraScreen extends StatefulWidget {
   const ReportCameraScreen({super.key});
@@ -16,58 +15,85 @@ class ReportCameraScreen extends StatefulWidget {
 
 class _ReportCameraScreenState extends State<ReportCameraScreen> {
   final ImagePicker _picker = ImagePicker();
-  XFile? _capturedImage;
-  double? _latitude;
-  double? _longitude;
-  bool _isLoading = false;
+  XFile? _image;
+  bool _isUploading = false;
 
-  Future<void> _capturePhoto() async {
-    setState(() {
-      _isLoading = true;
-    });
-
+  Future<void> _takePicture() async {
     try {
-      // 위치 정보 가져오기 (웹에서는 geolocator 패키지 사용)
-      // TODO: 실제 위치 정보 가져오기 구현
-      _latitude = 37.5665; // 임시 값
-      _longitude = 126.9780; // 임시 값
+      // 위치 권한 확인
+      final position = await PermissionHelper.getCurrentPosition();
+      if (position == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('위치 권한이 필요합니다.')),
+          );
+        }
+        return;
+      }
 
-      // 카메라로 사진 촬영
       final XFile? image = await _picker.pickImage(
         source: ImageSource.camera,
-        imageQuality: 85,
       );
-
-      if (image != null && mounted) {
+      if (image != null) {
         setState(() {
-          _capturedImage = image;
-          _isLoading = false;
+          _image = image;
+          _isUploading = true;
         });
 
-        // 촬영 완료 후 주변 가게 선택 화면으로 이동
-        context.push(
-          '/report/shop-select',
-          extra: {
-            'image': _capturedImage!,
-            'lat': _latitude!,
-            'lng': _longitude!,
-          },
-        );
-      } else {
-        setState(() {
-          _isLoading = false;
-        });
+        // 사진 업로드
+        final photoService = Provider.of<PhotoService>(context, listen: false);
+        try {
+          final imageBytes = await File(image.path).readAsBytes();
+          final now = DateTime.now();
+          
+          // 업로드 초기화
+          final uploadInit = await photoService.initPhotoUpload(
+            lat: position.latitude,
+            lng: position.longitude,
+            takenAt: now,
+            isMember: false,
+          );
+          
+          // S3에 업로드
+          await photoService.uploadPhotoToS3(
+            presignedUrl: uploadInit.presignedUrl,
+            imageBytes: imageBytes,
+          );
+          
+          // 업로드 완료 알림
+          await photoService.completePhotoUpload(
+            uploadToken: uploadInit.uploadToken,
+            s3Key: uploadInit.s3Key,
+            lat: position.latitude,
+            lng: position.longitude,
+            takenAt: now,
+          );
+
+          if (mounted) {
+            context.push('/report/shop-select', extra: {
+              'image': image,
+              'lat': position.latitude,
+              'lng': position.longitude,
+            });
+          }
+        } catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('사진 업로드 실패: $e')),
+            );
+          }
+        } finally {
+          if (mounted) {
+            setState(() {
+              _isUploading = false;
+            });
+          }
+        }
       }
     } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("사진 촬영에 실패했습니다: $e"),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text('사진 촬영 실패: $e')),
         );
       }
     }
@@ -75,91 +101,30 @@ class _ReportCameraScreenState extends State<ReportCameraScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final responsive = context.responsive;
-    final textTheme = Theme.of(context).textTheme;
-
     return Scaffold(
-      backgroundColor: AppColors.white,
-      body: SafeArea(
-        child: ResponsivePadding(
-          mobilePadding: 16,
-          tabletPadding: 24,
-          desktopPadding: 32,
-          child: Column(
-            children: [
-              // 상단 제목
-              Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back),
-                    onPressed: () => context.pop(),
-                    color: AppColors.mainText,
-                  ),
-                  Expanded(
-                    child: Text(
-                      "사진 촬영",
-                      style: textTheme.titleLarge?.copyWith(
-                        fontSize: responsive.responsiveFontSize(mobileSize: 20),
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.mainText,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                  SizedBox(width: 48), // 뒤로가기 버튼과 균형 맞추기
-                ],
-              ),
-              SizedBox(height: responsive.responsivePadding(mobilePadding: 20)),
-              // 카메라 프리뷰 영역
-              Expanded(
-                child: Center(
-                  child: _isLoading
-                      ? const CircularProgressIndicator()
-                      : Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.camera_alt,
-                              size: 80,
-                              color: AppColors.subText,
-                            ),
-                            SizedBox(height: responsive.responsivePadding(mobilePadding: 16)),
-                            Text(
-                              "카메라를 실행하여\n사진을 촬영해주세요",
-                              textAlign: TextAlign.center,
-                              style: textTheme.bodyLarge?.copyWith(
-                                fontSize: responsive.responsiveFontSize(mobileSize: 16),
-                                color: AppColors.subText,
-                              ),
-                            ),
-                          ],
-                        ),
+      appBar: AppBar(
+        title: const Text('사진 촬영'),
+      ),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            if (_image != null)
+              Image.file(File(_image!.path), height: 200)
+            else
+              const Icon(Icons.camera_alt, size: 100),
+            const SizedBox(height: 40),
+            if (_isUploading)
+              const CircularProgressIndicator()
+            else
+              ElevatedButton(
+                onPressed: _takePicture,
+                style: ElevatedButton.styleFrom(
+                  minimumSize: const Size(200, 50),
                 ),
+                child: const Text('사진 촬영'),
               ),
-              // 촬영 버튼
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : _capturePhoto,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    padding: EdgeInsets.symmetric(
-                      vertical: responsive.responsivePadding(mobilePadding: 16),
-                    ),
-                  ),
-                  child: Text(
-                    "사진 촬영",
-                    style: textTheme.labelLarge?.copyWith(
-                      fontSize: responsive.responsiveFontSize(mobileSize: 16),
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.white,
-                    ),
-                  ),
-                ),
-              ),
-              SizedBox(height: responsive.responsivePadding(mobilePadding: 16)),
-            ],
-          ),
+          ],
         ),
       ),
     );

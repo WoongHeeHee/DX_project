@@ -32,7 +32,8 @@ import '../features/camera/camera_success_screen.dart';
 import '../features/camera/camera_take_photo_screen.dart';
 import '../features/report/report_guide_screen.dart';
 import '../features/report/report_camera_screen.dart';
-import '../features/report/report_store_select_screen.dart';
+import '../features/report/report_loading_screen.dart';
+import '../features/report/report_shop_select_screen.dart';
 import '../features/report/report_complete_screen.dart';
 import '../data/services/auth_service.dart';
 import 'package:image_picker/image_picker.dart';
@@ -73,8 +74,9 @@ class AppRouter {
         path: '/onboarding/loading',
         builder: (context, state) {
           final extra = state.extra as Map<String, dynamic>?;
+          final inputName = extra?['inputName'] as String? ?? '';
           return OnboardingLoadingScreen(
-            inputName: extra?['inputName'] as String?,
+            inputName: inputName,
           );
         },
       ),
@@ -95,9 +97,6 @@ class AppRouter {
           final extra = state.extra as Map<String, dynamic>?;
           return OnboardingCountryScreen(
             userName: extra?['userName'] as String?,
-            inputName: extra?['inputName'] as String?,
-            koreanName: extra?['koreanName'] as String?,
-            englishPronunciation: extra?['englishPronunciation'] as String?,
           );
         },
       ),
@@ -109,9 +108,6 @@ class AppRouter {
             userName: extra?['userName'] as String?,
             countryName: extra?['countryName'] as String?,
             countryId: extra?['countryId'] as String?,
-            inputName: extra?['inputName'] as String?,
-            koreanName: extra?['koreanName'] as String?,
-            englishPronunciation: extra?['englishPronunciation'] as String?,
           );
         },
       ),
@@ -124,9 +120,6 @@ class AppRouter {
             countryName: extra?['countryName'] as String?,
             countryId: extra?['countryId'] as String?,
             birthYyyyMm: extra?['birthYyyyMm'] as String?,
-            inputName: extra?['inputName'] as String?,
-            koreanName: extra?['koreanName'] as String?,
-            englishPronunciation: extra?['englishPronunciation'] as String?,
           );
         },
       ),
@@ -141,9 +134,6 @@ class AppRouter {
             birthYyyyMm: extra?['birthYyyyMm'] as String?,
             spiceLevel: extra?['spiceLevel'] as int?,
             locale: extra?['locale'] as String?,
-            inputName: extra?['inputName'] as String?,
-            koreanName: extra?['koreanName'] as String?,
-            englishPronunciation: extra?['englishPronunciation'] as String?,
           );
         },
       ),
@@ -168,20 +158,15 @@ class AppRouter {
         builder: (context, state) => const ReportCameraScreen(),
       ),
       GoRoute(
+        path: '/report/loading',
+        builder: (context, state) {
+          return const ReportLoadingScreen();
+        },
+      ),
+      GoRoute(
         path: '/report/shop-select',
         builder: (context, state) {
-          final extra = state.extra as Map<String, dynamic>?;
-          final image = extra?['image'] as XFile?;
-          final lat = extra?['lat'] as double?;
-          final lng = extra?['lng'] as double?;
-          if (image == null || lat == null || lng == null) {
-            throw Exception('image, lat, lng가 필요합니다.');
-          }
-          return ReportStoreSelectScreen(
-            image: image,
-            latitude: lat,
-            longitude: lng,
-          );
+          return const ReportShopSelectScreen();
         },
       ),
       GoRoute(

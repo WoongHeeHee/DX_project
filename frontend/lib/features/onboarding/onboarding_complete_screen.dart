@@ -1,4 +1,4 @@
-// lib/features/onboarding/onboarding_complete_screen.dart
+﻿// lib/features/onboarding/onboarding_complete_screen.dart
 
 import "dart:async";
 import "package:flutter/material.dart";
@@ -29,7 +29,7 @@ class _OnboardingCompleteScreenState extends State<OnboardingCompleteScreen> {
     // 5초 후 홈 화면으로 이동
     Timer(const Duration(seconds: 5), () {
       if (mounted) {
-        context.go('/map');
+        context.go('/explore');
       }
     });
   }
@@ -74,7 +74,7 @@ class _OnboardingCompleteScreenState extends State<OnboardingCompleteScreen> {
                     SizedBox(
                       width: responsive.responsiveFontSize(mobileSize: 180),
                       child: Image.asset(
-                        "assets/images/LGE_Electronics_Slogan.png",
+                        "assets/designs/images/LGE_Electronics_Slogan.png",
                         fit: BoxFit.contain,
                       ),
                     ),
@@ -115,3 +115,4 @@ class _OnboardingCompleteScreenState extends State<OnboardingCompleteScreen> {
     );
   }
 }
+

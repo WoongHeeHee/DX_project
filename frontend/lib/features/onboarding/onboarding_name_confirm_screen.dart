@@ -1,10 +1,10 @@
-// lib/features/onboarding/onboarding_name_confirm_screen.dart
+﻿// lib/features/onboarding/onboarding_name_confirm_screen.dart
 
 import "package:flutter/material.dart";
-import "package:go_router/go_router.dart";
 import "../../core/widgets/responsive_helper.dart";
 import "../../core/widgets/responsive_padding.dart";
 import "../../core/theme/app_colors.dart";
+import "onboarding_country_screen.dart";
 
 class OnboardingNameConfirmScreen extends StatefulWidget {
   final String? inputName; // 입력된 이름
@@ -172,14 +172,12 @@ class _OnboardingNameConfirmScreenState
         height: 60,
         child: ElevatedButton(
           onPressed: () {
-            context.push(
-              '/onboarding/country',
-              extra: {
-                'userName': _koreanName,
-                'inputName': widget.inputName,
-                'koreanName': widget.koreanName,
-                'englishPronunciation': widget.englishPronunciation,
-              },
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) =>
+                    OnboardingCountryScreen(userName: _koreanName),
+              ),
             );
           },
           style: ElevatedButton.styleFrom(
@@ -205,3 +203,4 @@ class _OnboardingNameConfirmScreenState
     );
   }
 }
+

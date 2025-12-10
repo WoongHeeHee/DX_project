@@ -1,10 +1,10 @@
-// lib/features/onboarding/onboarding_name_screen.dart
+﻿// lib/features/onboarding/onboarding_name_screen.dart
 
 import "package:flutter/material.dart";
-import "package:go_router/go_router.dart";
 import "../../core/widgets/responsive_helper.dart";
 import "../../core/widgets/responsive_padding.dart";
 import "../../core/theme/app_colors.dart";
+import "onboarding_loading_screen.dart";
 
 class OnboardingNameScreen extends StatefulWidget {
   const OnboardingNameScreen({super.key});
@@ -252,12 +252,14 @@ class _OnboardingNameScreenState extends State<OnboardingNameScreen> {
         child: ElevatedButton(
           onPressed: () async {
             if (_nameController.text.trim().isNotEmpty) {
-              // 바로 로딩 화면으로 이동 (extra로 inputName 전달)
-              context.push(
-                '/onboarding/loading',
-                extra: {
-                  'inputName': _nameController.text.trim(),
-                },
+              // 바로 로딩 화면으로 이동
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => OnboardingLoadingScreen(
+                    inputName: _nameController.text.trim(),
+                  ),
+                ),
               );
             }
           },
@@ -284,3 +286,4 @@ class _OnboardingNameScreenState extends State<OnboardingNameScreen> {
     );
   }
 }
+

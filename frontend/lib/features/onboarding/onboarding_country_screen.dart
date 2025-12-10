@@ -1,25 +1,19 @@
-// lib/features/onboarding/onboarding_country_screen.dart
+﻿// lib/features/onboarding/onboarding_country_screen.dart
 
 import "package:flutter/material.dart";
-import "package:go_router/go_router.dart";
 import "../../core/widgets/responsive_helper.dart";
 import "../../core/widgets/responsive_padding.dart";
 import "../../core/theme/app_colors.dart";
 import "../../core/widgets/custom_dropdown.dart";
 import "../home/models/filter_model.dart";
+import "onboarding_age_screen.dart";
 
 class OnboardingCountryScreen extends StatefulWidget {
   final String? userName; // 사용자 이름
-  final String? inputName; // 입력받은 이름
-  final String? koreanName; // 생성된 한국 이름
-  final String? englishPronunciation; // 영어 발음
 
   const OnboardingCountryScreen({
     super.key,
     this.userName,
-    this.inputName,
-    this.koreanName,
-    this.englishPronunciation,
   });
 
   @override
@@ -36,107 +30,112 @@ class _OnboardingCountryScreenState extends State<OnboardingCountryScreen> {
     CountryFilter(
       id: "country_jp",
       name: "일본",
-      flagImageUrl: "assets/images/JP.gif",
+      flagImageUrl: "assets/designs/images/JP.gif",
     ),
     CountryFilter(
       id: "country_us",
       name: "미국",
-      flagImageUrl: "assets/images/US.gif",
+      flagImageUrl: "assets/designs/images/US.gif",
     ),
     CountryFilter(
       id: "country_cn",
       name: "중국",
-      flagImageUrl: "assets/images/CN.gif",
+      flagImageUrl: "assets/designs/images/CN.gif",
     ),
     CountryFilter(
       id: "country_kr",
       name: "한국",
-      flagImageUrl: "assets/images/KR.png",
+      flagImageUrl: null,
     ),
     CountryFilter(
       id: "country_th",
       name: "태국",
-      flagImageUrl: "assets/images/TH.gif",
+      flagImageUrl: "assets/designs/images/TH.gif",
     ),
     CountryFilter(
       id: "country_vn",
       name: "베트남",
-      flagImageUrl: "assets/images/VN.gif",
+      flagImageUrl: "assets/designs/images/VN.gif",
     ),
     CountryFilter(
       id: "country_sg",
       name: "싱가포르",
-      flagImageUrl: "assets/images/SG.gif",
+      flagImageUrl: "assets/designs/images/SG.gif",
     ),
     CountryFilter(
       id: "country_my",
       name: "말레이시아",
-      flagImageUrl: "assets/images/MY.gif",
+      flagImageUrl: "assets/designs/images/MY.gif",
     ),
     CountryFilter(
       id: "country_id",
       name: "인도네시아",
-      flagImageUrl: "assets/images/ID.gif",
+      flagImageUrl: "assets/designs/images/ID.gif",
     ),
     CountryFilter(
       id: "country_ph",
       name: "필리핀",
-      flagImageUrl: "assets/images/PH.gif",
+      flagImageUrl: "assets/designs/images/PH.gif",
     ),
     CountryFilter(
       id: "country_in",
       name: "인도",
-      flagImageUrl: "assets/images/IN.gif",
+      flagImageUrl: "assets/designs/images/IN.gif",
     ),
     CountryFilter(
       id: "country_tw",
       name: "대만",
-      flagImageUrl: "assets/images/TW.png",
+      flagImageUrl: "assets/designs/images/TW.gif",
     ),
     CountryFilter(
       id: "country_hk",
       name: "홍콩",
-      flagImageUrl: "assets/images/HK.png",
+      flagImageUrl: "assets/designs/images/HK.gif",
     ),
     CountryFilter(
       id: "country_au",
       name: "호주",
-      flagImageUrl: "assets/images/AU.gif",
+      flagImageUrl: "assets/designs/images/AU.gif",
     ),
     CountryFilter(
       id: "country_ca",
       name: "캐나다",
-      flagImageUrl: "assets/images/CA.gif",
+      flagImageUrl: "assets/designs/images/CA.gif",
     ),
     CountryFilter(
       id: "country_gb",
       name: "영국",
-      flagImageUrl: "assets/images/GB.gif",
+      flagImageUrl: "assets/designs/images/GB.gif",
     ),
     CountryFilter(
       id: "country_fr",
       name: "프랑스",
-      flagImageUrl: "assets/images/FR.gif",
+      flagImageUrl: "assets/designs/images/FR.gif",
     ),
     CountryFilter(
       id: "country_de",
       name: "독일",
-      flagImageUrl: "assets/images/DE.gif",
+      flagImageUrl: "assets/designs/images/DE.gif",
     ),
     CountryFilter(
       id: "country_ru",
       name: "러시아",
-      flagImageUrl: "assets/images/RU.gif",
+      flagImageUrl: "assets/designs/images/RU.gif",
     ),
     CountryFilter(
       id: "country_mx",
       name: "멕시코",
-      flagImageUrl: "assets/images/MX.gif",
+      flagImageUrl: "assets/designs/images/MX.gif",
     ),
     CountryFilter(
       id: "country_mn",
       name: "몽골",
-      flagImageUrl: "assets/images/MN.gif",
+      flagImageUrl: "assets/designs/images/MN.gif",
+    ),
+    CountryFilter(
+      id: "country_other",
+      name: "기타",
+      flagImageUrl: null,
     ),
   ];
 
@@ -293,6 +292,7 @@ class _OnboardingCountryScreenState extends State<OnboardingCountryScreen> {
       maxHeight: 300,
       placeholder: "국가 선택하기",
       showCheckIcon: true,
+      useTextFieldStyle: true, // 텍스트 필드 스타일 사용
     );
   }
 
@@ -307,16 +307,15 @@ class _OnboardingCountryScreenState extends State<OnboardingCountryScreen> {
         child: ElevatedButton(
           onPressed: () {
             if (selectedCountry != null) {
-              context.push(
-                '/onboarding/age',
-                extra: {
-                  'userName': widget.userName,
-                  'countryName': selectedCountry!.name,
-                  'countryId': selectedCountry!.id,
-                  'inputName': widget.inputName,
-                  'koreanName': widget.koreanName,
-                  'englishPronunciation': widget.englishPronunciation,
-                },
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => OnboardingAgeScreen(
+                    userName: widget.userName,
+                    countryName: selectedCountry!.name,
+                    countryId: selectedCountry!.id,
+                  ),
+                ),
               );
             }
           },
@@ -343,3 +342,4 @@ class _OnboardingCountryScreenState extends State<OnboardingCountryScreen> {
     );
   }
 }
+

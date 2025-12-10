@@ -58,4 +58,6 @@ flutter:
 
   assets:
     - assets/images/
+    - assets/designs/images/
+    - assets/designs/fonts/
   # .env 파일은 flutter_dotenv가 직접 로드하므로 assets에 등록할 필요 없음

@@ -1,11 +1,11 @@
-// lib/features/onboarding/onboarding_language_screen.dart
+﻿// lib/features/onboarding/onboarding_language_screen.dart
 
 import "package:flutter/material.dart";
-import "package:go_router/go_router.dart";
 import "../../core/widgets/responsive_helper.dart";
 import "../../core/widgets/responsive_padding.dart";
 import "../../core/theme/app_colors.dart";
 import "../../data/repositories/api_repository.dart";
+import "onboarding_name_screen.dart";
 
 class OnboardingLanguageScreen extends StatefulWidget {
   const OnboardingLanguageScreen({super.key});
@@ -15,8 +15,7 @@ class OnboardingLanguageScreen extends StatefulWidget {
       _OnboardingLanguageScreenState();
 }
 
-class _OnboardingLanguageScreenState
-    extends State<OnboardingLanguageScreen> {
+class _OnboardingLanguageScreenState extends State<OnboardingLanguageScreen> {
   String? _selectedLanguage; // 선택된 언어
 
   // 언어 옵션
@@ -80,9 +79,6 @@ class _OnboardingLanguageScreenState
     final double progress = currentStep / totalSteps;
 
     return ResponsivePadding(
-      mobilePadding: 16,
-      tabletPadding: 24,
-      desktopPadding: 32,
       child: LayoutBuilder(
         builder: (context, constraints) {
           final double containerWidth = constraints.maxWidth;
@@ -122,28 +118,28 @@ class _OnboardingLanguageScreenState
     TextTheme textTheme,
   ) {
     return ResponsivePadding(
-      mobilePadding: 16,
-      tabletPadding: 24,
-      desktopPadding: 32,
+      mobileEdgeInsets: EdgeInsets.only(
+        left: responsive.responsivePadding(mobilePadding: 20),
+        right: responsive.responsivePadding(mobilePadding: 20),
+        top: responsive.responsivePadding(mobilePadding: 8),
+        bottom: responsive.responsivePadding(mobilePadding: 20),
+      ),
       child: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            SizedBox(
-              height: responsive.responsivePadding(mobilePadding: 20),
-            ),
             // STEP 1 · Language
             Text(
               "STEP 1 · Language",
               style: textTheme.bodySmall?.copyWith(
-                fontSize: responsive.responsiveFontSize(mobileSize: 11),
-                fontWeight: FontWeight.w400,
+                fontSize: responsive.responsiveFontSize(mobileSize: 16),
+                fontWeight: FontWeight.w600,
                 color: AppColors.inactiveText,
                 letterSpacing: 0.22,
               ),
             ),
             SizedBox(
-              height: responsive.responsivePadding(mobilePadding: 20),
+              height: responsive.responsivePadding(mobilePadding: 50),
             ),
             // 언어 선택 카드들
             Column(
@@ -187,14 +183,15 @@ class _OnboardingLanguageScreenState
           vertical: responsive.responsivePadding(mobilePadding: 14),
         ),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.white : const Color(0xFFF7F7F8),
+          color:
+              isSelected ? AppColors.primary.withOpacity(0.1) : AppColors.white,
           border: isSelected
-              ? Border.all(
-                  color: AppColors.primary,
+              ? null
+              : Border.all(
+                  color: const Color(0xFFF7F7F8),
                   width: 1,
-                )
-              : null,
-          borderRadius: BorderRadius.circular(8),
+                ),
+          borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -203,7 +200,7 @@ class _OnboardingLanguageScreenState
               language.greeting,
               style: textTheme.titleMedium?.copyWith(
                 fontSize: responsive.responsiveFontSize(mobileSize: 16),
-                fontWeight: FontWeight.w500,
+                fontWeight: FontWeight.w600,
                 color: AppColors.mainText,
               ),
             ),
@@ -229,34 +226,39 @@ class _OnboardingLanguageScreenState
     TextTheme textTheme,
   ) {
     return ResponsivePadding(
-      mobilePadding: 16,
-      tabletPadding: 24,
-      desktopPadding: 32,
-        child: GestureDetector(
-          onTap: () async {
+      child: SizedBox(
+        width: double.infinity,
+        height: 60,
+        child: ElevatedButton(
+          onPressed: () async {
             // locale 저장
             if (_selectedLanguage != null) {
               final apiRepository = ApiRepository();
               await apiRepository.userService.setLocale(_selectedLanguage!);
             }
 
-            context.push('/onboarding/name');
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const OnboardingNameScreen(),
+              ),
+            );
           },
-        child: Container(
-          width: double.infinity,
-          padding: EdgeInsets.symmetric(
-            vertical: responsive.responsivePadding(mobilePadding: 13),
-          ),
-          decoration: BoxDecoration(
-            color: AppColors.primary,
-            borderRadius: BorderRadius.circular(8),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.primary,
+            foregroundColor: AppColors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            elevation: 0,
+            shadowColor: Colors.transparent,
+            splashFactory: NoSplash.splashFactory,
+            animationDuration: Duration.zero,
           ),
           child: Text(
             "선택 완료",
-            textAlign: TextAlign.center,
-            style: textTheme.labelLarge?.copyWith(
-              fontSize: responsive.responsiveFontSize(mobileSize: 15),
-              fontWeight: FontWeight.w500,
+            style: textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w600,
               color: AppColors.white,
             ),
           ),
