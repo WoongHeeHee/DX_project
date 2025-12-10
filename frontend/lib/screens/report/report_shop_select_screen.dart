@@ -1,8 +1,8 @@
-import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
-import '../../data/services/shop_service.dart';
-import '../../models/shop_model.dart';
+import "package:flutter/material.dart";
+import "package:go_router/go_router.dart";
+import "../../core/widgets/responsive_helper.dart";
+import "../../core/widgets/responsive_padding.dart";
+import "../../core/theme/app_colors.dart";
 
 class ReportShopSelectScreen extends StatefulWidget {
   const ReportShopSelectScreen({super.key});
@@ -12,107 +12,183 @@ class ReportShopSelectScreen extends StatefulWidget {
 }
 
 class _ReportShopSelectScreenState extends State<ReportShopSelectScreen> {
-  List<ShopModel> _shops = [];
-  bool _isLoading = true;
   String? _selectedShopId;
-  double? _lat;
-  double? _lng;
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (_shops.isEmpty) {
-      final extra = GoRouterState.of(context).extra;
-      if (extra is Map<String, dynamic>) {
-        _lat = extra['lat'] as double?;
-        _lng = extra['lng'] as double?;
-        _loadNearbyShops();
-      }
-    }
-  }
-
-  Future<void> _loadNearbyShops() async {
-    if (_lat == null || _lng == null) return;
-
-    try {
-      final shopService = Provider.of<ShopService>(context, listen: false);
-      final shops = await shopService.getNearbyShops(
-        lat: _lat!,
-        lng: _lng!,
-        radiusMeters: 5.0,
-        limit: 5,
-      );
-      setState(() {
-        _shops = shops;
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('가게 조회 실패: $e')),
-        );
-      }
-    }
-  }
+  // 더미 데이터 (나중에 DB에서 가져올 데이터)
+  final List<Map<String, String>> _dummyShops = [
+    {
+      "id": "1",
+      "name": "더미 가게 1",
+      "address": "서울시 강남구 테헤란로 123",
+    },
+    {
+      "id": "2",
+      "name": "더미 가게 2",
+      "address": "서울시 강남구 테헤란로 456",
+    },
+    {
+      "id": "3",
+      "name": "더미 가게 3",
+      "address": "서울시 강남구 테헤란로 789",
+    },
+  ];
 
   @override
   Widget build(BuildContext context) {
+    final responsive = context.responsive;
+    final textTheme = Theme.of(context).textTheme;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('가게 선택'),
-      ),
-      body: Column(
-        children: [
-          const Padding(
-            padding: EdgeInsets.all(16.0),
-            child: Text('주변 가게를 선택해주세요'),
-          ),
-          Expanded(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : _shops.isEmpty
-                    ? const Center(child: Text('주변에 가게가 없습니다.'))
-                    : ListView.builder(
-                        itemCount: _shops.length,
-                        itemBuilder: (context, index) {
-                          final shop = _shops[index];
-                          return ListTile(
-                            title: Text(shop.name),
-                            subtitle: shop.address != null ? Text(shop.address!) : null,
-                            leading: shop.repImageUrl != null
-                                ? Image.network(shop.repImageUrl!, width: 50, height: 50)
-                                : const Icon(Icons.store),
-                            selected: _selectedShopId == shop.id,
-                            onTap: () {
-                              setState(() {
-                                _selectedShopId = shop.id;
-                              });
-                            },
-                          );
-                        },
+      backgroundColor: AppColors.white,
+      body: SafeArea(
+        child: Column(
+          children: [
+            Expanded(
+              child: ResponsivePadding(
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SizedBox(
+                        height: responsive.responsivePadding(mobilePadding: 40),
                       ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: ElevatedButton(
-              onPressed: _selectedShopId == null
-                  ? null
-                  : () {
-                      context.push('/report/complete', extra: _selectedShopId);
-                    },
-              style: ElevatedButton.styleFrom(
-                minimumSize: const Size(double.infinity, 50),
+                      _buildTitle(textTheme, responsive),
+                      SizedBox(
+                        height: responsive.responsivePadding(mobilePadding: 40),
+                      ),
+                      _buildShopOptions(responsive, textTheme),
+                    ],
+                  ),
+                ),
               ),
-              child: const Text('선택 완료'),
+            ),
+            _buildBottomButton(context, responsive, textTheme),
+            SizedBox(
+              height: responsive.responsivePadding(mobilePadding: 40),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTitle(TextTheme textTheme, ResponsiveHelper responsive) {
+    return Text(
+      "촬영하신 음식의\n가게를 선택해주세요",
+      style: textTheme.headlineLarge?.copyWith(
+        fontSize: responsive.responsiveFontSize(mobileSize: 26),
+        fontWeight: FontWeight.w600,
+        height: 1.3,
+        color: AppColors.mainText,
+      ),
+    );
+  }
+
+  Widget _buildShopOptions(
+    ResponsiveHelper responsive,
+    TextTheme textTheme,
+  ) {
+    return Column(
+      children: _dummyShops.map((shop) {
+        final isSelected = _selectedShopId == shop["id"];
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: responsive.responsivePadding(mobilePadding: 10),
+          ),
+          child: GestureDetector(
+            onTap: () {
+              setState(() {
+                _selectedShopId = shop["id"];
+              });
+            },
+            child: Container(
+              width: double.infinity,
+              padding: EdgeInsets.symmetric(
+                horizontal: responsive.responsivePadding(mobilePadding: 12),
+                vertical: responsive.responsivePadding(mobilePadding: 14),
+              ),
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? AppColors.primary.withOpacity(0.1)
+                    : AppColors.white,
+                border: isSelected
+                    ? null
+                    : Border.all(
+                        color: const Color(0xFFF7F7F8),
+                        width: 1,
+                      ),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    shop["name"] ?? "",
+                    style: textTheme.titleMedium?.copyWith(
+                      fontSize: responsive.responsiveFontSize(mobileSize: 16),
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.mainText,
+                    ),
+                  ),
+                  if (shop["address"] != null) ...[
+                    SizedBox(
+                      height: responsive.responsivePadding(mobilePadding: 4),
+                    ),
+                    Text(
+                      shop["address"]!,
+                      style: textTheme.bodyMedium?.copyWith(
+                        fontSize: responsive.responsiveFontSize(mobileSize: 13),
+                        fontWeight: FontWeight.w400,
+                        color: AppColors.inactiveText,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
             ),
           ),
-        ],
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildBottomButton(
+    BuildContext context,
+    ResponsiveHelper responsive,
+    TextTheme textTheme,
+  ) {
+    return ResponsivePadding(
+      child: SizedBox(
+        width: double.infinity,
+        height: 60,
+        child: ElevatedButton(
+          onPressed: _selectedShopId == null
+              ? null
+              : () {
+                  context.push("/report/complete", extra: _selectedShopId);
+                },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.primary,
+            foregroundColor: AppColors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            elevation: 0,
+            shadowColor: Colors.transparent,
+            splashFactory: NoSplash.splashFactory,
+            animationDuration: Duration.zero,
+            disabledBackgroundColor: AppColors.lightGrey,
+            disabledForegroundColor: AppColors.inactiveText,
+          ),
+          child: Text(
+            "제보 완료하기",
+            style: textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+              color: AppColors.white,
+            ),
+          ),
+        ),
       ),
     );
   }
 }
-

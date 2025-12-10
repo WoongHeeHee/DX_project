@@ -31,6 +31,9 @@ final ThemeData appTheme = ThemeData(
   // 화면 배경색 지정 (Scaffold의 기본 배경색)
   scaffoldBackgroundColor: AppColors.white,
 
+  // 호버/터치 시 생기는 원형 효과 제거
+  splashFactory: NoSplash.splashFactory,
+
   // ----------------------------------------------------
   // 3. 텍스트 테마 (TextTheme)
   // ----------------------------------------------------

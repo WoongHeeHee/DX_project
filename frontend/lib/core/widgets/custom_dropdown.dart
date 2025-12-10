@@ -145,18 +145,17 @@ class _CustomDropdownState<T> extends State<CustomDropdown<T>> {
         width: widget.width != null ? widget.width : double.infinity,
         constraints: widget.useTextFieldStyle
             ? BoxConstraints(
-                // TextField의 실제 높이와 동일하게 설정
+                // TextField의 실제 높이를 1.5배로 설정
                 // 텍스트 크기(16px) * line height(1.25) + padding(12px * 2) = 약 44px
-                minHeight: (textSize * 1.25) + 
-                    (responsive.responsivePadding(mobilePadding: 12) * 2),
+                // 1.5배 = 약 66px
+                minHeight: ((textSize * 1.25) + 
+                    (responsive.responsivePadding(mobilePadding: 12) * 2)) * 1.5,
               )
             : null,
         padding: widget.useTextFieldStyle
-            ? EdgeInsets.only(
-                left: responsive.responsivePadding(mobilePadding: 16),
-                right: responsive.responsivePadding(mobilePadding: 16),
-                top: responsive.responsivePadding(mobilePadding: 12),
-                bottom: responsive.responsivePadding(mobilePadding: 12),
+            ? EdgeInsets.symmetric(
+                horizontal: responsive.responsivePadding(mobilePadding: 16),
+                vertical: responsive.responsivePadding(mobilePadding: 12),
               )
             : EdgeInsets.symmetric(
                 horizontal: responsive.responsivePadding(mobilePadding: 12),
@@ -195,7 +194,7 @@ class _CustomDropdownState<T> extends State<CustomDropdown<T>> {
                     decoration: BoxDecoration(
                       color: imageUrl != null
                           ? Colors.transparent
-                          : AppColors.filterColor,
+                          : AppColors.white,
                       borderRadius: BorderRadius.circular(2),
                     ),
                     child: imageUrl != null
@@ -206,7 +205,7 @@ class _CustomDropdownState<T> extends State<CustomDropdown<T>> {
                               fit: BoxFit.cover,
                               errorBuilder: (context, error, stackTrace) {
                                 debugPrint("❌ 국기 이미지 로드 실패: $imageUrl");
-                                return Container(color: AppColors.filterColor);
+                                return Container(color: AppColors.white);
                               },
                             ),
                           )
@@ -324,17 +323,16 @@ class _CustomDropdownState<T> extends State<CustomDropdown<T>> {
                       Builder(
                         builder: (context) {
                           final imageUrl = widget.getImageUrl!(item);
+                          final textSize = responsive.responsiveFontSize(mobileSize: 16);
+                          final flagHeight = textSize * 1.25; // 폰트 높이에 맞춤
+                          final flagWidth = flagHeight * 1.5; // 국기 비율 유지 (3:2)
                           return Container(
-                            width: responsive.responsiveIconSize(
-                              mobileSize: 24,
-                            ),
-                            height: responsive.responsiveIconSize(
-                              mobileSize: 16,
-                            ),
+                            width: flagWidth,
+                            height: flagHeight,
                             decoration: BoxDecoration(
                               color: imageUrl != null
                                   ? Colors.transparent
-                                  : AppColors.filterColor,
+                                  : AppColors.white,
                               borderRadius: BorderRadius.circular(2),
                             ),
                             child: imageUrl != null
@@ -349,7 +347,7 @@ class _CustomDropdownState<T> extends State<CustomDropdown<T>> {
                                               "❌ 국기 이미지 로드 실패: $imageUrl",
                                             );
                                             return Container(
-                                              color: AppColors.filterColor,
+                                              color: AppColors.white,
                                             );
                                           },
                                     ),
@@ -360,7 +358,7 @@ class _CustomDropdownState<T> extends State<CustomDropdown<T>> {
                       ),
                     if (widget.getImageUrl != null)
                       SizedBox(
-                        width: responsive.responsivePadding(mobilePadding: 6),
+                        width: responsive.responsivePadding(mobilePadding: 8),
                       ),
                     // 라벨
                     Expanded(
@@ -368,7 +366,7 @@ class _CustomDropdownState<T> extends State<CustomDropdown<T>> {
                         widget.getLabel(item),
                         style: textTheme.bodyMedium?.copyWith(
                           fontSize: responsive.responsiveFontSize(
-                            mobileSize: 13,
+                            mobileSize: 16,
                           ),
                           fontWeight: isSelected
                               ? FontWeight.w600
