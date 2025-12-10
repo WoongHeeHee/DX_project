@@ -16,6 +16,7 @@ import '../screens/onboarding/onboarding_main_1_screen.dart';
 import '../screens/onboarding/onboarding_main_2_screen.dart';
 import '../screens/report/report_guide_screen.dart';
 import '../screens/report/report_camera_screen.dart';
+import '../screens/report/report_loading_screen.dart';
 import '../screens/report/report_shop_select_screen.dart';
 import '../screens/report/report_complete_screen.dart';
 import '../features/home/explore_screen.dart' as features;
@@ -31,7 +32,7 @@ class AppRouter {
   AppRouter({required this.authService});
 
   late final GoRouter router = GoRouter(
-    initialLocation: '/login',
+    initialLocation: '/explore',
     routes: [
       // 인증 관련
       GoRoute(
@@ -157,6 +158,10 @@ class AppRouter {
         builder: (context, state) => const ReportCameraScreen(),
       ),
       GoRoute(
+        path: '/report/loading',
+        builder: (context, state) => const ReportLoadingScreen(),
+      ),
+      GoRoute(
         path: '/report/shop-select',
         builder: (context, state) => const ReportShopSelectScreen(),
       ),
@@ -167,27 +172,42 @@ class AppRouter {
 
       // 메인 탭 (하단 네비게이션)
       GoRoute(
-        path: '/explore',
-        builder: (context, state) => const features.ExploreScreen(),
+        path: "/explore",
+        pageBuilder: (context, state) => NoTransitionPage(
+          key: state.pageKey,
+          child: const features.ExploreScreen(),
+        ),
       ),
       GoRoute(
-        path: '/map',
-        builder: (context, state) => const MapMarketSelectScreen(),
+        path: "/map",
+        pageBuilder: (context, state) => NoTransitionPage(
+          key: state.pageKey,
+          child: const MapMarketSelectScreen(),
+        ),
       ),
       GoRoute(
-        path: '/map/market/:marketId',
-        builder: (context, state) {
-          final marketId = state.pathParameters['marketId']!;
-          return MapMarketScreen(marketId: marketId);
+        path: "/map/market/:marketId",
+        pageBuilder: (context, state) {
+          final marketId = state.pathParameters["marketId"]!;
+          return NoTransitionPage(
+            key: state.pageKey,
+            child: MapMarketScreen(marketId: marketId),
+          );
         },
       ),
       GoRoute(
-        path: '/camera',
-        builder: (context, state) => const CameraScreen(),
+        path: "/camera",
+        pageBuilder: (context, state) => NoTransitionPage(
+          key: state.pageKey,
+          child: const CameraScreen(),
+        ),
       ),
       GoRoute(
-        path: '/my',
-        builder: (context, state) => const MyPageScreen(),
+        path: "/my",
+        pageBuilder: (context, state) => NoTransitionPage(
+          key: state.pageKey,
+          child: const MyPageScreen(),
+        ),
       ),
     ],
     redirect: (context, state) {

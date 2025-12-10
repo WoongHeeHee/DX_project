@@ -17,7 +17,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _handleGoogleSignIn() async {
     // 일단 로그인 시도 없이 바로 온보딩 화면으로 이동
     context.go('/onboarding/language');
-    
+
     // TODO: 실제 로그인 기능 구현 시 아래 코드 사용
     /*
     setState(() {
@@ -98,25 +98,13 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Widget _buildLogoPlaceholder(ResponsiveHelper responsive) {
-    final logoSize = responsive.responsiveFontSize(mobileSize: 120);
-    
-    return Container(
+    final logoSize = responsive.responsiveFontSize(mobileSize: 240);
+
+    return Image.asset(
+      "assets/images/logo.png",
       width: logoSize,
       height: logoSize,
-      decoration: BoxDecoration(
-        color: AppColors.lightGrey,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Center(
-        child: Text(
-          "로고 들어갈 예정",
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: responsive.responsiveFontSize(mobileSize: 12),
-            color: AppColors.inactiveText,
-          ),
-        ),
-      ),
+      fit: BoxFit.contain,
     );
   }
 
@@ -135,11 +123,7 @@ class _LoginScreenState extends State<LoginScreen> {
           bottom: responsive.responsivePadding(mobilePadding: 16),
         ),
         decoration: BoxDecoration(
-          color: AppColors.white,
-          border: Border.all(
-            color: AppColors.mainText,
-            width: 1,
-          ),
+          color: AppColors.mainText.withOpacity(0.8),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
@@ -158,11 +142,11 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             Flexible(
               child: Text(
-                "Google 로그인",
+                "로그인",
                 style: textTheme.bodyMedium?.copyWith(
                   fontSize: responsive.responsiveFontSize(mobileSize: 16),
                   fontWeight: FontWeight.w600,
-                  color: AppColors.mainText,
+                  color: AppColors.white,
                 ),
                 overflow: TextOverflow.ellipsis,
               ),
@@ -190,11 +174,7 @@ class _LoginScreenState extends State<LoginScreen> {
           bottom: responsive.responsivePadding(mobilePadding: 16),
         ),
         decoration: BoxDecoration(
-          color: AppColors.white,
-          border: Border.all(
-            color: AppColors.mainText,
-            width: 1,
-          ),
+          color: AppColors.primary,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Text(
@@ -203,11 +183,10 @@ class _LoginScreenState extends State<LoginScreen> {
           style: textTheme.bodyMedium?.copyWith(
             fontSize: responsive.responsiveFontSize(mobileSize: 16),
             fontWeight: FontWeight.w600,
-            color: AppColors.mainText,
+            color: AppColors.white,
           ),
         ),
       ),
     );
   }
 }
-

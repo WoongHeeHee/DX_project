@@ -1,36 +1,42 @@
-import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
+import "package:flutter/material.dart";
+import "package:go_router/go_router.dart";
+import "../../core/theme/app_colors.dart";
 
-class ReportCompleteScreen extends StatelessWidget {
+class ReportCompleteScreen extends StatefulWidget {
   const ReportCompleteScreen({super.key});
+
+  @override
+  State<ReportCompleteScreen> createState() => _ReportCompleteScreenState();
+}
+
+class _ReportCompleteScreenState extends State<ReportCompleteScreen> {
+  bool _hasNavigated = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // 3초 후 로그인 화면으로 이동
+    if (!_hasNavigated) {
+      _hasNavigated = true;
+      Future.delayed(const Duration(seconds: 3), () {
+        if (mounted) {
+          context.go("/login");
+        }
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('제보 완료'),
-      ),
+      backgroundColor: AppColors.white,
       body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Text(
-              '제보 완료',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 20),
-            const Text('감사합니다!'),
-            const SizedBox(height: 40),
-            ElevatedButton(
-              onPressed: () {
-                context.go('/welcome');
-              },
-              style: ElevatedButton.styleFrom(
-                minimumSize: const Size(200, 50),
-              ),
-              child: const Text('최초화면 돌아가기'),
-            ),
-          ],
+        child: Image.asset(
+          "assets/images/thankyou.png",
+          fit: BoxFit.contain,
+          errorBuilder: (context, error, stackTrace) {
+            return const Text("이미지를 불러올 수 없습니다");
+          },
         ),
       ),
     );

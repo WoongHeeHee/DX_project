@@ -193,20 +193,19 @@ class _OnboardingStyleScreenState extends State<OnboardingStyleScreen> {
             },
             child: Container(
               width: double.infinity,
-              padding: EdgeInsets.only(
-                left: responsive.responsivePadding(mobilePadding: 16),
-                right: responsive.responsivePadding(mobilePadding: 16),
-                top: responsive.responsivePadding(mobilePadding: 16),
-                bottom: responsive.responsivePadding(mobilePadding: 16),
+              padding: EdgeInsets.symmetric(
+                horizontal: responsive.responsivePadding(mobilePadding: 12),
+                vertical: responsive.responsivePadding(mobilePadding: 28),
               ),
               decoration: BoxDecoration(
-                color: AppColors.white,
-                border: Border.all(
-                  color: isSelected
-                      ? AppColors.mainText.withOpacity(0.5)
-                      : const Color(0xFFF7F7F8),
-                  width: 1,
-                ),
+                color:
+                    isSelected ? AppColors.primary.withOpacity(0.1) : AppColors.white,
+                border: isSelected
+                    ? null
+                    : Border.all(
+                        color: const Color(0xFFF7F7F8),
+                        width: 1,
+                      ),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Row(
@@ -217,8 +216,7 @@ class _OnboardingStyleScreenState extends State<OnboardingStyleScreen> {
                     style,
                     style: textTheme.bodyMedium?.copyWith(
                       fontSize: textSize,
-                      fontWeight:
-                          isSelected ? FontWeight.w600 : FontWeight.w500,
+                      fontWeight: FontWeight.w600,
                       color: AppColors.mainText,
                     ),
                   ),

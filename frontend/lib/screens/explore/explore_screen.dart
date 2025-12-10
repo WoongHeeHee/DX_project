@@ -30,13 +30,15 @@ class _ExploreScreenState extends State<ExploreScreen> {
 
   Future<void> _loadData() async {
     try {
-      final recommendationService = Provider.of<RecommendationService>(context, listen: false);
+      final recommendationService =
+          Provider.of<RecommendationService>(context, listen: false);
       final marketService = Provider.of<MarketService>(context, listen: false);
 
       final results = await Future.wait([
         recommendationService.getRecommendations(limit: 3),
         recommendationService.getTrendingMenus(limit: 3),
-        recommendationService.getRecommendations(category: _selectedCategory.value, limit: 10),
+        recommendationService.getRecommendations(
+            category: _selectedCategory.value, limit: 10),
         marketService.getMarkets(),
       ]);
 
@@ -61,8 +63,10 @@ class _ExploreScreenState extends State<ExploreScreen> {
 
   Future<void> _loadCategoryMenus() async {
     try {
-      final recommendationService = Provider.of<RecommendationService>(context, listen: false);
-      final menus = await recommendationService.getRecommendations(category: _selectedCategory.value, limit: 10);
+      final recommendationService =
+          Provider.of<RecommendationService>(context, listen: false);
+      final menus = await recommendationService.getRecommendations(
+          category: _selectedCategory.value, limit: 10);
       setState(() {
         _categoryMenus = menus;
       });
@@ -92,7 +96,8 @@ class _ExploreScreenState extends State<ExploreScreen> {
                     padding: EdgeInsets.all(16.0),
                     child: Text(
                       '국적-나이 별 트렌드 메뉴',
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                      style:
+                          TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                     ),
                   ),
                   SizedBox(
@@ -122,7 +127,8 @@ class _ExploreScreenState extends State<ExploreScreen> {
                     padding: EdgeInsets.all(16.0),
                     child: Text(
                       '개인 맞춤 추천',
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                      style:
+                          TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                     ),
                   ),
                   SizedBox(
@@ -151,7 +157,8 @@ class _ExploreScreenState extends State<ExploreScreen> {
                     padding: EdgeInsets.all(16.0),
                     child: Text(
                       'Korean Street Food',
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                      style:
+                          TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                     ),
                   ),
                   // 카테고리 선택
@@ -203,7 +210,8 @@ class _ExploreScreenState extends State<ExploreScreen> {
                     padding: EdgeInsets.all(16.0),
                     child: Text(
                       'Discover 시장',
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                      style:
+                          TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                     ),
                   ),
                   ListView.builder(
@@ -214,7 +222,9 @@ class _ExploreScreenState extends State<ExploreScreen> {
                       final market = _markets[index];
                       return ListTile(
                         title: Text(market.name),
-                        subtitle: market.description != null ? Text(market.description!) : null,
+                        subtitle: market.description != null
+                            ? Text(market.description!)
+                            : null,
                       );
                     },
                   ),

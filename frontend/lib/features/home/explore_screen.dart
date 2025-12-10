@@ -10,6 +10,7 @@ import "../../core/widgets/loading_overlay.dart";
 import "../../data/repositories/api_repository.dart";
 import "../../data/models/market_models.dart" as api_models;
 import "../../data/models/menu_models.dart";
+import "../../widgets/bottom_navigation_bar.dart";
 import "models/filter_model.dart";
 import "models/market_model.dart";
 import "models/food_model.dart";
@@ -1192,6 +1193,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
             ),
           ),
         ),
+        bottomNavigationBar: const CustomBottomNavigationBar(currentIndex: 0),
       ),
     );
   }

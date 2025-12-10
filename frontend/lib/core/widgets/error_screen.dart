@@ -1,5 +1,7 @@
-import 'package:flutter/material.dart';
-import '../theme/app_colors.dart';
+import "package:flutter/material.dart";
+import "../theme/app_colors.dart";
+import "../widgets/responsive_helper.dart";
+import "../widgets/responsive_padding.dart";
 
 /// 에러 화면 위젯
 class ErrorScreen extends StatelessWidget {
@@ -18,49 +20,76 @@ class ErrorScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final locale = Localizations.localeOf(context);
     final defaultButtonText = _getDefaultButtonText(locale.languageCode);
+    final responsive = context.responsive;
+    final textTheme = Theme.of(context).textTheme;
 
     return Scaffold(
       backgroundColor: AppColors.white,
       body: SafeArea(
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // 에러 아이콘 (선택사항)
-                Icon(
-                  Icons.error_outline,
-                  size: 64,
-                  color: Colors.red,
-                ),
-                const SizedBox(height: 24),
-                // 에러 메시지
-                Text(
-                  message,
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: AppColors.mainText,
+        child: Column(
+          children: [
+            Expanded(
+              child: Center(
+                child: ResponsivePadding(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      // 에러 아이콘 (선택사항)
+                      Icon(
+                        Icons.error_outline,
+                        size: 64,
+                        color: Colors.red,
                       ),
-                  textAlign: TextAlign.center,
+                      SizedBox(
+                        height: responsive.responsivePadding(mobilePadding: 24),
+                      ),
+                      // 에러 메시지
+                      Text(
+                        message,
+                        style: textTheme.bodyLarge?.copyWith(
+                          color: AppColors.mainText,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 32),
-                // 돌아가기 버튼
-                ElevatedButton(
-                  onPressed: onRetry ?? () => Navigator.of(context).popUntil((route) => route.isFirst),
+              ),
+            ),
+            // 돌아가기 버튼
+            ResponsivePadding(
+              child: SizedBox(
+                width: double.infinity,
+                height: 60,
+                child: ElevatedButton(
+                  onPressed: onRetry ??
+                      () => Navigator.of(context)
+                          .popUntil((route) => route.isFirst),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
-                    minimumSize: const Size(double.infinity, 50),
+                    foregroundColor: AppColors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 0,
+                    shadowColor: Colors.transparent,
+                    splashFactory: NoSplash.splashFactory,
+                    animationDuration: Duration.zero,
                   ),
                   child: Text(
                     buttonText ?? defaultButtonText,
-                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          color: AppColors.white,
-                        ),
+                    style: textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.white,
+                    ),
                   ),
                 ),
-              ],
+              ),
             ),
-          ),
+            SizedBox(
+              height: responsive.responsivePadding(mobilePadding: 40),
+            ),
+          ],
         ),
       ),
     );
