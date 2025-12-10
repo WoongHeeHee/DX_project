@@ -106,7 +106,7 @@ class _SearchScreenState extends State<SearchScreen> {
     final textTheme = Theme.of(context).textTheme;
 
     return Scaffold(
-      backgroundColor: AppColors.softGreyBackground,
+      backgroundColor: AppColors.white,
       body: SafeArea(
         child: Column(
           children: [
@@ -151,7 +151,8 @@ class _SearchScreenState extends State<SearchScreen> {
             fontSize: responsive.responsiveFontSize(mobileSize: 20),
             fontWeight: FontWeight.w500,
             color: AppColors.mainText,
-            height: 1.30,
+            height: 26 / 20, // Figma: lineHeight 26px / fontSize 20px
+            fontFamily: 'Inter',
           ),
               ),
             ),
@@ -184,7 +185,7 @@ class _SearchScreenState extends State<SearchScreen> {
             description: "시장 음식 사진을 첨부하면 어떤 메뉴인\n지 분석하고 비슷한 메뉴를 추천해드려요.",
             onTap: _handleImageSearch,
           ),
-          SizedBox(height: responsive.responsivePadding(mobilePadding: 12)),
+          SizedBox(height: responsive.responsivePadding(mobilePadding: 18)),
           // 텍스트로 찾기 카드
           _buildSearchCard(
             context,
@@ -215,17 +216,10 @@ class _SearchScreenState extends State<SearchScreen> {
       onTap: onTap,
       child: Container(
         width: double.infinity,
-        padding: EdgeInsets.all(responsive.responsivePadding(mobilePadding: 14)),
+        padding: EdgeInsets.all(responsive.responsivePadding(mobilePadding: 16)),
         decoration: BoxDecoration(
           color: AppColors.white,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.03),
-              blurRadius: 12,
-              offset: const Offset(0, 6),
-            ),
-          ],
+          borderRadius: BorderRadius.circular(8),
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -235,7 +229,7 @@ class _SearchScreenState extends State<SearchScreen> {
               width: responsive.responsiveIconSize(mobileSize: 40),
               height: responsive.responsiveIconSize(mobileSize: 40),
               decoration: BoxDecoration(
-                color: AppColors.softPurpleBackground,
+                color: AppColors.softGreyBackground,
                 shape: BoxShape.circle,
               ),
               child: Icon(
@@ -256,16 +250,19 @@ class _SearchScreenState extends State<SearchScreen> {
                       fontSize: responsive.responsiveFontSize(mobileSize: 15),
                       fontWeight: FontWeight.w500,
                       color: AppColors.mainText,
+                      height: 18.15 / 15, // Figma: lineHeight 18.15px / fontSize 15px
+                      fontFamily: 'Inter',
                     ),
                   ),
-                  SizedBox(height: responsive.responsivePadding(mobilePadding: 4)),
+                  SizedBox(height: responsive.responsivePadding(mobilePadding: 5)),
                   Text(
                     description,
                     style: textTheme.bodyMedium?.copyWith(
                       fontSize: responsive.responsiveFontSize(mobileSize: 13),
                       fontWeight: FontWeight.w400,
-                      color: AppColors.subText,
-                      height: 1.40,
+                      color: AppColors.inactiveText,
+                      height: 18.2 / 13, // Figma: lineHeight 18.2px / fontSize 13px
+                      fontFamily: 'Inter',
                     ),
                   ),
                 ],
@@ -276,7 +273,7 @@ class _SearchScreenState extends State<SearchScreen> {
             Icon(
               Icons.arrow_forward_ios,
               size: responsive.responsiveIconSize(mobileSize: 18),
-              color: AppColors.subText,
+              color: AppColors.inactiveText,
             ),
           ],
         ),

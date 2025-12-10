@@ -9,7 +9,7 @@ class AppColors {
   static const Color lightGrey = Color(0xFFF2F2F2); // 그레이박스: #F2F2F2
 
   // 2. 텍스트 및 서브 색상 (Text & Sub Colors)
-  static const Color mainText = Color(0xFF222222); // 메인텍스트색상: #222222
+  static const Color mainText = Color(0xFF0F1724); // 메인텍스트색상: #0F1724 (Figma 디자인)
   static const Color subText = Color(0xFF6C6C6C); // 서브텍스트: #6C6C6C
 
   // 3. 배경 및 카드 색상

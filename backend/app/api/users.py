@@ -5,6 +5,7 @@
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+import logging
 
 from app.db.database import get_db
 from app.db.models import User, AdventureLevel, KoreanExperience
@@ -18,6 +19,7 @@ from app.models.schemas import (
 from app.api.auth import get_current_user, get_optional_user
 from app.services.korean_name_service import KoreanNameService
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
@@ -65,7 +67,14 @@ async def complete_onboarding(
     """
     # 필수 온보딩 정보 확인
     required_fields = ['country', 'birth_yyyy_mm', 'spice_level', 'adventure', 'korean_experience']
+    
+    # exclude_unset=True: JSON 요청에 포함된 필드만 포함 (None이 아닌 값만)
+    # 프론트엔드에서 조건부로 필드를 포함하므로, 포함된 필드는 "set"으로 간주됨
     update_data = user_update.dict(exclude_unset=True)
+    
+    logger.info(f"complete_onboarding 호출 - current_user: {current_user.id if current_user else None}")
+    logger.info(f"user_update 원본: {user_update}")
+    logger.info(f"update_data (exclude_unset=True): {update_data}")
 
     # 문자열로 넘어오는 Enum 필드 변환
     def _to_adventure(value):
@@ -114,20 +123,49 @@ async def complete_onboarding(
         from app.models.schemas import UserCreate
         from datetime import datetime
         
+        # update_data에서 display_name을 가져오거나 기본값 사용
+        display_name = update_data.get('display_name', 'User')
+        
         temp_user_data = UserCreate(
             google_id=None,  # 임시 사용자
             email=None,
-            display_name="임시 사용자",
+            display_name=display_name,
             locale=update_data.get('locale', 'ko')
         )
         current_user = User(**temp_user_data.dict())
         db.add(current_user)
         db.commit()
         db.refresh(current_user)
+        logger.info(f"임시 사용자 생성 완료 - user_id: {current_user.id}, display_name: {current_user.display_name}")
     
     # 프로필 업데이트
+    logger.info(f"프로필 업데이트 전 - display_name: {current_user.display_name}, korean_name: {current_user.korean_name}")
+    
+    # display_name과 korean_name을 명시적으로 처리
+    # update_data에 포함되어 있으면 (None이 아니고 빈 문자열이 아니면) 업데이트
+    if 'display_name' in update_data:
+        display_name_value = update_data['display_name']
+        if display_name_value and isinstance(display_name_value, str) and display_name_value.strip():
+            current_user.display_name = display_name_value.strip()
+            logger.info(f"display_name 업데이트: {display_name_value}")
+        else:
+            logger.warning(f"display_name이 유효하지 않음: {display_name_value}")
+    
+    if 'korean_name' in update_data:
+        korean_name_value = update_data['korean_name']
+        if korean_name_value and isinstance(korean_name_value, str) and korean_name_value.strip():
+            current_user.korean_name = korean_name_value.strip()
+            logger.info(f"korean_name 업데이트: {korean_name_value}")
+        else:
+            logger.warning(f"korean_name이 유효하지 않음: {korean_name_value}")
+    
+    # 나머지 필드 업데이트
     for field, value in update_data.items():
-        setattr(current_user, field, value)
+        if field not in ['display_name', 'korean_name'] and value is not None:
+            setattr(current_user, field, value)
+            logger.info(f"필드 업데이트: {field} = {value}")
+    
+    logger.info(f"프로필 업데이트 후 - display_name: {current_user.display_name}, korean_name: {current_user.korean_name}")
     
     # 온보딩 완료 플래그 설정
     current_user.onboarding_completed = True

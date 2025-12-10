@@ -11,10 +11,20 @@ class TokenResponse {
   });
 
   factory TokenResponse.fromJson(Map<String, dynamic> json) {
+    final accessToken = json['access_token'];
+    if (accessToken == null) {
+      throw FormatException('access_token이 응답에 없습니다. 응답: $json');
+    }
+    
+    final expiresIn = json['expires_in'];
+    if (expiresIn == null) {
+      throw FormatException('expires_in이 응답에 없습니다. 응답: $json');
+    }
+    
     return TokenResponse(
-      accessToken: json['access_token'] as String,
+      accessToken: accessToken as String,
       tokenType: json['token_type'] as String? ?? 'bearer',
-      expiresIn: json['expires_in'] as int,
+      expiresIn: expiresIn is int ? expiresIn : int.tryParse(expiresIn.toString()) ?? 0,
     );
   }
 }

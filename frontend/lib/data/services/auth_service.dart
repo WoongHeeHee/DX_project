@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'api_service.dart';
 import '../models/auth_models.dart';
 import 'google_auth_service.dart';
@@ -36,17 +37,52 @@ class AuthService {
 
   /// Google 로그인 (id_token 직접 전달)
   Future<TokenResponse> googleLoginWithIdToken(String idToken) async {
-    final response = await _apiService.post(
-      '/auth/google',
-      data: {
-        'id_token': idToken,
-      },
-    );
+    try {
+      final response = await _apiService.post(
+        '/auth/google',
+        data: {
+          'id_token': idToken,
+        },
+      );
 
-    final tokenData = TokenResponse.fromJson(response.data);
-    await _apiService.setAuthToken(tokenData.accessToken);
+      // 응답 상태 코드 확인
+      if (response.statusCode == null || response.statusCode! < 200 || response.statusCode! >= 300) {
+        throw Exception('서버 응답 오류: 상태 코드 ${response.statusCode}');
+      }
 
-    return tokenData;
+      // 응답 데이터 로깅
+      debugPrint('Google 로그인 응답 상태 코드: ${response.statusCode}');
+      debugPrint('Google 로그인 응답 데이터 타입: ${response.data.runtimeType}');
+      debugPrint('Google 로그인 응답 데이터: ${response.data}');
+      
+      if (response.data == null) {
+        throw Exception('서버 응답이 비어있습니다.');
+      }
+
+      // response.data가 Map이 아닌 경우 처리
+      Map<String, dynamic> responseData;
+      if (response.data is Map) {
+        responseData = Map<String, dynamic>.from(response.data as Map);
+      } else if (response.data is String) {
+        // JSON 문자열인 경우 파싱 시도
+        throw Exception('응답이 JSON 문자열입니다. 서버 설정을 확인하세요: ${response.data}');
+      } else {
+        throw Exception('예상치 못한 응답 형식: ${response.data.runtimeType}, 데이터: ${response.data}');
+      }
+
+      debugPrint('파싱할 데이터: $responseData');
+      debugPrint('access_token 키 존재 여부: ${responseData.containsKey("access_token")}');
+      debugPrint('모든 키: ${responseData.keys.toList()}');
+      
+      final tokenData = TokenResponse.fromJson(responseData);
+      await _apiService.setAuthToken(tokenData.accessToken);
+
+      return tokenData;
+    } catch (e, stackTrace) {
+      debugPrint('Google 로그인 처리 오류: $e');
+      debugPrint('스택 트레이스: $stackTrace');
+      rethrow;
+    }
   }
 
   /// 현재 사용자 정보 조회

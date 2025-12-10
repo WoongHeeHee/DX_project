@@ -68,7 +68,7 @@ class UserCreate(UserBase):
 class UserUpdate(BaseModel):
     """사용자 업데이트 모델"""
     display_name: Optional[str] = Field(None, min_length=1, max_length=100)
-    korean_name: Optional[str] = Field(None, max_length=50)
+    korean_name: Optional[str] = Field(None, max_length=100)  # (한글이름, 영어발음) 형식으로 저장
     country: Optional[str] = Field(None, max_length=2)
     birth_yyyy_mm: Optional[str] = Field(None, pattern=r'^\d{4}-\d{2}$')
     spice_level: Optional[int] = Field(None, ge=1, le=5)
@@ -244,7 +244,7 @@ class MenuItemBase(BaseModel):
 class MenuItem(MenuItemBase):
     """메뉴 아이템 응답 모델"""
     id: str
-    created_at: datetime
+    created_at: Optional[datetime] = None  # 기존 데이터 호환성을 위해 Optional로 변경
     is_saved: Optional[bool] = Field(None, description="현재 사용자가 저장했는지 여부 (인증된 사용자만)")
 
     class Config:

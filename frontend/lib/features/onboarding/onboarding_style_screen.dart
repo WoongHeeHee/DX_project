@@ -16,6 +16,9 @@ class OnboardingStyleScreen extends StatefulWidget {
   final String? birthYyyyMm; // 생년월 (YYYY-MM)
   final int? spiceLevel; // 매운맛 레벨 (1-5)
   final String? locale; // locale (ko, en, zh, ja)
+  final String? inputName; // 입력받은 이름
+  final String? koreanName; // 생성된 한국 이름
+  final String? englishPronunciation; // 영어 발음
 
   const OnboardingStyleScreen({
     super.key,
@@ -25,6 +28,9 @@ class OnboardingStyleScreen extends StatefulWidget {
     this.birthYyyyMm,
     this.spiceLevel,
     this.locale,
+    this.inputName,
+    this.koreanName,
+    this.englishPronunciation,
   });
 
   @override
@@ -255,7 +261,31 @@ class _OnboardingStyleScreenState extends State<OnboardingStyleScreen> {
                   OnboardingData.getAdventureFromStyle(_selectedStyle!);
               final koreanExperience = OnboardingData.getKoreanExperience();
 
+              // 디버그: 전달되는 값 확인
+              debugPrint('=== 온보딩 완료 데이터 확인 ===');
+              debugPrint('inputName: ${widget.inputName}');
+              debugPrint('koreanName: ${widget.koreanName}');
+              debugPrint('englishPronunciation: ${widget.englishPronunciation}');
+
+              // korean_name을 (한글이름, 영어발음) 형식으로 생성
+              String? koreanNameFormatted;
+              if (widget.koreanName != null && widget.englishPronunciation != null) {
+                koreanNameFormatted = '(${widget.koreanName}, ${widget.englishPronunciation})';
+                debugPrint('koreanNameFormatted: $koreanNameFormatted');
+              } else if (widget.koreanName != null) {
+                koreanNameFormatted = '(${widget.koreanName}, )';
+                debugPrint('koreanNameFormatted (발음 없음): $koreanNameFormatted');
+              } else {
+                debugPrint('경고: koreanName이 null입니다!');
+              }
+
+              if (widget.inputName == null || widget.inputName!.isEmpty) {
+                debugPrint('경고: inputName이 null이거나 비어있습니다!');
+              }
+
               await _apiRepository.userService.completeOnboarding(
+                displayName: widget.inputName,
+                koreanName: koreanNameFormatted,
                 country: countryCode ?? 'JP',
                 birthYyyyMm: widget.birthYyyyMm ?? '1990-01',
                 spiceLevel: widget.spiceLevel ?? 3,

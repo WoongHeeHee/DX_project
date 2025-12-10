@@ -5,6 +5,8 @@ import "../../core/theme/app_colors.dart";
 import "package:go_router/go_router.dart";
 import "../../core/widgets/responsive_helper.dart";
 import "../../core/widgets/responsive_padding.dart";
+import "../../core/widgets/loading_overlay.dart";
+import "../../data/repositories/api_repository.dart";
 import "models/search_result_model.dart";
 
 class SearchResultScreen extends StatefulWidget {
@@ -20,16 +22,83 @@ class SearchResultScreen extends StatefulWidget {
 }
 
 class _SearchResultScreenState extends State<SearchResultScreen> {
+  final _apiRepository = ApiRepository();
   bool _isFavorite = false; // 찜 버튼 상태
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSavedStatus();
+  }
+
+  Future<void> _loadSavedStatus() async {
+    try {
+      final menuItemDetail = await _apiRepository.menuService.getMenuItem(widget.result.id);
+      if (mounted) {
+        setState(() {
+          _isFavorite = menuItemDetail.isSaved;
+        });
+      }
+    } catch (e) {
+      debugPrint("저장 상태 조회 실패: $e");
+      // 에러가 발생해도 계속 진행 (기본값 false 사용)
+    }
+  }
+
+  Future<void> _toggleSave() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      if (_isFavorite) {
+        await _apiRepository.menuService.unsaveMenuItem(widget.result.id);
+      } else {
+        await _apiRepository.menuService.saveMenuItem(widget.result.id);
+      }
+      
+      if (mounted) {
+        setState(() {
+          _isFavorite = !_isFavorite;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint("찜하기/찜 해제 실패: $e");
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("저장에 실패했습니다. 다시 시도해주세요."),
+            backgroundColor: AppColors.primary,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    }
+  }
+
+  /// S3 버킷 메뉴 대표사진 URL 생성
+  String _getMenuImageUrl() {
+    final menuName = widget.result.menuName;
+    final menuId = widget.result.id;
+    // URL 형식: https://dnzeuzpu74ulj.cloudfront.net/placeholders/Menu_all/${menu_items.name}/${menu_items.name}1_${menu_items.id}.png
+    return "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Menu_all/$menuName/${menuName}1_$menuId.png";
+  }
 
   @override
   Widget build(BuildContext context) {
     final responsive = context.responsive;
     final textTheme = Theme.of(context).textTheme;
 
-    return Scaffold(
-      backgroundColor: AppColors.softGreyBackground,
-      body: SafeArea(
+    return LoadingOverlay(
+      isLoading: _isLoading,
+      child: Scaffold(
+        backgroundColor: AppColors.softGreyBackground,
+        body: SafeArea(
         child: SingleChildScrollView(
           child: Padding(
             padding: EdgeInsets.all(
@@ -85,6 +154,7 @@ class _SearchResultScreenState extends State<SearchResultScreen> {
             ),
           ),
         ),
+        ),
       ),
     );
   }
@@ -139,6 +209,7 @@ class _SearchResultScreenState extends State<SearchResultScreen> {
 
   Widget _buildImageSection(ResponsiveHelper responsive, TextTheme textTheme) {
     final imageHeight = responsive.isMobile ? 220.0 : 250.0;
+    final imageUrl = _getMenuImageUrl();
 
     return Container(
       width: double.infinity,
@@ -150,32 +221,23 @@ class _SearchResultScreenState extends State<SearchResultScreen> {
       child: SizedBox(
         width: double.infinity,
         height: imageHeight,
-        child: widget.result.imageUrl.isNotEmpty
-            ? ClipRRect(
-                borderRadius: BorderRadius.circular(10),
-                child: Image.network(
-                  widget.result.imageUrl,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      color: const Color(0xFFF3EEF3),
-                      child: Icon(
-                        Icons.error,
-                        size: responsive.responsiveIconSize(mobileSize: 40),
-                        color: AppColors.subText,
-                      ),
-                    );
-                  },
-                ),
-              )
-            : Container(
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(10),
+          child: Image.network(
+            imageUrl,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) {
+              return Container(
                 color: const Color(0xFFF3EEF3),
                 child: Icon(
-                  Icons.image,
+                  Icons.error,
                   size: responsive.responsiveIconSize(mobileSize: 40),
                   color: AppColors.subText,
                 ),
-              ),
+              );
+            },
+          ),
+        ),
       ),
     );
   }
@@ -209,11 +271,7 @@ class _SearchResultScreenState extends State<SearchResultScreen> {
               ),
               const SizedBox(width: 8),
               GestureDetector(
-                onTap: () {
-                  setState(() {
-                    _isFavorite = !_isFavorite;
-                  });
-                },
+                onTap: _toggleSave,
                 child: Container(
                   padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(

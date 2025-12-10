@@ -39,8 +39,10 @@ MAP_PROVIDER=naver  # naver
 NAVER_CLIENT_ID=your-naver-client-id
 NAVER_CLIENT_SECRET=your-naver-client-secret
 
-# CORS (Flutter Web 개발용 포트 포함)
-ALLOWED_ORIGINS=http://localhost:3000,http://localhost:8080,http://localhost:50000,http://127.0.0.1:50000
+# CORS (로컬 개발 + 프로덕션 도메인)
+# 로컬: 3000, 8080, 50000, 127.0.0.1:50000
+# 프로덕션: sijanggo.com (http/https 모두)
+ALLOWED_ORIGINS=http://localhost:3000,http://localhost:8080,http://localhost:50000,http://127.0.0.1:50000,https://sijanggo.com,http://sijanggo.com
 
 # Celery
 CELERY_BROKER_URL=redis://localhost:6379/0

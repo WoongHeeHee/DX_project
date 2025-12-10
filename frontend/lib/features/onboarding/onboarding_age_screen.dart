@@ -10,12 +10,18 @@ class OnboardingAgeScreen extends StatefulWidget {
   final String? userName; // 사용자 이름
   final String? countryName; // 국가 이름
   final String? countryId; // 국가 ID
+  final String? inputName; // 입력받은 이름
+  final String? koreanName; // 생성된 한국 이름
+  final String? englishPronunciation; // 영어 발음
 
   const OnboardingAgeScreen({
     super.key,
     this.userName,
     this.countryName,
     this.countryId,
+    this.inputName,
+    this.koreanName,
+    this.englishPronunciation,
   });
 
   @override
@@ -270,6 +276,9 @@ class _OnboardingAgeScreenState extends State<OnboardingAgeScreen> {
                   'countryName': widget.countryName,
                   'countryId': widget.countryId,
                   'birthYyyyMm': _formatDate(),
+                  'inputName': widget.inputName,
+                  'koreanName': widget.koreanName,
+                  'englishPronunciation': widget.englishPronunciation,
                 },
               );
             }

@@ -70,8 +70,15 @@ async def search_by_image(
         # 근처 가게 검색 (위치 정보가 있는 경우)
         shops_nearby = []
         if request.lat is not None and request.lng is not None:
-            # 해당 메뉴를 판매하는 가게 조회
-            shops_with_menu = db.query(Shop).join(ShopMenu).filter(
+            # 해당 메뉴를 판매하는 가게 조회 (필요한 필드만 선택적으로 로드)
+            from sqlalchemy.orm import load_only
+            shops_with_menu = db.query(Shop).options(
+                load_only(
+                    Shop.id, Shop.market_id, Shop.name, Shop.name_en, 
+                    Shop.name_zh, Shop.name_ja, Shop.lat, Shop.lng,
+                    Shop.last_reported_open_at, Shop.created_at
+                )
+            ).join(ShopMenu).filter(
                 ShopMenu.menu_item_id == menu_item.id,
                 ShopMenu.available == True
             ).all()
@@ -95,7 +102,11 @@ async def search_by_image(
                     lng=shop.lng,
                     last_reported_open_at=shop.last_reported_open_at,
                     created_at=shop.created_at,
-                    distance_meters=round(distance, 2)
+                    distance_meters=round(distance, 2),
+                    closed_days=None,  # DB 스키마 불일치로 인해 None으로 설정
+                    closed_days_en=None,
+                    closed_days_zh=None,
+                    closed_days_ja=None
                 ))
             
             # 거리순 정렬

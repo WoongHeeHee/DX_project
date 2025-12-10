@@ -55,7 +55,7 @@ class _TextSearchScreenState extends State<TextSearchScreen> {
       child: LoadingOverlay(
         isLoading: _isLoading,
         child: Scaffold(
-          backgroundColor: AppColors.softGreyBackground,
+          backgroundColor: AppColors.white,
           resizeToAvoidBottomInset: true,
           body: SafeArea(
             child: Column(
@@ -118,7 +118,8 @@ class _TextSearchScreenState extends State<TextSearchScreen> {
               fontSize: responsive.responsiveFontSize(mobileSize: 20),
               fontWeight: FontWeight.w500,
               color: AppColors.mainText,
-              height: 1.30,
+              height: 26 / 20, // Figma: lineHeight 26px / fontSize 20px
+              fontFamily: 'Inter',
             ),
                 ),
               ),
@@ -141,8 +142,12 @@ class _TextSearchScreenState extends State<TextSearchScreen> {
         vertical: responsive.responsivePadding(mobilePadding: 10),
       ),
       decoration: BoxDecoration(
-        color: AppColors.softPurpleBackground,
-        borderRadius: BorderRadius.circular(12),
+        color: AppColors.primary.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: AppColors.primary.withOpacity(0.05),
+          width: 1,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -157,6 +162,7 @@ class _TextSearchScreenState extends State<TextSearchScreen> {
                   fontSize: responsive.responsiveFontSize(mobileSize: 12),
                   fontWeight: FontWeight.w500,
                   color: AppColors.primary,
+                  height: 1.2,
                 ),
               ),
               const SizedBox(width: 55.75), // 공간 유지
@@ -175,7 +181,7 @@ class _TextSearchScreenState extends State<TextSearchScreen> {
               ),
               decoration: BoxDecoration(
                 color: AppColors.white,
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(6),
               ),
               child: TextField(
                 controller: _textController,
@@ -186,9 +192,10 @@ class _TextSearchScreenState extends State<TextSearchScreen> {
                 keyboardType: TextInputType.multiline,
                 style: textTheme.bodyMedium?.copyWith(
                   fontSize: responsive.responsiveFontSize(mobileSize: 14),
-                  fontWeight: FontWeight.w700, // 볼드
+                  fontWeight: FontWeight.w300,
                   color: AppColors.mainText,
-                  height: 1.50,
+                  height: 21 / 14, // Figma: lineHeight 21px / fontSize 14px
+                  fontFamily: 'Inter',
                 ),
                 decoration: InputDecoration(
                   hintText:
@@ -196,8 +203,9 @@ class _TextSearchScreenState extends State<TextSearchScreen> {
                   hintStyle: textTheme.bodyMedium?.copyWith(
                     fontSize: responsive.responsiveFontSize(mobileSize: 14),
                     fontWeight: FontWeight.w300,
-                    color: AppColors.primary, // 메인 컬러
-                    height: 1.50,
+                    color: AppColors.primary,
+                    height: 21 / 14, // Figma: lineHeight 21px / fontSize 14px
+                    fontFamily: 'Inter',
                   ),
                   border: InputBorder.none,
                   enabledBorder: InputBorder.none,
@@ -235,20 +243,30 @@ class _TextSearchScreenState extends State<TextSearchScreen> {
     });
 
     try {
-      // 텍스트 검색 API 호출
+      // menu_matcher_service를 사용하기 위해 POST /search/image 엔드포인트 사용
+      // 텍스트만 전달 (이미지 없이)
       final locale = await _apiRepository.userService.getLocale();
-      final menuItems = await _apiRepository.searchService.searchMenuItems(
-        query: query,
-        limit: 1, // 첫 번째 결과만 사용
+      
+      // 위치 정보 가져오기 (웹에서는 geolocator 사용)
+      // TODO: 실제 위치 정보 가져오기 구현
+      double? lat = 37.5665; // 임시 값
+      double? lng = 126.9780; // 임시 값
+      
+      final searchResults = await _apiRepository.searchService.imageSearch(
+        imageUrl: null, // 텍스트만 사용
+        userText: query,
+        lat: lat,
+        lng: lng,
       );
 
       if (mounted) {
-        if (menuItems.isEmpty) {
+        if (searchResults.isEmpty) {
           // 검색 결과가 없는 경우 에러 화면
           context.push('/search/error');
         } else {
           // 첫 번째 결과 사용
-          final menuItem = menuItems.first;
+          final result = searchResults.first;
+          final menuItem = result.menuItem;
           
           // SearchResultModel로 변환
           final searchResult = SearchResultModel(
@@ -256,8 +274,12 @@ class _TextSearchScreenState extends State<TextSearchScreen> {
             menuName: menuItem.getNameByLocale(locale),
             imageUrl: menuItem.repImageUrl ?? '',
             description: menuItem.getDescriptionByLocale(locale) ?? '',
-            nearestMarketName: null, // TODO: 시장 정보 추가 필요
-            nearestMarketId: null,
+            nearestMarketName: result.shopsNearby.isNotEmpty 
+                ? null // TODO: 시장 정보 추가 필요
+                : null,
+            nearestMarketId: result.shopsNearby.isNotEmpty 
+                ? result.shopsNearby.first.marketId 
+                : null,
           );
           
           context.push(

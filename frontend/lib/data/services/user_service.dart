@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'api_service.dart';
 import '../models/auth_models.dart';
@@ -43,6 +44,8 @@ class UserService {
 
   /// 온보딩 완료
   Future<UserResponse> completeOnboarding({
+    String? displayName,
+    String? koreanName,
     required String country,
     required String birthYyyyMm,
     required int spiceLevel,
@@ -50,7 +53,14 @@ class UserService {
     required String koreanExperience,
     String? locale,
   }) async {
+    // 디버그: 전달되는 데이터 확인
+    debugPrint('=== completeOnboarding 호출 ===');
+    debugPrint('displayName: $displayName');
+    debugPrint('koreanName: $koreanName');
+    
     final data = {
+      if (displayName != null && displayName.isNotEmpty) 'display_name': displayName,
+      if (koreanName != null && koreanName.isNotEmpty) 'korean_name': koreanName,
       'country': country,
       'birth_yyyy_mm': birthYyyyMm,
       'spice_level': spiceLevel,
@@ -58,6 +68,8 @@ class UserService {
       'korean_experience': koreanExperience,
       if (locale != null) 'locale': locale,
     };
+
+    debugPrint('전송할 data: $data');
 
     // 백엔드 API는 PUT /users/complete-onboarding을 사용
     final response = await _apiService.put('/users/complete-onboarding', data: data);

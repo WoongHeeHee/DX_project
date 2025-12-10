@@ -94,6 +94,9 @@ class AppRouter {
           final extra = state.extra as Map<String, dynamic>?;
           return OnboardingCountryScreen(
             userName: extra?['userName'] as String?,
+            inputName: extra?['inputName'] as String?,
+            koreanName: extra?['koreanName'] as String?,
+            englishPronunciation: extra?['englishPronunciation'] as String?,
           );
         },
       ),
@@ -105,6 +108,9 @@ class AppRouter {
             userName: extra?['userName'] as String?,
             countryName: extra?['countryName'] as String?,
             countryId: extra?['countryId'] as String?,
+            inputName: extra?['inputName'] as String?,
+            koreanName: extra?['koreanName'] as String?,
+            englishPronunciation: extra?['englishPronunciation'] as String?,
           );
         },
       ),
@@ -117,6 +123,9 @@ class AppRouter {
             countryName: extra?['countryName'] as String?,
             countryId: extra?['countryId'] as String?,
             birthYyyyMm: extra?['birthYyyyMm'] as String?,
+            inputName: extra?['inputName'] as String?,
+            koreanName: extra?['koreanName'] as String?,
+            englishPronunciation: extra?['englishPronunciation'] as String?,
           );
         },
       ),
@@ -131,6 +140,9 @@ class AppRouter {
             birthYyyyMm: extra?['birthYyyyMm'] as String?,
             spiceLevel: extra?['spiceLevel'] as int?,
             locale: extra?['locale'] as String?,
+            inputName: extra?['inputName'] as String?,
+            koreanName: extra?['koreanName'] as String?,
+            englishPronunciation: extra?['englishPronunciation'] as String?,
           );
         },
       ),

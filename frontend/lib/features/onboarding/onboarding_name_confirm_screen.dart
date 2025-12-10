@@ -176,6 +176,9 @@ class _OnboardingNameConfirmScreenState
               '/onboarding/country',
               extra: {
                 'userName': _koreanName,
+                'inputName': widget.inputName,
+                'koreanName': widget.koreanName,
+                'englishPronunciation': widget.englishPronunciation,
               },
             );
           },

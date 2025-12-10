@@ -105,6 +105,7 @@ class SearchResult {
 /// 거리 정보가 포함된 가게 모델
 class ShopWithDistance {
   final String id;
+  final String marketId;
   final String name;
   final double lat;
   final double lng;
@@ -113,6 +114,7 @@ class ShopWithDistance {
 
   ShopWithDistance({
     required this.id,
+    required this.marketId,
     required this.name,
     required this.lat,
     required this.lng,
@@ -123,6 +125,7 @@ class ShopWithDistance {
   factory ShopWithDistance.fromJson(Map<String, dynamic> json) {
     return ShopWithDistance(
       id: json['id'] as String,
+      marketId: json['market_id'] as String,
       name: json['name'] as String,
       lat: (json['lat'] as num).toDouble(),
       lng: (json['lng'] as num).toDouble(),

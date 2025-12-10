@@ -30,6 +30,9 @@ class OnboardingSpicyLevelScreen extends StatefulWidget {
   final String? countryName; // 국가 이름
   final String? countryId; // 국가 ID
   final String? birthYyyyMm; // 생년월
+  final String? inputName; // 입력받은 이름
+  final String? koreanName; // 생성된 한국 이름
+  final String? englishPronunciation; // 영어 발음
 
   const OnboardingSpicyLevelScreen({
     super.key,
@@ -37,6 +40,9 @@ class OnboardingSpicyLevelScreen extends StatefulWidget {
     this.countryName,
     this.countryId,
     this.birthYyyyMm,
+    this.inputName,
+    this.koreanName,
+    this.englishPronunciation,
   });
 
   @override
@@ -441,6 +447,9 @@ class _OnboardingSpicyLevelScreenState extends State<OnboardingSpicyLevelScreen>
                 'birthYyyyMm': widget.birthYyyyMm,
                 'spiceLevel': _spicyLevel,
                 'locale': null, // TODO: locale 전달 필요 (언어 선택 화면에서)
+                'inputName': widget.inputName,
+                'koreanName': widget.koreanName,
+                'englishPronunciation': widget.englishPronunciation,
               },
             );
           },

@@ -10,10 +10,16 @@ import "../home/models/filter_model.dart";
 
 class OnboardingCountryScreen extends StatefulWidget {
   final String? userName; // 사용자 이름
+  final String? inputName; // 입력받은 이름
+  final String? koreanName; // 생성된 한국 이름
+  final String? englishPronunciation; // 영어 발음
 
   const OnboardingCountryScreen({
     super.key,
     this.userName,
+    this.inputName,
+    this.koreanName,
+    this.englishPronunciation,
   });
 
   @override
@@ -45,7 +51,7 @@ class _OnboardingCountryScreenState extends State<OnboardingCountryScreen> {
     CountryFilter(
       id: "country_kr",
       name: "한국",
-      flagImageUrl: "assets/images/KR.gif",
+      flagImageUrl: "assets/images/KR.png",
     ),
     CountryFilter(
       id: "country_th",
@@ -85,12 +91,12 @@ class _OnboardingCountryScreenState extends State<OnboardingCountryScreen> {
     CountryFilter(
       id: "country_tw",
       name: "대만",
-      flagImageUrl: "assets/images/TW.gif",
+      flagImageUrl: "assets/images/TW.png",
     ),
     CountryFilter(
       id: "country_hk",
       name: "홍콩",
-      flagImageUrl: "assets/images/HK.gif",
+      flagImageUrl: "assets/images/HK.png",
     ),
     CountryFilter(
       id: "country_au",
@@ -307,6 +313,9 @@ class _OnboardingCountryScreenState extends State<OnboardingCountryScreen> {
                   'userName': widget.userName,
                   'countryName': selectedCountry!.name,
                   'countryId': selectedCountry!.id,
+                  'inputName': widget.inputName,
+                  'koreanName': widget.koreanName,
+                  'englishPronunciation': widget.englishPronunciation,
                 },
               );
             }

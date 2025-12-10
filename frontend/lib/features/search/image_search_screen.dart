@@ -154,7 +154,7 @@ class _ImageSearchScreenState extends State<ImageSearchScreen> {
       child: LoadingOverlay(
         isLoading: _isLoading,
         child: Scaffold(
-          backgroundColor: AppColors.softGreyBackground,
+          backgroundColor: AppColors.white,
           resizeToAvoidBottomInset: true,
           body: SafeArea(
             child: Column(
@@ -212,7 +212,8 @@ class _ImageSearchScreenState extends State<ImageSearchScreen> {
               fontSize: responsive.responsiveFontSize(mobileSize: 20),
               fontWeight: FontWeight.w500,
               color: AppColors.mainText,
-              height: 1.30,
+              height: 26 / 20, // Figma: lineHeight 26px / fontSize 20px
+              fontFamily: 'Inter',
             ),
                 ),
               ),
@@ -235,49 +236,34 @@ class _ImageSearchScreenState extends State<ImageSearchScreen> {
         onTap: _showImageSourceDialog,
         child: Container(
           width: responsive.isMobile ? 159 : 180,
+          height: responsive.isMobile ? 220 : 250,
           decoration: BoxDecoration(
             color: AppColors.softPurpleBackground,
             borderRadius: BorderRadius.circular(10),
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: double.infinity,
-                height: responsive.isMobile ? 220 : 250,
-                decoration: BoxDecoration(
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(10),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: _selectedImage != null
+                ? XFileImage(
+                    image: _selectedImage,
+                    fit: BoxFit.cover,
+                    errorWidget: Container(
+                      color: AppColors.imagePlaceholder,
+                      child: Icon(
+                        Icons.error,
+                        size: responsive.responsiveIconSize(mobileSize: 40),
+                        color: AppColors.subText,
+                      ),
+                    ),
+                  )
+                : Container(
+                    color: AppColors.imagePlaceholder,
+                    child: Icon(
+                      Icons.add_photo_alternate,
+                      size: responsive.responsiveIconSize(mobileSize: 40),
+                      color: AppColors.subText,
+                    ),
                   ),
-                ),
-                child: ClipRRect(
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(10),
-                  ),
-                  child: _selectedImage != null
-                      ? XFileImage(
-                          image: _selectedImage,
-                          fit: BoxFit.cover,
-                          errorWidget: Container(
-                            color: AppColors.imagePlaceholder,
-                            child: Icon(
-                              Icons.error,
-                              size: responsive.responsiveIconSize(mobileSize: 40),
-                              color: AppColors.subText,
-                            ),
-                          ),
-                        )
-                      : Container(
-                          color: AppColors.imagePlaceholder,
-                          child: Icon(
-                            Icons.add_photo_alternate,
-                            size: responsive.responsiveIconSize(mobileSize: 40),
-                            color: AppColors.subText,
-                          ),
-                        ),
-                ),
-              ),
-            ],
           ),
         ),
       ),
@@ -292,8 +278,12 @@ class _ImageSearchScreenState extends State<ImageSearchScreen> {
         vertical: responsive.responsivePadding(mobilePadding: 10),
       ),
       decoration: BoxDecoration(
-        color: AppColors.softPurpleBackground,
-        borderRadius: BorderRadius.circular(12),
+        color: AppColors.primary.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: AppColors.primary.withOpacity(0.05),
+          width: 1,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -308,6 +298,7 @@ class _ImageSearchScreenState extends State<ImageSearchScreen> {
                   fontSize: responsive.responsiveFontSize(mobileSize: 12),
                   fontWeight: FontWeight.w500,
                   color: AppColors.primary,
+                  height: 1.2,
                 ),
               ),
               const SizedBox(width: 55.75),
@@ -326,7 +317,7 @@ class _ImageSearchScreenState extends State<ImageSearchScreen> {
               ),
               decoration: BoxDecoration(
                 color: AppColors.white,
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(6),
               ),
               child: TextField(
                 controller: _textController,
@@ -337,9 +328,10 @@ class _ImageSearchScreenState extends State<ImageSearchScreen> {
                 keyboardType: TextInputType.multiline,
                 style: textTheme.bodyMedium?.copyWith(
                   fontSize: responsive.responsiveFontSize(mobileSize: 14),
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w300,
                   color: AppColors.mainText,
-                  height: 1.50,
+                  height: 21 / 14, // Figma: lineHeight 21px / fontSize 14px
+                  fontFamily: 'Inter',
                 ),
                 decoration: InputDecoration(
                   hintText: "사진에 덧붙일 설명이 있다면 적어주세요!",
@@ -347,7 +339,8 @@ class _ImageSearchScreenState extends State<ImageSearchScreen> {
                     fontSize: responsive.responsiveFontSize(mobileSize: 14),
                     fontWeight: FontWeight.w300,
                     color: AppColors.primary,
-                    height: 1.50,
+                    height: 21 / 14, // Figma: lineHeight 21px / fontSize 14px
+                    fontFamily: 'Inter',
                   ),
                   border: InputBorder.none,
                   enabledBorder: InputBorder.none,
@@ -506,7 +499,7 @@ class _ImageSearchScreenState extends State<ImageSearchScreen> {
               elevation: 0,
             ),
             child: Text(
-              "결과보기",
+              "메뉴 찾기",
               textAlign: TextAlign.center,
               style: textTheme.titleMedium?.copyWith(
                 fontSize: responsive.responsiveFontSize(mobileSize: 15),

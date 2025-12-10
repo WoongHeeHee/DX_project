@@ -329,7 +329,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
     CountryFilter(
       id: "country_kr",
       name: "한국",
-      flagImageUrl: "assets/images/KR.gif", // 한국 국기 이미지가 없으면 null
+      flagImageUrl: "assets/images/KR.png", // 한국 국기 이미지가 없으면 null
     ),
     CountryFilter(
       id: "country_th",
@@ -369,12 +369,12 @@ class _ExploreScreenState extends State<ExploreScreen> {
     CountryFilter(
       id: "country_tw",
       name: "대만",
-      flagImageUrl: "assets/images/TW.gif",
+      flagImageUrl: "assets/images/TW.png",
     ),
     CountryFilter(
       id: "country_hk",
       name: "홍콩",
-      flagImageUrl: "assets/images/HK.gif",
+      flagImageUrl: "assets/images/HK.png",
     ),
     CountryFilter(
       id: "country_au",

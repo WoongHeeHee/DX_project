@@ -25,7 +25,7 @@ class MenuItemModel {
   final String? mayContainsJa;
   final String? category;
   final int spiceLevel;
-  final DateTime createdAt;
+  final DateTime? createdAt;
 
   MenuItemModel({
     required this.id,
@@ -53,37 +53,48 @@ class MenuItemModel {
     this.mayContainsJa,
     this.category,
     required this.spiceLevel,
-    required this.createdAt,
+    this.createdAt,
   });
 
   factory MenuItemModel.fromJson(Map<String, dynamic> json) {
+    // null 안전 처리를 위한 헬퍼 함수
+    String? _parseString(dynamic value) {
+      if (value == null) return null;
+      if (value is String) {
+        return value.isEmpty ? null : value;
+      }
+      return value.toString();
+    }
+
     return MenuItemModel(
       id: json['id'] as String,
       name: json['name'] as String,
-      nameEn: json['name_en'] as String?,
-      nameZh: json['name_zh'] as String?,
-      nameJa: json['name_ja'] as String?,
-      description: json['description'] as String?,
-      descriptionEn: json['description_en'] as String?,
-      descriptionZh: json['description_zh'] as String?,
-      descriptionJa: json['description_ja'] as String?,
-      similarFood: json['similar_food'] as String?,
-      similarFoodEn: json['similar_food_en'] as String?,
-      similarFoodZh: json['similar_food_zh'] as String?,
-      similarFoodJa: json['similar_food_ja'] as String?,
-      repImageUrl: json['rep_image_url'] as String?,
-      price: json['price'] as String?,
-      contains: json['contains'] as String?,
-      containsEn: json['contains_en'] as String?,
-      containsZh: json['contains_zh'] as String?,
-      containsJa: json['contains_ja'] as String?,
-      mayContains: json['may_contains'] as String?,
-      mayContainsEn: json['may_contains_en'] as String?,
-      mayContainsZh: json['may_contains_zh'] as String?,
-      mayContainsJa: json['may_contains_ja'] as String?,
-      category: json['category'] as String?,
+      nameEn: _parseString(json['name_en']),
+      nameZh: _parseString(json['name_zh']),
+      nameJa: _parseString(json['name_ja']),
+      description: _parseString(json['description']),
+      descriptionEn: _parseString(json['description_en']),
+      descriptionZh: _parseString(json['description_zh']),
+      descriptionJa: _parseString(json['description_ja']),
+      similarFood: _parseString(json['similar_food']),
+      similarFoodEn: _parseString(json['similar_food_en']),
+      similarFoodZh: _parseString(json['similar_food_zh']),
+      similarFoodJa: _parseString(json['similar_food_ja']),
+      repImageUrl: _parseString(json['rep_image_url']),
+      price: _parseString(json['price']),
+      contains: _parseString(json['contains']),
+      containsEn: _parseString(json['contains_en']),
+      containsZh: _parseString(json['contains_zh']),
+      containsJa: _parseString(json['contains_ja']),
+      mayContains: _parseString(json['may_contains']),
+      mayContainsEn: _parseString(json['may_contains_en']),
+      mayContainsZh: _parseString(json['may_contains_zh']),
+      mayContainsJa: _parseString(json['may_contains_ja']),
+      category: _parseString(json['category']),
       spiceLevel: json['spice_level'] as int? ?? 1,
-      createdAt: DateTime.parse(json['created_at'] as String),
+      createdAt: json['created_at'] != null 
+          ? DateTime.parse(json['created_at'] as String)
+          : null,
     );
   }
 
@@ -188,38 +199,49 @@ class MenuItemDetailModel extends MenuItemModel {
     super.mayContainsJa,
     super.category,
     required super.spiceLevel,
-    required super.createdAt,
+    super.createdAt,
     required this.isSaved,
   });
 
   factory MenuItemDetailModel.fromJson(Map<String, dynamic> json) {
+    // null 안전 처리를 위한 헬퍼 함수
+    String? _parseString(dynamic value) {
+      if (value == null) return null;
+      if (value is String) {
+        return value.isEmpty ? null : value;
+      }
+      return value.toString();
+    }
+
     return MenuItemDetailModel(
       id: json['id'] as String,
       name: json['name'] as String,
-      nameEn: json['name_en'] as String?,
-      nameZh: json['name_zh'] as String?,
-      nameJa: json['name_ja'] as String?,
-      description: json['description'] as String?,
-      descriptionEn: json['description_en'] as String?,
-      descriptionZh: json['description_zh'] as String?,
-      descriptionJa: json['description_ja'] as String?,
-      similarFood: json['similar_food'] as String?,
-      similarFoodEn: json['similar_food_en'] as String?,
-      similarFoodZh: json['similar_food_zh'] as String?,
-      similarFoodJa: json['similar_food_ja'] as String?,
-      repImageUrl: json['rep_image_url'] as String?,
-      price: json['price'] as String?,
-      contains: json['contains'] as String?,
-      containsEn: json['contains_en'] as String?,
-      containsZh: json['contains_zh'] as String?,
-      containsJa: json['contains_ja'] as String?,
-      mayContains: json['may_contains'] as String?,
-      mayContainsEn: json['may_contains_en'] as String?,
-      mayContainsZh: json['may_contains_zh'] as String?,
-      mayContainsJa: json['may_contains_ja'] as String?,
-      category: json['category'] as String?,
+      nameEn: _parseString(json['name_en']),
+      nameZh: _parseString(json['name_zh']),
+      nameJa: _parseString(json['name_ja']),
+      description: _parseString(json['description']),
+      descriptionEn: _parseString(json['description_en']),
+      descriptionZh: _parseString(json['description_zh']),
+      descriptionJa: _parseString(json['description_ja']),
+      similarFood: _parseString(json['similar_food']),
+      similarFoodEn: _parseString(json['similar_food_en']),
+      similarFoodZh: _parseString(json['similar_food_zh']),
+      similarFoodJa: _parseString(json['similar_food_ja']),
+      repImageUrl: _parseString(json['rep_image_url']),
+      price: _parseString(json['price']),
+      contains: _parseString(json['contains']),
+      containsEn: _parseString(json['contains_en']),
+      containsZh: _parseString(json['contains_zh']),
+      containsJa: _parseString(json['contains_ja']),
+      mayContains: _parseString(json['may_contains']),
+      mayContainsEn: _parseString(json['may_contains_en']),
+      mayContainsZh: _parseString(json['may_contains_zh']),
+      mayContainsJa: _parseString(json['may_contains_ja']),
+      category: _parseString(json['category']),
       spiceLevel: json['spice_level'] as int? ?? 1,
-      createdAt: DateTime.parse(json['created_at'] as String),
+      createdAt: json['created_at'] != null 
+          ? DateTime.parse(json['created_at'] as String)
+          : null,
       isSaved: json['is_saved'] as bool? ?? false,
     );
   }

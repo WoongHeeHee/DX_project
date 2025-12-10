@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
-import 'dart:html' as html;
 import 'dart:async';
 import '../../core/theme/app_colors.dart';
 import '../../data/repositories/api_repository.dart';
+
+// 웹 환경에서만 dart:html 사용
+import 'dart:html' as html if (dart.library.html) 'dart:html';
 
 /// Google OAuth 리디렉션 콜백 화면
 /// URL에서 id_token을 추출하여 자동 로그인 처리
@@ -44,9 +46,12 @@ class _AuthCallbackScreenState extends State<AuthCallbackScreen> {
       Uri uri;
       if (widget.uri != null) {
         uri = widget.uri!;
-      } else {
+      } else if (kIsWeb) {
         final currentUrl = html.window.location.href;
         uri = Uri.parse(currentUrl);
+        debugPrint('현재 URL: $currentUrl');
+      } else {
+        throw Exception('웹 환경에서만 사용할 수 있습니다.');
       }
       
       String? idToken;
@@ -101,8 +106,10 @@ class _AuthCallbackScreenState extends State<AuthCallbackScreen> {
       }
 
       // URL 정리 (쿼리 파라미터와 해시 제거)
-      final cleanUrl = html.window.location.origin + '/auth/callback';
-      html.window.history.replaceState(null, '', cleanUrl);
+      if (kIsWeb) {
+        final cleanUrl = html.window.location.origin + '/auth/callback';
+        html.window.history.replaceState(null, '', cleanUrl);
+      }
 
       // 온보딩 완료 여부 확인
       final isOnboardingComplete = user.country != null && user.birthYyyyMm != null;

@@ -36,10 +36,36 @@
   <!-- Google 로그인을 사용하려면 아래 GOOGLE_CLIENT_ID에 값을 입력하세요 -->
   <!-- 자세한 설정 방법은 프로젝트 루트의 GOOGLE_CLIENT_ID_SETUP.md 파일을 참고하세요 -->
   <script>
-    window.ENV = {
-      API_BASE_URL: 'http://localhost:8000',
-      GOOGLE_CLIENT_ID: '584089307412-hfnij6j84iqfr5gj3m45ef7ue1f3k5je.apps.googleusercontent.com'
-    };
+    // 환경에 따라 API_BASE_URL 자동 설정 + 쿼리 파라미터 오버라이드 지원
+    (function() {
+      const hostname = window.location.hostname;
+      const params = new URLSearchParams(window.location.search);
+      const override = params.get('api_base');
+      const isIpv4Host = /^\\d+\\.\\d+\\.\\d+\\.\\d+$/.test(hostname);
+      let apiBaseUrl;
+      
+      if (override && override.trim() !== '') {
+        apiBaseUrl = override.trim();
+        console.log('🔧 api_base 쿼리 파라미터로 API_BASE_URL 오버라이드: ' + apiBaseUrl);
+      } else if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '0.0.0.0') {
+        // 로컬 개발 (localhost)
+        apiBaseUrl = 'http://localhost:8000';
+        console.log('🔧 로컬 개발 환경 감지 - API_BASE_URL: ' + apiBaseUrl);
+      } else if (isIpv4Host) {
+        // 같은 네트워크 대역에서 IP로 접속 시 로컬 백엔드로 연결
+        apiBaseUrl = `http://${hostname}:8000`;
+        console.log('🔧 로컬 IP 접속 감지 - API_BASE_URL: ' + apiBaseUrl);
+      } else {
+        // 프로덕션: 기본적으로 현재 도메인 사용 (리버스 프록시/터널로 백엔드 연결 가정)
+        apiBaseUrl = window.location.origin;
+        console.log('🌐 프로덕션 환경 감지 - API_BASE_URL: ' + apiBaseUrl);
+      }
+      
+      window.ENV = {
+        API_BASE_URL: apiBaseUrl,
+        GOOGLE_CLIENT_ID: '584089307412-hfnij6j84iqfr5gj3m45ef7ue1f3k5je.apps.googleusercontent.com'
+      };
+    })();
   </script>
 
   <!-- Google Identity Services 스크립트 -->
