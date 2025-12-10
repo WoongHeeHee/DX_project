@@ -138,6 +138,11 @@ class _OnboardingCountryScreenState extends State<OnboardingCountryScreen> {
       name: "몽골",
       flagImageUrl: "assets/images/MN.gif",
     ),
+    CountryFilter(
+      id: "country_other",
+      name: "기타",
+      flagImageUrl: null,
+    ),
   ];
 
   @override

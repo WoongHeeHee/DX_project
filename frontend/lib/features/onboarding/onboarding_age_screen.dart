@@ -213,11 +213,14 @@ class _OnboardingAgeScreenState extends State<OnboardingAgeScreen> {
       },
       child: Container(
         width: double.infinity,
-        padding: EdgeInsets.only(
-          left: responsive.responsivePadding(mobilePadding: 16),
-          right: responsive.responsivePadding(mobilePadding: 16),
-          top: responsive.responsivePadding(mobilePadding: 12),
-          bottom: responsive.responsivePadding(mobilePadding: 12),
+        constraints: BoxConstraints(
+          // 국가 선택 박스처럼 높이를 1.5배로 설정
+          minHeight: ((textSize * 1.25) + 
+              (responsive.responsivePadding(mobilePadding: 12) * 2)) * 1.5,
+        ),
+        padding: EdgeInsets.symmetric(
+          horizontal: responsive.responsivePadding(mobilePadding: 16),
+          vertical: responsive.responsivePadding(mobilePadding: 12),
         ),
         decoration: BoxDecoration(
           color: AppColors.white,
@@ -420,6 +423,7 @@ class _YearMonthPickerDialogState extends State<_YearMonthPickerDialog> {
                       Container(
                         height: 200,
                         decoration: BoxDecoration(
+                          color: AppColors.white,
                           border: Border.all(
                             color: const Color(0xFFF7F7F8),
                             width: 1,
@@ -495,6 +499,7 @@ class _YearMonthPickerDialogState extends State<_YearMonthPickerDialog> {
                       Container(
                         height: 200,
                         decoration: BoxDecoration(
+                          color: AppColors.white,
                           border: Border.all(
                             color: const Color(0xFFF7F7F8),
                             width: 1,
@@ -549,27 +554,30 @@ class _YearMonthPickerDialogState extends State<_YearMonthPickerDialog> {
             Row(
               children: [
                 Expanded(
-                  child: OutlinedButton(
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                    },
-                    style: OutlinedButton.styleFrom(
-                      side: BorderSide(
-                        color: const Color(0xFFF7F7F8),
-                        width: 1,
+                  child: SizedBox(
+                    height: responsive.responsivePadding(mobilePadding: 14) * 2 * 1.5,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.mainText,
+                        foregroundColor: AppColors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 0,
+                        shadowColor: Colors.transparent,
+                        padding: EdgeInsets.symmetric(
+                          vertical: responsive.responsivePadding(mobilePadding: 14),
+                        ),
                       ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      padding: EdgeInsets.symmetric(
-                        vertical: responsive.responsivePadding(mobilePadding: 14),
-                      ),
-                    ),
-                    child: Text(
-                      "취소",
-                      style: textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.mainText,
+                      child: Text(
+                        "취소",
+                        style: textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.white,
+                        ),
                       ),
                     ),
                   ),
@@ -578,28 +586,31 @@ class _YearMonthPickerDialogState extends State<_YearMonthPickerDialog> {
                   width: responsive.responsivePadding(mobilePadding: 12),
                 ),
                 Expanded(
-                  child: ElevatedButton(
-                    onPressed: () {
-                      widget.onSelected(_selectedYear, _selectedMonth);
-                      Navigator.of(context).pop();
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: AppColors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                  child: SizedBox(
+                    height: responsive.responsivePadding(mobilePadding: 14) * 2 * 1.5,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        widget.onSelected(_selectedYear, _selectedMonth);
+                        Navigator.of(context).pop();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: AppColors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 0,
+                        shadowColor: Colors.transparent,
+                        padding: EdgeInsets.symmetric(
+                          vertical: responsive.responsivePadding(mobilePadding: 14),
+                        ),
                       ),
-                      elevation: 0,
-                      shadowColor: Colors.transparent,
-                      padding: EdgeInsets.symmetric(
-                        vertical: responsive.responsivePadding(mobilePadding: 14),
-                      ),
-                    ),
-                    child: Text(
-                      "확인",
-                      style: textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.white,
+                      child: Text(
+                        "확인",
+                        style: textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.white,
+                        ),
                       ),
                     ),
                   ),

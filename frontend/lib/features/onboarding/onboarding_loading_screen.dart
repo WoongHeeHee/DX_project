@@ -51,43 +51,43 @@ class _OnboardingLoadingScreenState extends State<OnboardingLoadingScreen> {
   Future<void> _generateKoreanName() async {
     try {
       // 한국 이름 생성 API 호출
-      debugPrint('한국 이름 생성 요청: ${widget.inputName}');
+      debugPrint("한국 이름 생성 요청: ${widget.inputName}");
       final koreanNameResponse =
           await _apiRepository.userService.generateKoreanName(widget.inputName!);
 
       debugPrint(
-          '한국 이름 생성 응답: ${koreanNameResponse.koreanName}, ${koreanNameResponse.englishPronunciation}');
+          "한국 이름 생성 응답: ${koreanNameResponse.koreanName}, ${koreanNameResponse.englishPronunciation}");
 
       if (koreanNameResponse.koreanName.isEmpty) {
-        throw Exception('한국 이름이 생성되지 않았습니다.');
+        throw Exception("한국 이름이 생성되지 않았습니다.");
       }
 
       if (mounted) {
         // 로딩 완료 후 이름 확인 화면으로 이동 (extra로 데이터 전달)
         context.pushReplacement(
-          '/onboarding/name-confirm',
+          "/onboarding/name-confirm",
           extra: {
-            'inputName': widget.inputName,
-            'koreanName': koreanNameResponse.koreanName,
-            'englishPronunciation': koreanNameResponse.englishPronunciation,
+            "inputName": widget.inputName,
+            "koreanName": koreanNameResponse.koreanName,
+            "englishPronunciation": koreanNameResponse.englishPronunciation,
           },
         );
       }
     } catch (e) {
-      debugPrint('한국 이름 생성 에러: $e');
+      debugPrint("한국 이름 생성 에러: $e");
       if (mounted) {
         context.pop(); // 로딩 화면 닫기
         
         // 에러 메시지 생성
-        String errorMessage = '한국 이름 생성에 실패했습니다.';
+        String errorMessage = "한국 이름 생성에 실패했습니다.";
         
         // 연결 에러인 경우 더 명확한 메시지 표시
-        if (e.toString().contains('서버에 연결할 수 없습니다') || 
-            e.toString().contains('connection') ||
-            e.toString().contains('Connection')) {
-          errorMessage = '서버에 연결할 수 없습니다.\n서버가 실행 중인지 확인해주세요.\n\n자세한 내용은 SERVER_CONNECTION_GUIDE.md를 참조하세요.';
-        } else if (e.toString().contains('timeout') || e.toString().contains('시간')) {
-          errorMessage = '서버 응답 시간이 초과되었습니다.\n네트워크 연결과 서버 상태를 확인해주세요.';
+        if (e.toString().contains("서버에 연결할 수 없습니다") || 
+            e.toString().contains("connection") ||
+            e.toString().contains("Connection")) {
+          errorMessage = "서버에 연결할 수 없습니다.\n서버가 실행 중인지 확인해주세요.\n\n자세한 내용은 SERVER_CONNECTION_GUIDE.md를 참조하세요.";
+        } else if (e.toString().contains("timeout") || e.toString().contains("시간")) {
+          errorMessage = "서버 응답 시간이 초과되었습니다.\n네트워크 연결과 서버 상태를 확인해주세요.";
         }
         
         // 에러 화면 대신 스낵바로 표시하고 재시도 가능하도록
@@ -96,7 +96,7 @@ class _OnboardingLoadingScreenState extends State<OnboardingLoadingScreen> {
             content: Text(errorMessage),
             duration: const Duration(seconds: 5),
             action: SnackBarAction(
-              label: '다시 시도',
+              label: "다시 시도",
               onPressed: () {
                 // 이름 입력 화면으로 돌아가서 다시 시도
                 context.pop();
@@ -180,13 +180,13 @@ class _OnboardingLoadingScreenState extends State<OnboardingLoadingScreen> {
             strokeWidth: 3,
           ),
           SizedBox(
-            height: responsive.responsivePadding(mobilePadding: 24),
+            height: responsive.responsivePadding(mobilePadding: 40),
           ),
           Text(
-            "당신의 한국 이름을 만드는 중 ...",
+            "･ ･ ･ 한국 이름을 만드는 중 ･ ･ ･",
             style: textTheme.bodyMedium?.copyWith(
               fontSize: responsive.responsiveFontSize(mobileSize: 14),
-              fontWeight: FontWeight.w400,
+              fontWeight: FontWeight.w700,
               color: AppColors.mainText,
             ),
           ),

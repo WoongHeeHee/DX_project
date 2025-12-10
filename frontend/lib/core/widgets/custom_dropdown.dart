@@ -17,6 +17,7 @@ class CustomDropdown<T> extends StatefulWidget {
   final double? maxHeight;
   final String placeholder;
   final bool showCheckIcon;
+  final bool useTextFieldStyle;
 
   const CustomDropdown({
     super.key,
@@ -31,6 +32,7 @@ class CustomDropdown<T> extends StatefulWidget {
     this.maxHeight,
     this.placeholder = "선택",
     this.showCheckIcon = true,
+    this.useTextFieldStyle = false,
   });
 
   @override
@@ -93,14 +95,13 @@ class _CustomDropdownState<T> extends State<CustomDropdown<T>> {
         _buttonKey.currentContext?.findRenderObject() as RenderBox?;
     final size = renderBox?.size ?? Size.zero;
     // 버튼의 실제 너비를 사용 (width가 지정되지 않았거나 double.infinity인 경우)
-    final dropdownWidth =
-        (widget.width != null &&
+    final dropdownWidth = (widget.width != null &&
             widget.width != double.infinity &&
             widget.width! > 0)
         ? widget.width!.toDouble()
         : size.width > 0
-        ? size.width
-        : 200.0;
+            ? size.width
+            : 200.0;
 
     return OverlayEntry(
       builder: (context) => Stack(
@@ -134,85 +135,99 @@ class _CustomDropdownState<T> extends State<CustomDropdown<T>> {
   Widget build(BuildContext context) {
     final responsive = context.responsive;
     final textTheme = Theme.of(context).textTheme;
+    final textSize = responsive.responsiveFontSize(mobileSize: 16);
 
     return CompositedTransformTarget(
       link: _layerLink,
       child: GestureDetector(
-      key: _buttonKey,
-      onTap: widget.onToggle,
-      child: Container(
-        width: widget.width != null ? widget.width : double.infinity,
-        padding: EdgeInsets.symmetric(
-          horizontal: responsive.responsivePadding(mobilePadding: 12),
-          vertical: responsive.responsivePadding(mobilePadding: 10),
-        ),
-        decoration: BoxDecoration(
-          color: AppColors.chipBackground,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Row(
-          mainAxisSize: widget.width != null
-              ? MainAxisSize.min
-              : MainAxisSize.max,
-          children: [
-            // 이미지가 있는 경우 표시
-            if (widget.getImageUrl != null && widget.selectedValue != null)
-              Builder(
-                builder: (context) {
-                  final imageUrl = widget.getImageUrl!(widget.selectedValue!);
-                  return Container(
-                    width: responsive.responsiveIconSize(mobileSize: 30),
-                    height: responsive.responsiveIconSize(mobileSize: 18),
-                    decoration: BoxDecoration(
-                      color: imageUrl != null
-                          ? Colors.transparent
-                          : AppColors.filterColor,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                    child: imageUrl != null
-                        ? ClipRRect(
-                            borderRadius: BorderRadius.circular(2),
-                            child: Image.asset(
-                              imageUrl,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) {
-                                debugPrint("❌ 국기 이미지 로드 실패: $imageUrl");
-                                  return Container(
-                                    color: AppColors.filterColor,
-                                  );
-                              },
-                            ),
-                          )
-                        : null,
-                  );
-                },
-              ),
-            if (widget.getImageUrl != null && widget.selectedValue != null)
+        key: _buttonKey,
+        onTap: widget.onToggle,
+        child: Container(
+          width: widget.width != null ? widget.width : double.infinity,
+          constraints: widget.useTextFieldStyle
+              ? BoxConstraints(
+                  // TextField의 실제 높이를 1.5배로 설정
+                  // 텍스트 크기(16px) * line height(1.25) + padding(12px * 2) = 약 44px
+                  // 1.5배 = 약 66px
+                  minHeight: ((textSize * 1.25) +
+                          (responsive.responsivePadding(mobilePadding: 12) *
+                              2)) *
+                      1.5,
+                )
+              : null,
+          padding: widget.useTextFieldStyle
+              ? EdgeInsets.symmetric(
+                  horizontal: responsive.responsivePadding(mobilePadding: 16),
+                  vertical: responsive.responsivePadding(mobilePadding: 12),
+                )
+              : EdgeInsets.symmetric(
+                  horizontal: responsive.responsivePadding(mobilePadding: 12),
+                  vertical: responsive.responsivePadding(mobilePadding: 10),
+                ),
+          decoration: BoxDecoration(
+            color: AppColors.chipBackground,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Row(
+            mainAxisSize:
+                widget.width != null ? MainAxisSize.min : MainAxisSize.max,
+            children: [
+              // 이미지가 있는 경우 표시
+              if (widget.getImageUrl != null && widget.selectedValue != null)
+                Builder(
+                  builder: (context) {
+                    final imageUrl = widget.getImageUrl!(widget.selectedValue!);
+                    return Container(
+                      width: responsive.responsiveIconSize(mobileSize: 30),
+                      height: responsive.responsiveIconSize(mobileSize: 18),
+                      decoration: BoxDecoration(
+                        color: imageUrl != null
+                            ? Colors.transparent
+                            : AppColors.white,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                      child: imageUrl != null
+                          ? ClipRRect(
+                              borderRadius: BorderRadius.circular(2),
+                              child: Image.asset(
+                                imageUrl,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  debugPrint("❌ 국기 이미지 로드 실패: $imageUrl");
+                                  return Container(color: AppColors.white);
+                                },
+                              ),
+                            )
+                          : null,
+                    );
+                  },
+                ),
+              if (widget.getImageUrl != null && widget.selectedValue != null)
                 SizedBox(
                   width: responsive.responsivePadding(mobilePadding: 8),
                 ),
-            // 선택된 값 또는 플레이스홀더
-            Expanded(
-              child: Text(
-                widget.selectedValue != null
-                    ? widget.getLabel(widget.selectedValue as T)
-                    : widget.placeholder,
-                style: textTheme.bodyMedium?.copyWith(
-                  fontSize: responsive.responsiveFontSize(mobileSize: 13),
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.subText,
-                  fontFamily: 'Inter',
+              // 선택된 값 또는 플레이스홀더
+              Expanded(
+                child: Text(
+                  widget.selectedValue != null
+                      ? widget.getLabel(widget.selectedValue as T)
+                      : widget.placeholder,
+                  style: textTheme.bodyMedium?.copyWith(
+                    fontSize: responsive.responsiveFontSize(mobileSize: 13),
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.subText,
+                    fontFamily: 'Inter',
+                  ),
                 ),
               ),
-            ),
-            Icon(
-              widget.isOpen
-                  ? Icons.keyboard_arrow_up
-                  : Icons.keyboard_arrow_down,
-              size: responsive.responsiveIconSize(mobileSize: 16),
-              color: AppColors.subText,
-            ),
-          ],
+              Icon(
+                widget.isOpen
+                    ? Icons.keyboard_arrow_up
+                    : Icons.keyboard_arrow_down,
+                size: responsive.responsiveIconSize(mobileSize: 16),
+                color: AppColors.subText,
+              ),
+            ],
           ),
         ),
       ),
@@ -248,8 +263,7 @@ class _CustomDropdownState<T> extends State<CustomDropdown<T>> {
           itemCount: widget.items.length,
           itemBuilder: (context, index) {
             final item = widget.items[index];
-            final isSelected =
-                widget.selectedValue != null &&
+            final isSelected = widget.selectedValue != null &&
                 _isEqual(widget.selectedValue as T, item);
 
             return InkWell(
@@ -284,17 +298,17 @@ class _CustomDropdownState<T> extends State<CustomDropdown<T>> {
                       Builder(
                         builder: (context) {
                           final imageUrl = widget.getImageUrl!(item);
+                          final textSize =
+                              responsive.responsiveFontSize(mobileSize: 16);
+                          final flagHeight = textSize * 1.25; // 폰트 높이에 맞춤
+                          final flagWidth = flagHeight * 1.5; // 국기 비율 유지 (3:2)
                           return Container(
-                            width: responsive.responsiveIconSize(
-                              mobileSize: 24,
-                            ),
-                            height: responsive.responsiveIconSize(
-                              mobileSize: 16,
-                            ),
+                            width: flagWidth,
+                            height: flagHeight,
                             decoration: BoxDecoration(
                               color: imageUrl != null
                                   ? Colors.transparent
-                                  : AppColors.filterColor,
+                                  : AppColors.white,
                               borderRadius: BorderRadius.circular(2),
                             ),
                             child: imageUrl != null
@@ -305,13 +319,13 @@ class _CustomDropdownState<T> extends State<CustomDropdown<T>> {
                                       fit: BoxFit.cover,
                                       errorBuilder:
                                           (context, error, stackTrace) {
-                                            debugPrint(
-                                              "❌ 국기 이미지 로드 실패: $imageUrl",
-                                            );
-                                            return Container(
-                                              color: AppColors.filterColor,
-                                            );
-                                          },
+                                        debugPrint(
+                                          "❌ 국기 이미지 로드 실패: $imageUrl",
+                                        );
+                                        return Container(
+                                          color: AppColors.white,
+                                        );
+                                      },
                                     ),
                                   )
                                 : null,
@@ -328,11 +342,10 @@ class _CustomDropdownState<T> extends State<CustomDropdown<T>> {
                         widget.getLabel(item),
                         style: textTheme.bodyMedium?.copyWith(
                           fontSize: responsive.responsiveFontSize(
-                            mobileSize: 13,
+                            mobileSize: 16,
                           ),
-                          fontWeight: isSelected
-                              ? FontWeight.w600
-                              : FontWeight.w400,
+                          fontWeight:
+                              isSelected ? FontWeight.w600 : FontWeight.w400,
                           color: isSelected
                               ? AppColors.mainText
                               : AppColors.subText,

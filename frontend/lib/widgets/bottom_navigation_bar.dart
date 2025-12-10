@@ -1,6 +1,6 @@
-import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
-import '../core/theme/app_colors.dart';
+import "package:flutter/material.dart";
+import "package:go_router/go_router.dart";
+import "../core/theme/app_colors.dart";
 
 class CustomBottomNavigationBar extends StatelessWidget {
   final int currentIndex;
@@ -17,23 +17,23 @@ class CustomBottomNavigationBar extends StatelessWidget {
     final items = [
       _NavItem(
         icon: Icons.explore,
-        label: '탐색',
-        route: '/explore',
+        label: "탐색",
+        route: "/explore",
       ),
       _NavItem(
         icon: Icons.map,
-        label: '지도',
-        route: '/map',
+        label: "지도",
+        route: "/map",
       ),
       _NavItem(
         icon: Icons.camera_alt,
-        label: '카메라',
-        route: '/camera',
+        label: "카메라",
+        route: "/camera",
       ),
       _NavItem(
         icon: Icons.person,
-        label: '마이',
-        route: '/my',
+        label: "마이",
+        route: "/my",
       ),
     ];
 
@@ -63,7 +63,7 @@ class CustomBottomNavigationBar extends StatelessWidget {
                   case 2:
                     final path =
                         returnPath ?? GoRouterState.of(context).uri.toString();
-                    context.go(item.route, extra: {'returnPath': path});
+                    context.go(item.route, extra: {"returnPath": path});
                     break;
                   case 3:
                     context.go(item.route);
@@ -109,4 +109,3 @@ class _NavItem {
     required this.route,
   });
 }
-

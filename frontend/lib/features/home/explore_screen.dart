@@ -748,29 +748,29 @@ class _ExploreScreenState extends State<ExploreScreen> {
                 controller: _scrollController,
                 physics: const ClampingScrollPhysics(),
                 child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildNowTrendSection(responsive, textTheme),
-                  ResponsivePadding(
-                    mobilePadding: 16,
-                    tabletPadding: 24,
-                    desktopPadding: 32,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const SizedBox(height: 16),
-                        _buildKoreanStreetFoodSection(responsive, textTheme),
-                        const SizedBox(height: 16),
-                        _buildDiscoverSijangSection(responsive, textTheme),
-                      ],
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildNowTrendSection(responsive, textTheme),
+                    ResponsivePadding(
+                      mobilePadding: 16,
+                      tabletPadding: 24,
+                      desktopPadding: 32,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(height: 16),
+                          _buildKoreanStreetFoodSection(responsive, textTheme),
+                          const SizedBox(height: 16),
+                          _buildDiscoverSijangSection(responsive, textTheme),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
         ),
-      ),
       ),
     );
   }

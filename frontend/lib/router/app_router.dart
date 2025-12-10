@@ -33,6 +33,7 @@ import '../features/report/report_guide_screen.dart';
 import '../features/report/report_camera_screen.dart';
 import '../features/report/report_store_select_screen.dart';
 import '../features/report/report_complete_screen.dart';
+import '../screens/report/report_loading_screen.dart';
 import '../data/services/auth_service.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -42,7 +43,7 @@ class AppRouter {
   AppRouter({required this.authService});
 
   late final GoRouter router = GoRouter(
-    initialLocation: '/login',
+    initialLocation: '/explore',
     routes: [
       // 인증 관련
       GoRoute(
@@ -167,6 +168,10 @@ class AppRouter {
         builder: (context, state) => const ReportCameraScreen(),
       ),
       GoRoute(
+        path: '/report/loading',
+        builder: (context, state) => const ReportLoadingScreen(),
+      ),
+      GoRoute(
         path: '/report/shop-select',
         builder: (context, state) {
           final extra = state.extra as Map<String, dynamic>?;
@@ -190,120 +195,179 @@ class AppRouter {
 
       // 메인 탭 (하단 네비게이션)
       GoRoute(
-        path: '/explore',
-        builder: (context, state) => const features.ExploreScreen(),
+        path: "/explore",
+        pageBuilder: (context, state) => NoTransitionPage(
+          key: state.pageKey,
+          child: const features.ExploreScreen(),
+        ),
       ),
       GoRoute(
-        path: '/explore/food/:foodId',
-        builder: (context, state) {
+        path: "/explore/food/:foodId",
+        pageBuilder: (context, state) {
           final extra = state.extra as Map<String, dynamic>?;
-          final food = extra?['food'] as FoodModel?;
+          final food = extra?["food"] as FoodModel?;
           if (food == null) {
-            throw Exception('FoodModel이 필요합니다.');
+            throw Exception("FoodModel이 필요합니다.");
           }
-          return FoodDetailScreen(food: food);
+          return NoTransitionPage(
+            key: state.pageKey,
+            child: FoodDetailScreen(food: food),
+          );
         },
       ),
       GoRoute(
-        path: '/explore/market/:marketId',
-        builder: (context, state) {
+        path: "/explore/market/:marketId",
+        pageBuilder: (context, state) {
           final extra = state.extra as Map<String, dynamic>?;
-          final market = extra?['market'] as MarketModel?;
+          final market = extra?["market"] as MarketModel?;
           if (market == null) {
-            throw Exception('MarketModel이 필요합니다.');
+            throw Exception("MarketModel이 필요합니다.");
           }
-          return MarketDetailScreen(market: market);
+          return NoTransitionPage(
+            key: state.pageKey,
+            child: MarketDetailScreen(market: market),
+          );
         },
       ),
       GoRoute(
-        path: '/map',
-        builder: (context, state) => const MapScreen(),
+        path: "/map",
+        pageBuilder: (context, state) => NoTransitionPage(
+          key: state.pageKey,
+          child: const MapScreen(),
+        ),
       ),
       GoRoute(
-        path: '/map/market/:marketId/detail',
-        builder: (context, state) {
+        path: "/map/market/:marketId/detail",
+        pageBuilder: (context, state) {
           final extra = state.extra as Map<String, dynamic>?;
-          final market = extra?['market'] as MarketModel?;
+          final market = extra?["market"] as MarketModel?;
           if (market == null) {
-            throw Exception('MarketModel이 필요합니다.');
+            throw Exception("MarketModel이 필요합니다.");
           }
-          return MarketMapDetailScreen(market: market);
+          return NoTransitionPage(
+            key: state.pageKey,
+            child: MarketMapDetailScreen(market: market),
+          );
         },
       ),
       GoRoute(
-        path: '/map/market/:marketId/store-list',
-        builder: (context, state) {
+        path: "/map/market/:marketId/store-list",
+        pageBuilder: (context, state) {
           final extra = state.extra as Map<String, dynamic>?;
-          final market = extra?['market'] as MarketModel?;
-          final menuName = extra?['menuName'] as String?;
+          final market = extra?["market"] as MarketModel?;
+          final menuName = extra?["menuName"] as String?;
           if (market == null || menuName == null) {
-            throw Exception('MarketModel과 menuName이 필요합니다.');
+            throw Exception("MarketModel과 menuName이 필요합니다.");
           }
-          return StoreListScreen(market: market, menuName: menuName);
+          return NoTransitionPage(
+            key: state.pageKey,
+            child: StoreListScreen(market: market, menuName: menuName),
+          );
         },
       ),
       GoRoute(
-        path: '/search',
-        builder: (context, state) => const SearchScreen(),
+        path: "/search",
+        pageBuilder: (context, state) => NoTransitionPage(
+          key: state.pageKey,
+          child: const SearchScreen(),
+        ),
       ),
       GoRoute(
-        path: '/search/image',
-        builder: (context, state) {
+        path: "/search/image",
+        pageBuilder: (context, state) {
           final extra = state.extra as Map<String, dynamic>?;
-          final initialImage = extra?['initialImage'] as XFile?;
-          return ImageSearchScreen(initialImage: initialImage);
+          final initialImage = extra?["initialImage"] as XFile?;
+          return NoTransitionPage(
+            key: state.pageKey,
+            child: ImageSearchScreen(initialImage: initialImage),
+          );
         },
       ),
       GoRoute(
-        path: '/search/text',
-        builder: (context, state) => const TextSearchScreen(),
+        path: "/search/text",
+        pageBuilder: (context, state) => NoTransitionPage(
+          key: state.pageKey,
+          child: const TextSearchScreen(),
+        ),
       ),
       GoRoute(
-        path: '/search/result',
-        builder: (context, state) {
+        path: "/search/result",
+        pageBuilder: (context, state) {
           final extra = state.extra as Map<String, dynamic>?;
-          final result = extra?['result'] as SearchResultModel?;
+          final result = extra?["result"] as SearchResultModel?;
           if (result == null) {
-            throw Exception('SearchResultModel이 필요합니다.');
+            throw Exception("SearchResultModel이 필요합니다.");
           }
-          return SearchResultScreen(result: result);
+          return NoTransitionPage(
+            key: state.pageKey,
+            child: SearchResultScreen(result: result),
+          );
         },
       ),
       GoRoute(
-        path: '/search/error',
-        builder: (context, state) => const SearchErrorScreen(),
+        path: "/search/error",
+        pageBuilder: (context, state) => NoTransitionPage(
+          key: state.pageKey,
+          child: const SearchErrorScreen(),
+        ),
       ),
       GoRoute(
-        path: '/camera',
-        builder: (context, state) {
+        path: "/camera",
+        pageBuilder: (context, state) {
           final extra = state.extra as Map<String, dynamic>?;
-          final returnPath = extra?['returnPath'] as String?;
-          return CameraPreviewScreen(returnPath: returnPath);
+          final returnPath = extra?["returnPath"] as String?;
+          return NoTransitionPage(
+            key: state.pageKey,
+            child: CameraPreviewScreen(returnPath: returnPath),
+          );
         },
       ),
       GoRoute(
-        path: '/camera/preview',
-        builder: (context, state) {
+        path: "/camera/preview",
+        pageBuilder: (context, state) {
           final extra = state.extra as Map<String, dynamic>?;
-          final returnPath = extra?['returnPath'] as String?;
-          return CameraPreviewScreen(returnPath: returnPath);
+          final returnPath = extra?["returnPath"] as String?;
+          return NoTransitionPage(
+            key: state.pageKey,
+            child: CameraPreviewScreen(returnPath: returnPath),
+          );
         },
       ),
       GoRoute(
-        path: '/camera/take-photo',
-        builder: (context, state) {
+        path: "/camera/take-photo",
+        pageBuilder: (context, state) {
           final extra = state.extra as Map<String, dynamic>?;
-          final returnPath = extra?['returnPath'] as String?;
-          return CameraTakePhotoScreen(returnPath: returnPath);
+          final returnPath = extra?["returnPath"] as String?;
+          return NoTransitionPage(
+            key: state.pageKey,
+            child: CameraTakePhotoScreen(returnPath: returnPath),
+          );
         },
       ),
       GoRoute(
-        path: '/camera/success',
-        builder: (context, state) {
+        path: "/camera/success",
+        pageBuilder: (context, state) {
           final extra = state.extra as Map<String, dynamic>?;
-          final returnPath = extra?['returnPath'] as String?;
-          return CameraSuccessScreen(returnPath: returnPath);
+          final returnPath = extra?["returnPath"] as String?;
+          return NoTransitionPage(
+            key: state.pageKey,
+            child: CameraSuccessScreen(returnPath: returnPath),
+          );
         },
+      ),
+      GoRoute(
+        path: "/my",
+        pageBuilder: (context, state) => NoTransitionPage(
+          key: state.pageKey,
+          child: Scaffold(
+            body: Center(
+              child: Text(
+                "마이 페이지",
+                style: Theme.of(context).textTheme.headlineSmall,
+              ),
+            ),
+          ),
+        ),
       ),
     ],
     redirect: (context, state) {
