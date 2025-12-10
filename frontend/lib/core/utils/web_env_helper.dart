@@ -22,5 +22,10 @@ class WebEnvHelper {
   static String? getApiBaseUrl() {
     return getEnvValue('API_BASE_URL');
   }
+
+  /// 웹 환경에서 Google Maps API Key 가져오기
+  static String? getGoogleMapsApiKey() {
+    return getEnvValue('GOOGLE_MAPS_API_KEY');
+  }
 }
 

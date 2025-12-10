@@ -34,8 +34,8 @@ dependencies:
   # 위치 서비스
   geolocator: ^11.0.0
 
-  # 지도 (웹용 - 카카오맵/네이버맵은 웹뷰로 구현)
-  webview_flutter: ^4.4.2
+  # 지도
+  google_maps_flutter: ^2.5.0
 
   # 유틸리티
   intl: ^0.20.2

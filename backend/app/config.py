@@ -46,8 +46,7 @@ class Settings(BaseSettings):
     PINECONE_INDEX_NAME: str = "market-explorer"
     
     # 지도 API 설정
-    MAP_PROVIDER: str = "kakao"  # kakao | naver
-    KAKAO_API_KEY: str = ""
+    MAP_PROVIDER: str = "naver"  # naver
     NAVER_CLIENT_ID: str = ""
     NAVER_CLIENT_SECRET: str = ""
     

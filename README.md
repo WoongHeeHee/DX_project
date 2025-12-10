@@ -71,8 +71,6 @@ GOOGLE_CLIENT_ID=your-google-client-id
 GOOGLE_CLIENT_SECRET=your-google-client-secret
 
 # 지도 API (선택)
-KAKAO_API_KEY=your-kakao-api-key
-# 또는
 NAVER_CLIENT_ID=your-naver-client-id
 NAVER_CLIENT_SECRET=your-naver-client-secret
 ```

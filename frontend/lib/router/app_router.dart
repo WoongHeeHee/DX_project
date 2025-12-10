@@ -12,11 +12,6 @@ import '../features/onboarding/onboarding_age_screen.dart';
 import '../features/onboarding/onboarding_spicy_level_screen.dart';
 import '../features/onboarding/onboarding_style_screen.dart';
 import '../features/onboarding/onboarding_complete_screen.dart';
-import '../screens/onboarding/onboarding_name_input_screen.dart';
-import '../screens/onboarding/onboarding_name_generate_screen.dart';
-import '../screens/onboarding/onboarding_main_1_screen.dart';
-import '../screens/onboarding/onboarding_main_2_screen.dart';
-// 레거시 제보 화면 (삭제됨)
 import '../features/home/explore_screen.dart' as features;
 import '../features/home/food_detail_screen.dart';
 import '../features/home/market_detail_screen.dart';
@@ -34,7 +29,10 @@ import '../features/search/models/search_result_model.dart';
 import '../features/camera/camera_preview_screen.dart';
 import '../features/camera/camera_success_screen.dart';
 import '../features/camera/camera_take_photo_screen.dart';
-import '../screens/my/my_page_screen.dart';
+import '../features/report/report_guide_screen.dart';
+import '../features/report/report_camera_screen.dart';
+import '../features/report/report_store_select_screen.dart';
+import '../features/report/report_complete_screen.dart';
 import '../data/services/auth_service.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -146,27 +144,37 @@ class AppRouter {
           );
         },
       ),
-      
-      // 기존 온보딩 (레거시)
-      GoRoute(
-        path: '/onboarding/name-input',
-        builder: (context, state) => const OnboardingNameInputScreen(),
-      ),
-      GoRoute(
-        path: '/onboarding/name-generate',
-        builder: (context, state) => const OnboardingNameGenerateScreen(),
-      ),
-      GoRoute(
-        path: '/onboarding/main-1',
-        builder: (context, state) => const OnboardingMain1Screen(),
-      ),
-      GoRoute(
-        path: '/onboarding/main-2',
-        builder: (context, state) => const OnboardingMain2Screen(),
-      ),
 
       // 가게 제보
-      // 레거시 제보 플로우: 삭제 (새 디자인 통합 시 미사용)
+      GoRoute(
+        path: '/report/guide',
+        builder: (context, state) => const ReportGuideScreen(),
+      ),
+      GoRoute(
+        path: '/report/camera',
+        builder: (context, state) => const ReportCameraScreen(),
+      ),
+      GoRoute(
+        path: '/report/shop-select',
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>?;
+          final image = extra?['image'] as XFile?;
+          final lat = extra?['lat'] as double?;
+          final lng = extra?['lng'] as double?;
+          if (image == null || lat == null || lng == null) {
+            throw Exception('image, lat, lng가 필요합니다.');
+          }
+          return ReportStoreSelectScreen(
+            image: image,
+            latitude: lat,
+            longitude: lng,
+          );
+        },
+      ),
+      GoRoute(
+        path: '/report/complete',
+        builder: (context, state) => const ReportCompleteScreen(),
+      ),
 
       // 메인 탭 (하단 네비게이션)
       GoRoute(
@@ -284,10 +292,6 @@ class AppRouter {
           final returnPath = extra?['returnPath'] as String?;
           return CameraSuccessScreen(returnPath: returnPath);
         },
-      ),
-      GoRoute(
-        path: '/my',
-        builder: (context, state) => const MyPageScreen(),
       ),
     ],
     redirect: (context, state) {

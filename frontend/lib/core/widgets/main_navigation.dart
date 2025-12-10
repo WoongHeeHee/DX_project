@@ -3,7 +3,6 @@
 import "package:flutter/material.dart";
 import "package:go_router/go_router.dart";
 import "package:image_picker/image_picker.dart";
-import "../constants/app_routes.dart";
 import "../../features/home/explore_screen.dart";
 import "../../features/map/map_screen.dart";
 
@@ -22,7 +21,7 @@ class _MainNavigationState extends State<MainNavigation> {
   final List<NavigationItem> _navigationItems = [
     NavigationItem(
       label: "탐색",
-      route: AppRoutes.home,
+      route: "/explore",
       // 아이콘은 추후 등록 예정
     ),
     NavigationItem(

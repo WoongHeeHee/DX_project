@@ -11,8 +11,7 @@ API_TIMEOUT=30
 GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
 GOOGLE_REDIRECT_URI=http://localhost:8080/auth/callback
 
-# 지도 API (카카오맵 또는 네이버맵)
-KAKAO_MAP_API_KEY=your-kakao-map-api-key
+# 지도 API (네이버맵)
 NAVER_MAP_CLIENT_ID=your-naver-map-client-id
 NAVER_MAP_CLIENT_SECRET=your-naver-map-client-secret
 
@@ -29,7 +28,6 @@ IMAGE_BASE_URL=http://localhost:9000/market-explorer-photos
 - **API_TIMEOUT**: API 요청 타임아웃 (초)
 - **GOOGLE_CLIENT_ID**: Google OAuth 클라이언트 ID (웹용)
 - **GOOGLE_REDIRECT_URI**: Google OAuth 리디렉션 URI
-- **KAKAO_MAP_API_KEY**: 카카오맵 API 키 (선택사항)
 - **NAVER_MAP_CLIENT_ID**: 네이버맵 클라이언트 ID (선택사항)
 - **NAVER_MAP_CLIENT_SECRET**: 네이버맵 클라이언트 시크릿 (선택사항)
 - **ENVIRONMENT**: 환경 설정 (development/production)

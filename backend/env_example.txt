@@ -35,8 +35,7 @@ PINECONE_ENVIRONMENT=us-west1-gcp
 PINECONE_INDEX_NAME=market-explorer
 
 # 지도 API
-MAP_PROVIDER=kakao  # kakao | naver
-KAKAO_API_KEY=your-kakao-api-key
+MAP_PROVIDER=naver  # naver
 NAVER_CLIENT_ID=your-naver-client-id
 NAVER_CLIENT_SECRET=your-naver-client-secret
 

@@ -1,10 +1,10 @@
 // lib/features/report/report_complete_screen.dart
 
 import "package:flutter/material.dart";
+import "package:go_router/go_router.dart";
 import "../../core/widgets/responsive_helper.dart";
 import "../../core/widgets/responsive_padding.dart";
 import "../../core/theme/app_colors.dart";
-import "../auth/login_screen.dart";
 
 class ReportCompleteScreen extends StatelessWidget {
   const ReportCompleteScreen({super.key});
@@ -65,12 +65,7 @@ class ReportCompleteScreen extends StatelessWidget {
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () {
-                    Navigator.of(context).pushAndRemoveUntil(
-                      MaterialPageRoute(
-                        builder: (context) => const LoginScreen(),
-                      ),
-                      (route) => false,
-                    );
+                    context.go('/explore');
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,

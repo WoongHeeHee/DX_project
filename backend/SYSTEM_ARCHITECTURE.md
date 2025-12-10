@@ -785,7 +785,7 @@ erDiagram
 - `name`, `name_en`, `name_zh`, `name_ja`
 - `description`, `description_en`, `description_zh`, `description_ja` (Text) ← 다국어 설명
 - `silhouette_url` (String)
-- `lat`, `lng` (Float, nullable) ← 시장 중심 좌표 (Kakao Maps용)
+- `lat`, `lng` (Float, nullable) ← 시장 중심 좌표
 - `geom` (Geography('POINT'), nullable) ← PostGIS 좌표
 
 #### market_info

@@ -17,8 +17,7 @@
    GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
    GOOGLE_REDIRECT_URI=http://localhost:8080/auth/callback
 
-   # 지도 API (카카오맵 또는 네이버맵)
-   KAKAO_MAP_API_KEY=your-kakao-map-api-key
+   # 지도 API (네이버맵)
    NAVER_MAP_CLIENT_ID=your-naver-map-client-id
    NAVER_MAP_CLIENT_SECRET=your-naver-map-client-secret
 

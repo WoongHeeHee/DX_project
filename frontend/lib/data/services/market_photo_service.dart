@@ -47,6 +47,18 @@ class MarketPhotoService {
     );
     return MarketShopsStatusResponse.fromJson(response.data as Map<String, dynamic>);
   }
+
+  /// 시장 사진 위치 조회 (지도 핀용)
+  Future<MarketPhotoLocationsResponse> getMarketPhotoLocations({
+    required String marketId,
+    int limit = 10,
+  }) async {
+    final response = await _apiService.get(
+      '/market-photos/$marketId/photos/locations',
+      queryParameters: {'limit': limit},
+    );
+    return MarketPhotoLocationsResponse.fromJson(response.data as Map<String, dynamic>);
+  }
 }
 
 /// 시장 최근 사진 응답 모델
@@ -233,6 +245,51 @@ class ShopStatus {
           ? DateTime.parse(json['last_reported_open_at'] as String)
           : null,
       status: json['status'] as String,
+    );
+  }
+}
+
+/// 시장 사진 위치 응답 모델
+class MarketPhotoLocationsResponse {
+  final bool success;
+  final List<PhotoLocation> locations;
+
+  MarketPhotoLocationsResponse({
+    required this.success,
+    required this.locations,
+  });
+
+  factory MarketPhotoLocationsResponse.fromJson(Map<String, dynamic> json) {
+    return MarketPhotoLocationsResponse(
+      success: json['success'] as bool? ?? true,
+      locations: (json['locations'] as List<dynamic>?)
+              ?.map((e) => PhotoLocation.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          [],
+    );
+  }
+}
+
+/// 사진 위치 모델
+class PhotoLocation {
+  final double lat;
+  final double lng;
+  final String photoId;
+  final DateTime takenAt;
+
+  PhotoLocation({
+    required this.lat,
+    required this.lng,
+    required this.photoId,
+    required this.takenAt,
+  });
+
+  factory PhotoLocation.fromJson(Map<String, dynamic> json) {
+    return PhotoLocation(
+      lat: (json['lat'] as num).toDouble(),
+      lng: (json['lng'] as num).toDouble(),
+      photoId: json['photo_id'] as String,
+      takenAt: DateTime.parse(json['taken_at'] as String),
     );
   }
 }

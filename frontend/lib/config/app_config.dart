@@ -2,7 +2,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../core/utils/platform_detector.dart';
 import '../core/utils/web_env_helper.dart';
-import 'kakao_config.dart';
 
 class AppConfig {
   // API 설정
@@ -90,12 +89,6 @@ class AppConfig {
   }
 
   // 지도 API
-  /// 카카오 맵 API 키
-  /// 
-  /// 단일 출처: KakaoConfig.jsKey
-  /// 모든 플랫폼에서 동일한 키를 사용합니다.
-  static String get kakaoMapApiKey => KakaoConfig.jsKey;
-  
   static String get naverMapClientId {
     try {
       return dotenv.env['NAVER_MAP_CLIENT_ID'] ?? '';
@@ -107,6 +100,28 @@ class AppConfig {
   static String get naverMapClientSecret {
     try {
       return dotenv.env['NAVER_MAP_CLIENT_SECRET'] ?? '';
+    } catch (e) {
+      return '';
+    }
+  }
+
+  // Google Maps API
+  static String get googleMapsApiKey {
+    // 웹 환경: window.ENV를 먼저 확인
+    if (kIsWeb) {
+      final webApiKey = WebEnvHelper.getGoogleMapsApiKey();
+      if (webApiKey != null && webApiKey.isNotEmpty) {
+        return webApiKey;
+      }
+    }
+    
+    // dotenv에서 확인
+    try {
+      final apiKey = dotenv.env['GOOGLE_MAPS_API_KEY'] ?? '';
+      if (apiKey.isEmpty || apiKey.contains('your-google-maps-api-key')) {
+        return '';
+      }
+      return apiKey;
     } catch (e) {
       return '';
     }

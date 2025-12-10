@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../core/theme/app_colors.dart';
+
 class CustomBottomNavigationBar extends StatelessWidget {
   final int currentIndex;
   final String? returnPath;
@@ -12,11 +14,6 @@ class CustomBottomNavigationBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const selectedBg = Color(0xFFE9DFF0);
-    const unselectedBg = Color(0xFFF7F7F8);
-    const selectedIcon = Color(0xFF4B2E83);
-    const unselectedIcon = Color(0xFF9CA3AF);
-
     final items = [
       _NavItem(
         icon: Icons.explore,
@@ -42,67 +39,56 @@ class CustomBottomNavigationBar extends StatelessWidget {
 
     return Container(
       height: 64,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: const BoxDecoration(
-        color: Colors.white,
+        color: AppColors.white,
         border: Border(
           top: BorderSide(color: Color(0xFFE5E7EB), width: 1),
         ),
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: List.generate(items.length, (index) {
           final item = items[index];
           final selected = index == currentIndex;
           return Expanded(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: GestureDetector(
-                onTap: () {
-        switch (index) {
-          case 0:
-                      context.go(item.route);
-            break;
-          case 1:
-                      context.go(item.route);
-            break;
-          case 2:
-                      final path =
-                          returnPath ?? GoRouterState.of(context).uri.toString();
-                      context.go(item.route, extra: {'returnPath': path});
-            break;
-          case 3:
-                      context.go(item.route);
-            break;
-        }
-      },
-                child: Container(
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: selected ? selectedBg : unselectedBg,
-                    borderRadius: BorderRadius.circular(8),
-        ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        item.icon,
-                        size: 20,
-                        color: selected ? selectedIcon : unselectedIcon,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        item.label,
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight:
-                              selected ? FontWeight.w600 : FontWeight.w500,
-                          color: selected ? selectedIcon : unselectedIcon,
-                        ),
-                      ),
-                    ],
-        ),
-                ),
+            child: GestureDetector(
+              onTap: () {
+                switch (index) {
+                  case 0:
+                    context.go(item.route);
+                    break;
+                  case 1:
+                    context.go(item.route);
+                    break;
+                  case 2:
+                    final path =
+                        returnPath ?? GoRouterState.of(context).uri.toString();
+                    context.go(item.route, extra: {'returnPath': path});
+                    break;
+                  case 3:
+                    context.go(item.route);
+                    break;
+                }
+              },
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    item.icon,
+                    size: 20,
+                    color: selected ? AppColors.primary : AppColors.subText,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    item.label,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight:
+                          selected ? FontWeight.w600 : FontWeight.w500,
+                      color: selected ? AppColors.primary : AppColors.subText,
+                    ),
+                  ),
+                ],
               ),
             ),
           );

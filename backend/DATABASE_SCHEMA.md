@@ -73,8 +73,8 @@
 | description_zh | TEXT | NULL | 시장 설명 (중국어) |
 | description_ja | TEXT | NULL | 시장 설명 (일본어) |
 | silhouette_url | VARCHAR(500) | NULL | 실루엣 이미지 URL |
-| lat | FLOAT | NULL | 시장 중심 위도 (Kakao Maps용) |
-| lng | FLOAT | NULL | 시장 중심 경도 (Kakao Maps용) |
+| lat | FLOAT | NULL | 시장 중심 위도 |
+| lng | FLOAT | NULL | 시장 중심 경도 |
 | geom | GEOGRAPHY(POINT) | NULL | PostGIS 지리 좌표 |
 | created_at | TIMESTAMP WITH TIME ZONE | NOT NULL | 생성 시간 |
 
