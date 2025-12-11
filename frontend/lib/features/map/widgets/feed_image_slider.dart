@@ -12,11 +12,13 @@ import "../../../data/services/market_photo_service.dart";
 class FeedImageSlider extends StatefulWidget {
   final String marketId;
   final String selectedFilter;
+  final ValueChanged<MarketPhoto?>? onPhotoChanged;
 
   const FeedImageSlider({
     super.key,
     required this.marketId,
     required this.selectedFilter,
+    this.onPhotoChanged,
   });
 
   @override
@@ -67,6 +69,10 @@ class _FeedImageSliderState extends State<FeedImageSlider> {
           _photos = response.photos;
           _isLoading = false;
         });
+        // 초기 사진 선택 알림
+        if (_photos.isNotEmpty && widget.onPhotoChanged != null) {
+          widget.onPhotoChanged!(_photos[0]);
+        }
       }
     } catch (e) {
       debugPrint("사진 로드 실패: $e");
@@ -118,6 +124,12 @@ class _FeedImageSliderState extends State<FeedImageSlider> {
       child: PageView.builder(
         controller: _pageController,
         itemCount: _photos.length,
+        onPageChanged: (index) {
+          // 선택된 사진 변경 알림
+          if (widget.onPhotoChanged != null && index < _photos.length) {
+            widget.onPhotoChanged!(_photos[index]);
+          }
+        },
         itemBuilder: (context, index) {
           final photo = _photos[index];
           final timeText = TimeUtils.formatTimeAgo(photo.takenAt);
