@@ -1,6 +1,5 @@
 // lib/features/search/image_search_screen.dart
 
-import "dart:typed_data";
 import "package:flutter/material.dart";
 import "package:flutter/foundation.dart";
 import "package:go_router/go_router.dart";
@@ -11,12 +10,14 @@ import "../../core/theme/app_colors.dart";
 import "../../core/widgets/loading_overlay.dart";
 import "../../core/widgets/xfile_image.dart";
 import "../../data/repositories/api_repository.dart";
+import "../../utils/permissions.dart";
 import "models/search_result_model.dart";
 
 class ImageSearchScreen extends StatefulWidget {
   final XFile? initialImage;
+  final String? previousText;
 
-  const ImageSearchScreen({super.key, this.initialImage});
+  const ImageSearchScreen({super.key, this.initialImage, this.previousText});
 
   @override
   State<ImageSearchScreen> createState() => _ImageSearchScreenState();
@@ -35,6 +36,10 @@ class _ImageSearchScreenState extends State<ImageSearchScreen> {
   void initState() {
     super.initState();
     _selectedImage = widget.initialImage;
+    // 이전 입력값이 있으면 복원
+    if (widget.previousText != null && widget.previousText!.isNotEmpty) {
+      _textController.text = widget.previousText!;
+    }
   }
 
   @override
@@ -56,21 +61,6 @@ class _ImageSearchScreenState extends State<ImageSearchScreen> {
       debugPrint("이미지 선택 에러: $e");
     }
   }
-
-  // 더미 검색 결과 생성 (서버 연결 전 임시) - 현재 사용하지 않음
-  // SearchResultModel _createDummySearchResult(String query) {
-  //   // 쿼리에 따라 다른 더미 데이터 반환
-  //   // 실제로는 서버에서 받아올 데이터
-  //   return SearchResultModel(
-  //     id: "search_${DateTime.now().millisecondsSinceEpoch}",
-  //     menuName: "계란빵",
-  //     imageUrl: "https://placehold.co/343x220",
-  //     description:
-  //         "촉촉하고 따뜻한 계란이 가득 들어간 길거리 간식이에요. 출출할 때 하나만 먹어도 든든하고, 시장을 지나가다 향만 맡아도 한 번쯤은 꼭 먹고 싶은 메뉴죠.",
-  //     nearestMarketName: "광장시장",
-  //     nearestMarketId: "market_1",
-  //   );
-  // }
 
   void _showImageSourceDialog() {
     showModalBottomSheet(
@@ -399,48 +389,30 @@ class _ImageSearchScreenState extends State<ImageSearchScreen> {
               try {
                 final query = _textController.text.trim();
                 
-                // 1. 이미지 업로드 (presigned URL 사용)
+                // 1. 위치 정보 가져오기
+                final position = await PermissionHelper.getCurrentPosition();
+                if (position == null) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('위치 권한이 필요합니다. 위치 권한을 허용해주세요.'),
+                      ),
+                );
+                  }
+                  return;
+                }
+                
+                final lat = position.latitude;
+                final lng = position.longitude;
+                
+                // 2. 이미지 파일 읽기 (메모리에서)
                 final imageBytes = await _selectedImage!.readAsBytes();
-                final now = DateTime.now();
                 
-                // 위치 정보 가져오기 (웹에서는 geolocator 사용)
-                // TODO: 실제 위치 정보 가져오기 구현
-                double? lat = 37.5665; // 임시 값
-                double? lng = 126.9780; // 임시 값
-                
-                // 업로드 초기화
-                final uploadInit = await _apiRepository.photoService.initPhotoUpload(
-                  lat: lat,
-                  lng: lng,
-                  takenAt: now,
-                  isMember: false,
-                );
-                
-                // S3에 업로드
-                await _apiRepository.photoService.uploadPhotoToS3(
-                  presignedUrl: uploadInit.presignedUrl,
-                  imageBytes: Uint8List.fromList(imageBytes),
-                );
-                
-                // 업로드 완료 알림
-                await _apiRepository.photoService.completePhotoUpload(
-                  uploadToken: uploadInit.uploadToken,
-                  s3Key: uploadInit.s3Key,
-                  lat: lat,
-                  lng: lng,
-                  takenAt: now,
-                );
-                
-                // 2. 이미지 URL 생성 (S3 객체 URL)
-                // 백엔드에서 presigned download URL을 생성하거나, S3 공개 URL 사용
-                // 일단 s3_key를 사용하여 백엔드에서 처리하도록 함
-                // TODO: 백엔드에서 이미지 URL을 반환하도록 수정 필요
-                final imageUrl = uploadInit.s3Key; // 임시로 s3_key 사용
-                
-                // 3. 이미지 검색 API 호출
+                // 3. 검색용 사진은 저장하지 않고 직접 검색 API 호출
+                // 검색용 사진은 DB나 S3에 저장하지 않음
                 final locale = await _apiRepository.userService.getLocale();
-                final searchResults = await _apiRepository.searchService.imageSearch(
-                  imageUrl: imageUrl,
+                final searchResults = await _apiRepository.searchService.imageSearchUpload(
+                  imageBytes: imageBytes,
                   userText: query.isEmpty ? null : query,
                   lat: lat,
                   lng: lng,
@@ -470,7 +442,12 @@ class _ImageSearchScreenState extends State<ImageSearchScreen> {
                     
                     context.push(
                       '/search/result',
-                      extra: {'result': searchResult},
+                      extra: {
+                        'result': searchResult,
+                        'previousScreenType': 'image',
+                        'previousTextInput': query,
+                        'previousImage': _selectedImage,
+                      },
                     );
                   }
                 }

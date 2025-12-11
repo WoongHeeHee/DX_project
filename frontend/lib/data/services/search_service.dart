@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'api_service.dart';
 import '../models/menu_models.dart';
 
@@ -7,7 +8,46 @@ class SearchService {
 
   SearchService(this._apiService);
 
-  /// 이미지/텍스트 검색
+  /// 이미지 파일 직접 업로드하여 검색 (검색용 사진은 저장하지 않음)
+  Future<List<SearchResult>> imageSearchUpload({
+    required List<int> imageBytes,
+    String? userText,
+    double? lat,
+    double? lng,
+  }) async {
+    // multipart/form-data로 이미지 파일 업로드
+    final formDataMap = <String, dynamic>{
+      'image': MultipartFile.fromBytes(
+        imageBytes,
+        filename: 'search_image.jpg',
+      ),
+    };
+    if (userText != null && userText.isNotEmpty) {
+      formDataMap['user_text'] = userText;
+    }
+    if (lat != null) {
+      formDataMap['lat'] = lat.toString();
+    }
+    if (lng != null) {
+      formDataMap['lng'] = lng.toString();
+    }
+    
+    final formData = FormData.fromMap(formDataMap);
+
+    final response = await _apiService.post(
+      '/search/image-upload',
+      data: formData,
+      options: Options(
+        contentType: 'multipart/form-data',
+      ),
+    );
+    final results = (response.data['results'] as List)
+        .map((json) => SearchResult.fromJson(json as Map<String, dynamic>))
+        .toList();
+    return results;
+  }
+
+  /// 이미지 URL 또는 텍스트 검색 (기존 호환성용)
   Future<List<SearchResult>> imageSearch({
     String? imageUrl,
     String? userText,

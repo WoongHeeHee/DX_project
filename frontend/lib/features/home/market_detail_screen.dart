@@ -1,11 +1,16 @@
 // lib/features/home/market_detail_screen.dart
 
+import "dart:typed_data";
+import "dart:ui" as ui;
 import "package:flutter/material.dart";
+import "package:flutter/services.dart";
 import "package:go_router/go_router.dart";
+import "package:google_maps_flutter/google_maps_flutter.dart";
 import "../../core/theme/app_colors.dart";
 import "../../core/widgets/responsive_helper.dart";
 import "../../core/widgets/loading_overlay.dart";
 import "../../core/widgets/drag_only_scroll_behavior.dart";
+import "../../core/widgets/google_map_widget.dart";
 import "../../data/repositories/api_repository.dart";
 import "../../data/models/market_models.dart" as api_models;
 import "../../data/models/menu_models.dart";
@@ -30,12 +35,76 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
   
   // API로 가져온 데이터
   api_models.MarketInfoModel? _marketInfo;
+  api_models.MarketModel? _market; // 좌표 정보 포함
   Map<String, MenuItemModel> _menuNameToModel = {}; // 메뉴 ID -> MenuItemModel 매핑 (변수명은 유지)
+  BitmapDescriptor? _customPinIcon; // 커스텀 핀 아이콘
 
   @override
   void initState() {
     super.initState();
     _loadMarketData();
+    // 첫 프레임 후 커스텀 핀 아이콘 로드 (context 사용 가능)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadCustomPinIcon();
+    });
+  }
+
+  /// 커스텀 핀 아이콘 로드
+  Future<void> _loadCustomPinIcon() async {
+    if (!mounted) return;
+    
+    // 지도 가로 길이의 1/15 크기로 마커 생성
+    final double mapWidth = MediaQuery.of(context).size.width;
+    final int markerSize = (mapWidth / 15).round();
+    
+    try {
+      _customPinIcon = await _getResizedBitmapDescriptor(
+        'assets/images/custom_pin.png',
+        markerSize,
+      );
+      if (mounted) {
+        setState(() {});
+      }
+    } catch (e) {
+      try {
+        _customPinIcon = await _getResizedBitmapDescriptor(
+          'assets/designs/images/custom_pin.png',
+          markerSize,
+        );
+        if (mounted) {
+          setState(() {});
+        }
+      } catch (e2) {
+        debugPrint("커스텀 핀 이미지 로드 실패: $e2");
+        _customPinIcon = BitmapDescriptor.defaultMarker;
+        if (mounted) {
+          setState(() {});
+        }
+      }
+    }
+  }
+
+  /// 이미지를 리사이즈하여 BitmapDescriptor 생성
+  Future<BitmapDescriptor> _getResizedBitmapDescriptor(
+    String assetPath,
+    int targetSize,
+  ) async {
+    final ByteData data = await rootBundle.load(assetPath);
+    final ui.Codec codec = await ui.instantiateImageCodec(
+      data.buffer.asUint8List(),
+      targetWidth: targetSize,
+    );
+    final ui.FrameInfo frameInfo = await codec.getNextFrame();
+    final ByteData? byteData = await frameInfo.image.toByteData(
+      format: ui.ImageByteFormat.png,
+    );
+    
+    if (byteData == null) {
+      throw Exception('Failed to convert image to byte data');
+    }
+    
+    final Uint8List uint8List = byteData.buffer.asUint8List();
+    return BitmapDescriptor.fromBytes(uint8List);
   }
 
   Future<void> _loadMarketData() async {
@@ -46,6 +115,9 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
     try {
       // 사용자 locale 가져오기
       final locale = await _apiRepository.userService.getLocale();
+      
+      // 시장 정보 조회 (좌표 정보 포함)
+      final market = await _apiRepository.marketService.getMarket(widget.market.id);
       
       // 시장 부가정보 조회
       final marketInfo = await _apiRepository.marketService.getMarketInfo(widget.market.id);
@@ -60,6 +132,7 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
       
       if (mounted) {
         setState(() {
+          _market = market;
           _marketInfo = marketInfo;
           _userLocale = locale;
           _menuNameToModel = menuIdToModel; // 실제로는 ID로 매핑
@@ -481,7 +554,7 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
             ),
           ),
           const SizedBox(height: 12),
-          // 지도 영역 (placeholder - 추후 구현 예정)
+          // 지도 영역
           Container(
             width: double.infinity,
             height: responsive.isMobile ? 140 : 180,
@@ -491,15 +564,7 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(8),
-              child: widget.market.mapImageUrl.isNotEmpty
-                  ? Image.network(
-                      widget.market.mapImageUrl,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(color: AppColors.imagePlaceholder);
-                      },
-                    )
-                  : Container(color: AppColors.imagePlaceholder),
+              child: _buildMapWidget(),
             ),
           ),
           const SizedBox(height: 12),
@@ -556,6 +621,52 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
           ],
         ],
       ),
+    );
+  }
+
+  /// 지도 위젯 빌드
+  Widget _buildMapWidget() {
+    // 좌표가 없는 경우 플레이스홀더 표시
+    if (_market == null || _market!.lat == null || _market!.lng == null) {
+      return Container(
+        color: AppColors.imagePlaceholder,
+        child: const Center(
+          child: Text(
+            '지도 정보가 없습니다',
+            style: TextStyle(color: Colors.grey),
+          ),
+        ),
+      );
+    }
+
+    // 커스텀 핀 마커 생성
+    final Set<Marker> markers = {};
+    if (_customPinIcon != null) {
+      markers.add(
+        Marker(
+          markerId: const MarkerId('market_location'),
+          position: LatLng(_market!.lat!, _market!.lng!),
+          icon: _customPinIcon!,
+        ),
+      );
+    }
+
+    // 1cm:200m 스케일에 맞는 줌 레벨 계산
+    // 화면 너비가 대략 300px (약 10cm)라고 가정하면, 2km가 보여야 함
+    // 줌 레벨 15는 약 1.2km, 줌 레벨 14는 약 2.4km
+    // 더 정확하게는 2km를 보려면 줌 레벨 약 14.5
+    const double zoomLevel = 14.5;
+
+    return GoogleMapWidget(
+      latitude: _market!.lat!,
+      longitude: _market!.lng!,
+      height: double.infinity,
+      zoom: zoomLevel,
+      markers: markers,
+      interactive: false, // 모든 제스처 비활성화 (이동 및 확대/축소 불가)
+      onMapCreated: (controller) {
+        // 지도 생성 완료
+      },
     );
   }
 

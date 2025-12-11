@@ -12,8 +12,10 @@ class ShopModel {
   final String? repImageUrl;
   final String? openTime;
   final String? closeTime;
-  final List<String>? closedDays;
+  final String? closedDays;  // DB에서 문자열로 저장됨
   final double? averagePrice;
+  final String? status;  // "green", "yellow", "red"
+  final List<String>? imageUrls;  // 실시간 사진 URL 리스트 (최대 3개)
 
   ShopModel({
     required this.id,
@@ -29,6 +31,8 @@ class ShopModel {
     this.closeTime,
     this.closedDays,
     this.averagePrice,
+    this.status,
+    this.imageUrls,
   });
 
   factory ShopModel.fromJson(Map<String, dynamic> json) {
@@ -44,12 +48,14 @@ class ShopModel {
       repImageUrl: json['rep_image_url'],
       openTime: json['open_time'],
       closeTime: json['close_time'],
-      closedDays: json['closed_days'] != null
-          ? List<String>.from(json['closed_days'])
-          : null,
+      closedDays: json['closed_days'] as String?,
       averagePrice: json['average_price'] != null
           ? (json['average_price'] as num).toDouble()
           : null,
+      status: json['status'] as String?,
+      imageUrls: (json['image_urls'] as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList(),
     );
   }
 }

@@ -2,14 +2,15 @@
 시장 관련 API 엔드포인트
 """
 
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from collections import Counter
 from datetime import datetime, timedelta
-from fastapi import APIRouter, Depends, HTTPException, status
+from zoneinfo import ZoneInfo
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db
-from app.db.models import Market, MenuItem, Shop, MarketMenuItem, MarketInfo, KeywordReview, Diary
+from app.db.models import Market, MenuItem, Shop, MarketMenuItem, MarketInfo, KeywordReview, Diary, ShopMenu, Photo
 from app.models.schemas import (
     Market as MarketSchema,
     MenuItem as MenuItemSchema,
@@ -103,21 +104,59 @@ async def get_market_stats(market_id: str, db: Session = Depends(get_db)):
 @router.get("/{market_id}/info", response_model=MarketInfoSchema)
 async def get_market_info(market_id: str, db: Session = Depends(get_db)):
     """시장 부가정보 조회 (주소, 교통, 주차, 화장실 등)"""
-    market = db.query(Market).filter(Market.id == market_id).first()
-    if not market:
+    try:
+        market = db.query(Market).filter(Market.id == market_id).first()
+        if not market:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="시장을 찾을 수 없습니다"
+            )
+        
+        market_info = db.query(MarketInfo).filter(MarketInfo.market_id == market_id).first()
+        if not market_info:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="시장 부가정보를 찾을 수 없습니다"
+            )
+        
+        # FastAPI가 자동으로 변환하도록 반환
+        # 변환 실패 시를 대비해 에러 핸들링 추가
+        try:
+            return market_info
+        except Exception as e:
+            # 변환 실패 시 상세 정보 로깅
+            import traceback
+            error_msg = f"MarketInfo 스키마 변환 실패 (market_id: {market_id})"
+            print(error_msg)
+            print(f"에러: {str(e)}")
+            print(f"상세: {traceback.format_exc()}")
+            
+            # 주요 필드 확인
+            debug_info = {
+                "market_info_id": getattr(market_info, 'market_info_id', None),
+                "market_id": getattr(market_info, 'market_id', None),
+                "address": getattr(market_info, 'address', None),
+                "created_at": str(getattr(market_info, 'created_at', None)),
+                "created_at_type": str(type(getattr(market_info, 'created_at', None))),
+            }
+            print(f"디버그 정보: {debug_info}")
+            
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"시장 부가정보 변환 중 오류가 발생했습니다: {str(e)}"
+            )
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        error_msg = f"get_market_info 예외 발생 (market_id: {market_id})"
+        print(error_msg)
+        print(f"에러: {str(e)}")
+        print(f"상세: {traceback.format_exc()}")
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="시장을 찾을 수 없습니다"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"시장 부가정보 조회 중 오류가 발생했습니다: {str(e)}"
         )
-    
-    market_info = db.query(MarketInfo).filter(MarketInfo.market_id == market_id).first()
-    if not market_info:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="시장 부가정보를 찾을 수 없습니다"
-        )
-    
-    return market_info
 
 
 @router.post("/{market_id}/info", response_model=MarketInfoSchema)
@@ -251,3 +290,145 @@ async def get_market_top_keywords(market_id: str, db: Session = Depends(get_db))
         ]
 
     return keywords
+
+
+@router.get("/{market_id}/shops/by-menu")
+async def get_shops_by_menu(
+    market_id: str,
+    menu_name: str = Query(..., description="메뉴 이름 (한국어)"),
+    lat: Optional[float] = Query(None, description="현재 위치 위도 (거리 계산용)"),
+    lng: Optional[float] = Query(None, description="현재 위치 경도 (거리 계산용)"),
+    db: Session = Depends(get_db)
+):
+    """
+    시장의 특정 메뉴를 판매하는 가게 목록 조회
+    
+    Args:
+        market_id: 시장 ID
+        menu_name: 메뉴 이름 (한국어)
+        lat: 현재 위치 위도 (거리 계산용, 선택사항)
+        lng: 현재 위치 경도 (거리 계산용, 선택사항)
+    
+    Returns:
+        가게 목록 (영업 상태, 거리 기준 정렬)
+    """
+    try:
+        # 시장 존재 확인
+        market = db.query(Market).filter(Market.id == market_id).first()
+        if not market:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="시장을 찾을 수 없습니다"
+            )
+        
+        # 메뉴 아이템 조회 (이름으로)
+        menu_item = db.query(MenuItem).filter(MenuItem.name == menu_name).first()
+        if not menu_item:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="메뉴를 찾을 수 없습니다"
+            )
+        
+        # 해당 메뉴를 판매하는 가게 조회 (ShopMenu 조인)
+        shops_query = db.query(Shop).join(ShopMenu).filter(
+            Shop.market_id == market_id,
+            ShopMenu.menu_item_id == menu_item.id,
+            ShopMenu.available == True
+        )
+        
+        shops = shops_query.all()
+        
+        # 현재 시간 (한국 시간대 기준)
+        korea_tz = ZoneInfo("Asia/Seoul")
+        current_time = datetime.now(korea_tz)
+        current_hour = current_time.hour
+        current_minute = current_time.minute
+        current_time_minutes = current_hour * 60 + current_minute
+        
+        # 영업 상태 계산 및 가게 이미지 조회
+        from app.api.market_photos import calculate_shop_status
+        
+        # CDN URL 생성 헬퍼 함수
+        def s3_key_to_cdn_url(s3_key: str) -> str:
+            """S3 key를 CDN URL로 변환"""
+            if not s3_key:
+                return ""
+            cdn_base_url = "https://dnzeuzpu74ulj.cloudfront.net"
+            if s3_key.startswith('http://') or s3_key.startswith('https://'):
+                return s3_key
+            return f"{cdn_base_url}/{s3_key}"
+        
+        def placeholder_image(name: str, menu_id: str, variant: int = 1) -> str:
+            """메뉴 placeholder 이미지 URL 생성"""
+            from urllib.parse import quote
+            encoded_name = quote(name)
+            clamped = max(1, min(3, variant))
+            return f"https://dnzeuzpu74ulj.cloudfront.net/placeholders/Menu_all/{encoded_name}/{encoded_name}{clamped}_{menu_id}.png"
+        
+        result = []
+        for shop in shops:
+            # 영업 상태 계산
+            status_color = calculate_shop_status(shop, current_time, current_time_minutes, db)
+            
+            # 가게 이미지 조회 (해당 가게의 해당 메뉴 사진, 최대 3개)
+            photos = db.query(Photo).filter(
+                Photo.shop_id == shop.id,
+                Photo.menu_item_id == menu_item.id,
+                Photo.processed == True
+            ).order_by(Photo.taken_at.desc()).limit(3).all()
+            
+            image_urls = []
+            if photos:
+                for photo in photos:
+                    image_url = s3_key_to_cdn_url(photo.thumbnail_s3_key or photo.s3_key)
+                    image_urls.append(image_url)
+            else:
+                # 이미지가 없으면 메뉴 placeholder 사용
+                placeholder_url = placeholder_image(menu_item.name, menu_item.id, variant=1)
+                image_urls.append(placeholder_url)
+            
+            # 거리 계산 (lat, lng가 제공된 경우)
+            distance_meters = None
+            if lat is not None and lng is not None:
+                from app.utils.geography import haversine_distance
+                distance_meters = haversine_distance(lat, lng, shop.lat, shop.lng)
+            
+            shop_dict = {
+                "id": str(shop.id),
+                "name": shop.name,
+                "name_en": shop.name_en,
+                "name_zh": shop.name_zh,
+                "name_ja": shop.name_ja,
+                "lat": shop.lat,
+                "lng": shop.lng,
+                "image_urls": image_urls,
+                "status": status_color,  # "green", "yellow", "red"
+                "distance_meters": distance_meters,
+                "open_time": shop.open_time,
+                "close_time": shop.close_time,
+                "closed_days": shop.closed_days,
+            }
+            result.append(shop_dict)
+        
+        # 정렬: 영업상태(녹>황>적) > 거리
+        def sort_key(shop_dict):
+            status_order = {"green": 0, "yellow": 1, "red": 2}
+            status_priority = status_order.get(shop_dict["status"], 3)
+            distance = shop_dict["distance_meters"] if shop_dict["distance_meters"] is not None else float('inf')
+            return (status_priority, distance)
+        
+        result.sort(key=sort_key)
+        
+        return {
+            "success": True,
+            "shops": result,
+            "total_count": len(result)
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"가게 목록 조회 실패: {str(e)}"
+        )

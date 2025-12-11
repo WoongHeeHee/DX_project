@@ -5,6 +5,7 @@
 
 from typing import List, Optional, Dict, Any
 from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import func, and_, or_
@@ -187,7 +188,9 @@ async def get_shops_with_status(
             )
         
         shops = db.query(Shop).filter(Shop.market_id == market_id).all()
-        current_time = datetime.now(timezone.utc)
+        # 현재 시간 (한국 시간대 기준)
+        korea_tz = ZoneInfo("Asia/Seoul")
+        current_time = datetime.now(korea_tz)
         current_hour = current_time.hour
         current_minute = current_time.minute
         current_time_minutes = current_hour * 60 + current_minute
@@ -234,11 +237,25 @@ def calculate_shop_status(shop: Shop, current_time: datetime, current_time_minut
     """
     가게 영업 상태 계산 (녹색/황색/적색)
     
-    structure.md의 로직에 따라:
-    - 녹색: 운영시간 내 + 제보/리뷰 존재
-    - 황색: 운영시간 경계 + 제보/리뷰 유무에 따라
-    - 적색: 그 외
+    structure.md Line 642-652 로직에 따라:
+    - 기본적으로 휴무일(closed_days)에는 적색
+    - 제보가 들어온 경우 (리뷰용 사진 X):
+        - 초록색: (오픈시간, 마감시간 - 15m)
+        - 황색: (마감시간 - 15m, 마감시간)
+        - 적색: (,오픈시간) | (마감시간,)
+    - 제보가 들어오지 않은 경우:
+        - 초록색: (오픈시간, 마감시간 - 30m)
+        - 황색: (마감시간 - 30m, 마감시간 - 15m)
+        - 적색: (, 오픈시간) | (마감시간 - 15m, )
     """
+    # 휴무일 확인 (closed_days는 문자열로 저장, 예: "월요일, 수요일")
+    if shop.closed_days:
+        # 현재 요일 확인 (한국어 요일명)
+        weekday_names = ["월요일", "화요일", "수요일", "목요일", "금요일", "토요일", "일요일"]
+        current_weekday = weekday_names[current_time.weekday()]
+        if current_weekday in shop.closed_days:
+            return "red"
+    
     if not shop.open_time or not shop.close_time:
         # 운영시간 정보가 없으면 제보/리뷰 기반으로만 판단
         if shop.last_reported_open_at:
@@ -255,42 +272,41 @@ def calculate_shop_status(shop: Shop, current_time: datetime, current_time_minut
     except:
         return "red"
     
-    # 휴무일 확인 (closed_days는 이제 String이므로 파싱 필요)
-    # TODO: closed_days가 String 형식으로 저장되므로, 파싱 로직이 필요할 수 있습니다.
-    # 현재는 휴무일 체크를 건너뜁니다.
-    
-    # 제보/리뷰 존재 여부 확인
-    has_recent_report = False
+    # 제보/리뷰 존재 여부 확인 (리뷰용 사진이 아닌 제보용 사진만 확인)
+    has_report = False
     if shop.last_reported_open_at:
-        hours_since_report = (current_time - shop.last_reported_open_at).total_seconds() / 3600
-        has_recent_report = hours_since_report < 12  # 12시간 이내 제보/리뷰
+        # 제보용 사진인지 확인 (photo_type이 'report'인 경우만)
+        from app.db.models import Photo
+        report_photo = db.query(Photo).filter(
+            Photo.shop_id == shop.id,
+            Photo.photo_type == 'report',
+            Photo.created_at == shop.last_reported_open_at
+        ).first()
+        has_report = report_photo is not None
     
-    # 시간대별 상태 계산
-    # 녹색 조건
-    # 1. 현재 시간이 (오픈시간 + 1h, 마감시간 - 1h) 내
-    if open_minutes + 60 <= current_time_minutes <= close_minutes - 60:
-        return "green"
-    
-    # 2. 현재 시간이 (오픈시간 + 0.5h, 마감시간 - 0.5h) 내 + 제보/리뷰 존재
-    if open_minutes + 30 <= current_time_minutes <= close_minutes - 30:
-        if has_recent_report:
+    # structure.md 로직에 따른 상태 계산
+    if has_report:
+        # 제보가 들어온 경우
+        # 초록색: (오픈시간, 마감시간 - 15m)
+        if open_minutes <= current_time_minutes < close_minutes - 15:
             return "green"
-    
-    # 황색 조건
-    # 1. (오픈시간 + 0.5h, 오픈시간 + 1h) 또는 (마감시간 - 1h, 마감시간 - 0.5h) + 제보/리뷰 없음
-    if (open_minutes + 30 < current_time_minutes <= open_minutes + 60) or \
-       (close_minutes - 60 <= current_time_minutes < close_minutes - 30):
-        if not has_recent_report:
+        # 황색: (마감시간 - 15m, 마감시간)
+        elif close_minutes - 15 <= current_time_minutes < close_minutes:
             return "yellow"
-    
-    # 2. (오픈시간, 오픈시간 + 0.5h) 또는 (마감시간 - 0.5h, 마감시간) + 제보/리뷰 존재
-    if (open_minutes <= current_time_minutes <= open_minutes + 30) or \
-       (close_minutes - 30 <= current_time_minutes <= close_minutes):
-        if has_recent_report:
+        # 적색: (,오픈시간) | (마감시간,)
+        else:
+            return "red"
+    else:
+        # 제보가 들어오지 않은 경우
+        # 초록색: (오픈시간, 마감시간 - 30m)
+        if open_minutes <= current_time_minutes < close_minutes - 30:
+            return "green"
+        # 황색: (마감시간 - 30m, 마감시간 - 15m)
+        elif close_minutes - 30 <= current_time_minutes < close_minutes - 15:
             return "yellow"
-    
-    # 적색: 그 외
-    return "red"
+        # 적색: (, 오픈시간) | (마감시간 - 15m, )
+        else:
+            return "red"
 
 
 @router.get("/{market_id}/photos/locations")

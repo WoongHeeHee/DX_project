@@ -30,7 +30,7 @@ class ImageProcessorService:
     
     def classify_food_image(self, image_url: str) -> Dict:
         """
-        음식 사진 분류 (55% 기준)
+        음식 사진 분류 (40% 기준)
         
         Args:
             image_url: 분석할 이미지 URL
@@ -44,7 +44,7 @@ class ImageProcessorService:
         """
         prompt = """
         이미지를 분석하여 다음을 판별해주세요:
-        1. 음식이 전체 사진 면적의 55% 이상을 차지하는가?
+        1. 음식이 전체 사진 면적의 40% 이상을 차지하는가?
         2. 음식의 개수는 몇 개인가?
         
         JSON 형태로 응답해주세요:

@@ -303,3 +303,83 @@ class MarketStatusModel {
   }
 }
 
+/// 시장의 특정 메뉴를 판매하는 가게 목록 응답 모델
+class MarketShopsByMenuResponse {
+  final bool success;
+  final List<ShopByMenuModel> shops;
+  final int totalCount;
+
+  MarketShopsByMenuResponse({
+    required this.success,
+    required this.shops,
+    required this.totalCount,
+  });
+
+  factory MarketShopsByMenuResponse.fromJson(Map<String, dynamic> json) {
+    return MarketShopsByMenuResponse(
+      success: json['success'] as bool? ?? true,
+      shops: (json['shops'] as List<dynamic>?)
+              ?.map((e) => ShopByMenuModel.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          [],
+      totalCount: json['total_count'] as int? ?? 0,
+    );
+  }
+}
+
+/// 메뉴별 가게 모델
+class ShopByMenuModel {
+  final String id;
+  final String name;
+  final String? nameEn;
+  final String? nameZh;
+  final String? nameJa;
+  final double lat;
+  final double lng;
+  final List<String> imageUrls;
+  final String status; // "green", "yellow", "red"
+  final double? distanceMeters;
+  final String? openTime;
+  final String? closeTime;
+  final String? closedDays;
+
+  ShopByMenuModel({
+    required this.id,
+    required this.name,
+    this.nameEn,
+    this.nameZh,
+    this.nameJa,
+    required this.lat,
+    required this.lng,
+    required this.imageUrls,
+    required this.status,
+    this.distanceMeters,
+    this.openTime,
+    this.closeTime,
+    this.closedDays,
+  });
+
+  factory ShopByMenuModel.fromJson(Map<String, dynamic> json) {
+    return ShopByMenuModel(
+      id: json['id'] as String,
+      name: json['name'] as String,
+      nameEn: json['name_en'] as String?,
+      nameZh: json['name_zh'] as String?,
+      nameJa: json['name_ja'] as String?,
+      lat: (json['lat'] as num).toDouble(),
+      lng: (json['lng'] as num).toDouble(),
+      imageUrls: (json['image_urls'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          [],
+      status: json['status'] as String,
+      distanceMeters: json['distance_meters'] != null
+          ? (json['distance_meters'] as num).toDouble()
+          : null,
+      openTime: json['open_time'] as String?,
+      closeTime: json['close_time'] as String?,
+      closedDays: json['closed_days'] as String?,
+    );
+  }
+}
+

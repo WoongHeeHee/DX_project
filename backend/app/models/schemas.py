@@ -252,8 +252,29 @@ class MenuItem(MenuItemBase):
 
 
 # 사진 관련 모델
+class PhotoPresignResponse(BaseModel):
+    """사진 업로드 presigned URL 응답"""
+    upload_url: str = Field(..., description="S3 업로드용 presigned URL")
+    file_url: str = Field(..., description="업로드된 파일의 URL (S3 키 또는 presigned URL)")
+
+
+class PhotoUploadRequest(BaseModel):
+    """사진 업로드 완료 요청 (새 스펙)"""
+    photo_url: str = Field(..., description="presigned로 업로드된 주소 (S3 키 또는 URL)")
+    lat: float = Field(..., ge=-90, le=90, description="촬영 위치 위도")
+    lng: float = Field(..., ge=-180, le=180, description="촬영 위치 경도")
+    photo_type: str = Field(..., description="'review' | 'report' | 'search'")
+
+
+class PhotoUploadResponse(BaseResponse):
+    """사진 업로드 응답"""
+    photo_ids: Optional[List[str]] = Field(None, description="저장된 photo_id 리스트 (review/report만)")
+    matched_menu: Optional[str] = Field(None, description="매칭된 메뉴 이름 (search만)")
+
+
+# 기존 호환성을 위한 모델 (점진적 마이그레이션용)
 class PhotoUploadInit(BaseModel):
-    """사진 업로드 초기화 요청"""
+    """사진 업로드 초기화 요청 (기존)"""
     lat: float = Field(..., ge=-90, le=90)
     lng: float = Field(..., ge=-180, le=180)
     taken_at: datetime
@@ -261,14 +282,14 @@ class PhotoUploadInit(BaseModel):
 
 
 class PhotoUploadInitResponse(BaseResponse):
-    """사진 업로드 초기화 응답"""
+    """사진 업로드 초기화 응답 (기존)"""
     presigned_url: str
     upload_token: str
     s3_key: str
 
 
 class PhotoUploadComplete(BaseModel):
-    """사진 업로드 완료 요청"""
+    """사진 업로드 완료 요청 (기존)"""
     upload_token: str
     s3_key: str
     lat: float = Field(..., ge=-90, le=90)
@@ -282,6 +303,11 @@ class PhotoReportComplete(BaseModel):
     """제보 완료 요청 (가게 선택 후)"""
     upload_token: str
     shop_id: str
+
+
+class PhotoUploadResponse(BaseResponse):
+    """리뷰 사진 업로드 응답"""
+    photo_ids: List[str] = Field(..., description="저장된 photo_id 리스트")
 
 
 class Photo(BaseModel):

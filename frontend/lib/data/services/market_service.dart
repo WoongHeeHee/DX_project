@@ -48,6 +48,26 @@ class MarketService {
     return MarketStatusModel.fromJson(response.data as Map<String, dynamic>);
   }
 
+  /// 시장의 특정 메뉴를 판매하는 가게 목록 조회
+  Future<MarketShopsByMenuResponse> getShopsByMenu({
+    required String marketId,
+    required String menuName,
+    double? lat,
+    double? lng,
+  }) async {
+    final queryParams = <String, dynamic>{'menu_name': menuName};
+    if (lat != null && lng != null) {
+      queryParams['lat'] = lat;
+      queryParams['lng'] = lng;
+    }
+
+    final response = await _apiService.get(
+      '/markets/$marketId/shops/by-menu',
+      queryParameters: queryParams,
+    );
+    return MarketShopsByMenuResponse.fromJson(response.data as Map<String, dynamic>);
+  }
+
   /// 시장 인기 키워드 조회
   Future<List<PopularKeyword>> getMarketTopKeywords(String marketId) async {
     final response = await _apiService.get('/markets/$marketId/top-keywords');

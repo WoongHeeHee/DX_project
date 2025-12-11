@@ -17,6 +17,9 @@ class OnboardingStyleScreen extends StatefulWidget {
   final String? birthYyyyMm; // 생년월 (YYYY-MM)
   final int? spiceLevel; // 매운맛 레벨 (1-5)
   final String? locale; // locale (ko, en, zh, ja)
+  final String? inputName; // 입력된 이름
+  final String? koreanName; // 생성된 한국 이름
+  final String? englishPronunciation; // 영어 발음
 
   const OnboardingStyleScreen({
     super.key,
@@ -26,6 +29,9 @@ class OnboardingStyleScreen extends StatefulWidget {
     this.birthYyyyMm,
     this.spiceLevel,
     this.locale,
+    this.inputName,
+    this.koreanName,
+    this.englishPronunciation,
   });
 
   @override
@@ -263,7 +269,17 @@ class _OnboardingStyleScreenState extends State<OnboardingStyleScreen> {
                   OnboardingData.getAdventureFromStyle(_selectedStyle!);
               final koreanExperience = OnboardingData.getKoreanExperience();
 
+              // korean_name은 "(한국이름, 영어발음)" 형식으로 저장
+              String? koreanNameFormatted;
+              if (widget.koreanName != null && widget.englishPronunciation != null) {
+                koreanNameFormatted = "(${widget.koreanName}, ${widget.englishPronunciation})";
+              } else if (widget.koreanName != null) {
+                koreanNameFormatted = widget.koreanName;
+              }
+
               await _apiRepository.userService.completeOnboarding(
+                displayName: widget.inputName, // 입력된 이름을 display_name으로
+                koreanName: koreanNameFormatted, // (한국이름, 영어발음) 형식으로 저장
                 country: countryCode ?? 'JP',
                 birthYyyyMm: widget.birthYyyyMm ?? '1990-01',
                 spiceLevel: widget.spiceLevel ?? 3,

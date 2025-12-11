@@ -65,33 +65,86 @@ class _MapScreenState extends State<MapScreen> {
             locale: locale,
           );
           
-          // 시장 정보 조회 (주소 등)
-          final marketInfo = await _apiRepository.marketService.getMarketInfo(market.id);
           final statusColor = _statusToColor(status.status);
+          
+          // 시장 대표사진 생성
+          final marketName = market.getNameByLocale(locale);
+          final marketImageUrl = _marketPlaceholder(marketName, market.id, variant: 1);
+          
+          // 시장 정보 조회 (주소 등) - 별도 에러 처리
+          String marketAddress = '';
+          try {
+            final marketInfo = await _apiRepository.marketService.getMarketInfo(market.id);
+            marketAddress = marketInfo.getAddressByLocale(locale) ?? '';
+            debugPrint("시장 주소 조회 성공: $marketName - $marketAddress");
+            if (marketAddress.isEmpty) {
+              debugPrint("경고: 시장 주소가 비어있음 (market_id: ${market.id})");
+            }
+          } catch (e) {
+            debugPrint("시장 정보 조회 실패: $marketName (market_id: ${market.id}) - $e");
+            // market_info가 없을 수 있으므로 에러를 무시하고 계속 진행
+          }
+          
+          // 키워드 조회 (top 2개만)
+          List<String> topKeywords = [];
+          try {
+            final keywords = await _apiRepository.marketService.getMarketTopKeywords(market.id);
+            topKeywords = keywords.take(2).map((k) => k.keyword).toList();
+          } catch (e) {
+            debugPrint("키워드 조회 실패: $e");
+          }
+          
+          // 키워드가 2개 미만이면 placeholder 키워드로 채우기
+          if (topKeywords.length < 2) {
+            final placeholderKeywords = _getPlaceholderKeywords();
+            final needed = 2 - topKeywords.length;
+            for (int i = 0; i < needed && i < placeholderKeywords.length; i++) {
+              // 이미 있는 키워드와 중복되지 않는 것만 추가
+              if (!topKeywords.contains(placeholderKeywords[i])) {
+                topKeywords.add(placeholderKeywords[i]);
+              }
+            }
+          }
           
           marketsWithStatus.add(MapMarketData(
             id: market.id,
-            name: market.getNameByLocale(locale),
-            address: marketInfo.getAddressByLocale(locale) ?? '',
-            imageUrl: market.silhouetteUrl ?? '',
+            name: marketName,
+            address: marketAddress,
+            imageUrl: marketImageUrl,
             status: status.status,
             statusColor: statusColor,
             pinPosition: _calculatePinPosition(marketsWithStatus.length),
-            keywords: [], // TODO: 키워드 추가 필요
+            keywords: topKeywords,
           ));
         } catch (e) {
-          debugPrint("시장 상태 조회 실패: $e");
+          debugPrint("시장 상태 조회 실패: ${market.getNameByLocale(locale)} (market_id: ${market.id}) - $e");
           // 에러가 발생해도 기본 정보로 추가
           final statusColor = _statusToColor('green');
+          final marketName = market.getNameByLocale(locale);
+          final marketImageUrl = _marketPlaceholder(marketName, market.id, variant: 1);
+          
+          // 에러 발생 시에도 주소 조회 시도
+          String marketAddress = '';
+          try {
+            final marketInfo = await _apiRepository.marketService.getMarketInfo(market.id);
+            marketAddress = marketInfo.getAddressByLocale(locale) ?? '';
+            debugPrint("에러 상황에서 주소 조회 성공: $marketName - $marketAddress");
+          } catch (e2) {
+            debugPrint("에러 상황에서 주소 조회도 실패: $marketName - $e2");
+          }
+          
+          // 에러 발생 시에도 placeholder 키워드 추가
+          final placeholderKeywords = _getPlaceholderKeywords().take(2).toList();
+          
           marketsWithStatus.add(MapMarketData(
             id: market.id,
-            name: market.getNameByLocale(locale),
-            address: '',
-            imageUrl: market.silhouetteUrl ?? '',
+            name: marketName,
+            address: marketAddress,
+            imageUrl: marketImageUrl,
             status: 'green',
             statusColor: statusColor,
             pinPosition: _calculatePinPosition(marketsWithStatus.length),
-            keywords: [],
+            keywords: placeholderKeywords,
           ));
         }
       }
@@ -121,6 +174,47 @@ class _MapScreenState extends State<MapScreen> {
       const Offset(0.7, 0.5),
     ];
     return positions[index % positions.length];
+  }
+
+  String _toCdn(String url) {
+    // S3 정규식 치환 (모든 리전 호환)
+    final cdnUrl = url.replaceFirst(
+      RegExp(r'https?:\/\/market-explorer-photos\.s3\.[^\/]+\.amazonaws\.com'),
+      'https://dnzeuzpu74ulj.cloudfront.net',
+    );
+
+    // 상대 경로 처리 (/path 형태)
+    if (cdnUrl.startsWith('/')) {
+      return 'https://dnzeuzpu74ulj.cloudfront.net$cdnUrl';
+    }
+
+    return cdnUrl;
+  }
+
+  String _marketPlaceholder(String name, String id, {int variant = 1}) {
+    final encodedName = Uri.encodeComponent(name);
+    final clamped = variant < 1 ? 1 : (variant > 3 ? 3 : variant);
+    return _toCdn(
+        "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%ED%83%90%EC%83%89_Discover+Sijang/${encodedName}${clamped}_${id}.png");
+  }
+
+  /// Placeholder 키워드 목록 반환 (키워드 집계가 없을 때 사용)
+  List<String> _getPlaceholderKeywords() {
+    return [
+      "맛집 많음",
+      "관광 명소",
+      "로컬 맛집",
+      "한적함",
+      "인생샷",
+      "아이 동반",
+      "부모님 동반",
+      "대중교통 편리",
+      "주차 편리",
+      "자전거 편리",
+      "휠체어 접근",
+      "유모차 편리",
+      "친절함",
+    ];
   }
 
   @override
@@ -224,16 +318,20 @@ class _MapScreenState extends State<MapScreen> {
               width: double.infinity,
               height: double.infinity,
               decoration: BoxDecoration(
-                color: AppColors.imagePlaceholder,
+                color: const Color(0xFFFEFEFE), // #FEFEFE 배경색
                 borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: const Color(0xFFE8E8E9), // #e8e8e9 border 색상
+                  width: 1,
+                ),
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(8),
                 child: Image.asset(
                   'assets/images/seoul_silhouette.png',
-                  fit: BoxFit.cover,
+                  fit: BoxFit.contain,
                   errorBuilder: (context, error, stackTrace) {
-                    return Container(color: AppColors.imagePlaceholder);
+                    return Container(color: const Color(0xFFFEFEFE));
                   },
                 ),
               ),
@@ -302,7 +400,7 @@ class _MapScreenState extends State<MapScreen> {
 
   Widget _buildWheelPickerCards(ResponsiveHelper responsive, TextTheme textTheme) {
     return SizedBox(
-      height: responsive.isMobile ? 330 : 380,
+      height: responsive.isMobile ? 280 : 330,
       child: ScrollConfiguration(
         // 마우스 휠 스크롤 비활성화, 드래그만 허용
         behavior: DragOnlyScrollBehavior(),
@@ -433,7 +531,7 @@ class _MapScreenState extends State<MapScreen> {
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(6),
                     child: Image.network(
-                      "https://placehold.co/114x113",
+                      market.imageUrl,
                       fit: BoxFit.cover,
                       errorBuilder: (context, error, stackTrace) {
                         return Container(color: AppColors.imagePlaceholder);
@@ -447,32 +545,36 @@ class _MapScreenState extends State<MapScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // 키워드 칩들
-                      Wrap(
-                        spacing: responsive.responsivePadding(mobilePadding: 4),
-                        runSpacing: responsive.responsivePadding(mobilePadding: 4),
-                        children: market.keywords.map((keyword) {
-                          return Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: responsive.responsivePadding(mobilePadding: 8),
-                              vertical: responsive.responsivePadding(mobilePadding: 4),
+                      // 키워드 칩들 (Column으로 세로 배치)
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: market.keywords.take(2).map((keyword) {
+                          return Padding(
+                            padding: EdgeInsets.only(
+                              bottom: responsive.responsivePadding(mobilePadding: 4),
                             ),
-                            decoration: BoxDecoration(
-                              color: AppColors.lightGrey,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              keyword,
-                              style: textTheme.bodySmall?.copyWith(
-                                fontSize: responsive.responsiveFontSize(mobileSize: 11),
-                                color: AppColors.mainText,
-                                fontWeight: FontWeight.w500,
+                            child: Container(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: responsive.responsivePadding(mobilePadding: 8),
+                                vertical: responsive.responsivePadding(mobilePadding: 4),
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.lightGrey,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                keyword,
+                                style: textTheme.bodySmall?.copyWith(
+                                  fontSize: responsive.responsiveFontSize(mobileSize: 11),
+                                  color: AppColors.mainText,
+                                  fontWeight: FontWeight.w500,
+                                ),
                               ),
                             ),
                           );
                         }).toList(),
                       ),
-                      SizedBox(height: responsive.responsivePadding(mobilePadding: 20)),
+                      SizedBox(height: responsive.responsivePadding(mobilePadding: 12)),
                       // 주소
                       Container(
                         width: double.infinity,

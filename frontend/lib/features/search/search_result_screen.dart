@@ -8,13 +8,20 @@ import "../../core/widgets/responsive_padding.dart";
 import "../../core/widgets/loading_overlay.dart";
 import "../../data/repositories/api_repository.dart";
 import "models/search_result_model.dart";
+import "package:image_picker/image_picker.dart";
 
 class SearchResultScreen extends StatefulWidget {
   final SearchResultModel result;
+  final String? previousScreenType; // 'text' or 'image'
+  final String? previousTextInput; // 이전 텍스트 입력값
+  final XFile? previousImage; // 이전 이미지
 
   const SearchResultScreen({
     super.key,
     required this.result,
+    this.previousScreenType,
+    this.previousTextInput,
+    this.previousImage,
   });
 
   @override
@@ -150,6 +157,21 @@ class _SearchResultScreenState extends State<SearchResultScreen> {
                     ),
                 ),
               ),
+              // 하단 회색 컨테이너와 "이 메뉴가 아니에요" 버튼
+              if (widget.previousScreenType != null) ...[
+                SizedBox(height: responsive.responsivePadding(mobilePadding: 16)),
+                Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.all(
+                    responsive.responsivePadding(mobilePadding: 16),
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.lightGrey,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: _buildNotThisMenuButton(responsive, textTheme),
+                ),
+              ],
             ],
             ),
           ),
@@ -350,6 +372,58 @@ class _SearchResultScreenState extends State<SearchResultScreen> {
             fontSize: responsive.responsiveFontSize(mobileSize: 15),
             fontWeight: FontWeight.w500,
             color: AppColors.white,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNotThisMenuButton(
+    ResponsiveHelper responsive,
+    TextTheme textTheme,
+  ) {
+    return GestureDetector(
+      onTap: () {
+        // 이전 화면으로 돌아가면서 입력값 전달
+        if (widget.previousScreenType == 'text') {
+          // 텍스트 입력 화면으로 돌아가기
+          context.pushReplacement(
+            '/search/text',
+            extra: {
+              'previousText': widget.previousTextInput ?? '',
+            },
+          );
+        } else if (widget.previousScreenType == 'image') {
+          // 사진 > 텍스트 입력 화면으로 돌아가기
+          context.pushReplacement(
+            '/search/image',
+            extra: {
+              'initialImage': widget.previousImage,
+              'previousText': widget.previousTextInput ?? '',
+            },
+          );
+        } else {
+          // 이전 화면 타입이 없으면 기본적으로 뒤로가기
+          context.pop();
+        }
+      },
+      child: Container(
+        width: double.infinity,
+        padding: EdgeInsets.symmetric(
+          horizontal: responsive.responsivePadding(mobilePadding: 16),
+          vertical: responsive.responsivePadding(mobilePadding: 12),
+        ),
+        decoration: BoxDecoration(
+          color: AppColors.lightGrey,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Text(
+          "이 메뉴가 아니에요",
+          textAlign: TextAlign.center,
+          style: textTheme.titleMedium?.copyWith(
+            fontSize: responsive.responsiveFontSize(mobileSize: 15),
+            fontWeight: FontWeight.w500,
+            color: AppColors.mainText,
           ),
         ),
       ),

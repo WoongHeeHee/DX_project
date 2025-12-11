@@ -44,29 +44,22 @@ class _ReportCameraScreenState extends State<ReportCameraScreen> {
         final photoService = Provider.of<PhotoService>(context, listen: false);
         try {
           final imageBytes = await File(image.path).readAsBytes();
-          final now = DateTime.now();
           
-          // 업로드 초기화
-          final uploadInit = await photoService.initPhotoUpload(
-            lat: position.latitude,
-            lng: position.longitude,
-            takenAt: now,
-            isMember: false,
-          );
+          // 1. Presigned URL 발급 (새 API 스펙)
+          final presignResponse = await photoService.presignPhotoUpload();
           
-          // S3에 업로드
+          // 2. S3에 직접 업로드
           await photoService.uploadPhotoToS3(
-            presignedUrl: uploadInit.presignedUrl,
+            presignedUrl: presignResponse.uploadUrl,
             imageBytes: imageBytes,
           );
           
-          // 업로드 완료 알림
-          await photoService.completePhotoUpload(
-            uploadToken: uploadInit.uploadToken,
-            s3Key: uploadInit.s3Key,
+          // 3. 업로드 완료 알림 (새 API 스펙)
+          await photoService.uploadPhoto(
+            photoUrl: presignResponse.fileUrl,
             lat: position.latitude,
             lng: position.longitude,
-            takenAt: now,
+            photoType: 'report', // 비회원 가게 제보
           );
 
           if (mounted) {

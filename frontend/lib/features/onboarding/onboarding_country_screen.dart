@@ -10,10 +10,16 @@ import "onboarding_age_screen.dart";
 
 class OnboardingCountryScreen extends StatefulWidget {
   final String? userName; // 사용자 이름
+  final String? inputName; // 입력된 이름
+  final String? koreanName; // 생성된 한국 이름
+  final String? englishPronunciation; // 영어 발음
 
   const OnboardingCountryScreen({
     super.key,
     this.userName,
+    this.inputName,
+    this.koreanName,
+    this.englishPronunciation,
   });
 
   @override
@@ -322,6 +328,9 @@ class _OnboardingCountryScreenState extends State<OnboardingCountryScreen> {
                     userName: widget.userName,
                     countryName: selectedCountry!.name,
                     countryId: selectedCountry!.id,
+                    inputName: widget.inputName,
+                    koreanName: widget.koreanName,
+                    englishPronunciation: widget.englishPronunciation,
                   ),
                 ),
               );

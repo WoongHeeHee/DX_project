@@ -17,6 +17,7 @@ class GoogleMapWidget extends StatefulWidget {
   final Set<Marker>? markers;
   final Function(GoogleMapController)? onMapCreated;
   final double? zoom;
+  final bool interactive; // 모든 제스처 활성화 여부 (false면 완전히 비활성화)
 
   const GoogleMapWidget({
     Key? key,
@@ -28,6 +29,7 @@ class GoogleMapWidget extends StatefulWidget {
     this.markers,
     this.onMapCreated,
     this.zoom,
+    this.interactive = true, // 기본값은 true (기존 동작 유지)
   }) : super(key: key);
 
   @override
@@ -343,13 +345,96 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
     return Builder(
       builder: (context) {
         try {
+          // Silver (흑백) 스타일 JSON
+          const silverStyle = '''
+            [
+              {
+                "featureType": "all",
+                "elementType": "geometry",
+                "stylers": [{"saturation": -75}]
+              },
+              {
+                "featureType": "all",
+                "elementType": "labels",
+                "stylers": [{"saturation": -75}]
+              },
+              {
+                "featureType": "all",
+                "elementType": "labels.text.fill",
+                "stylers": [{"saturation": -75}]
+              },
+              {
+                "featureType": "all",
+                "elementType": "labels.text.stroke",
+                "stylers": [{"saturation": -75}]
+              },
+              {
+                "featureType": "water",
+                "elementType": "geometry.fill",
+                "stylers": [{"color": "#9e9e9e"}]
+              },
+              {
+                "featureType": "poi",
+                "elementType": "all",
+                "stylers": [{"visibility": "off"}]
+              },
+              {
+                "featureType": "poi",
+                "elementType": "labels",
+                "stylers": [{"visibility": "off"}]
+              },
+              {
+                "featureType": "road",
+                "elementType": "labels",
+                "stylers": [{"visibility": "off"}]
+              },
+              {
+                "featureType": "road",
+                "elementType": "labels.text",
+                "stylers": [{"visibility": "off"}]
+              },
+              {
+                "featureType": "road",
+                "elementType": "labels.text.fill",
+                "stylers": [{"visibility": "off"}]
+              },
+              {
+                "featureType": "road",
+                "elementType": "labels.text.stroke",
+                "stylers": [{"visibility": "off"}]
+              },
+              {
+                "featureType": "road",
+                "elementType": "labels.icon",
+                "stylers": [{"visibility": "off"}]
+              },
+              {
+                "featureType": "transit",
+                "elementType": "all",
+                "stylers": [{"visibility": "off"}]
+              },
+              {
+                "featureType": "transit",
+                "elementType": "labels",
+                "stylers": [{"visibility": "off"}]
+              },
+              {
+                "featureType": "transit.station",
+                "elementType": "all",
+                "stylers": [{"visibility": "off"}]
+              }
+            ]
+          ''';
+          
           return GoogleMap(
             initialCameraPosition: CameraPosition(
               target: _center!,
               zoom: widget.zoom ?? 15.0,
             ),
-            onMapCreated: (GoogleMapController controller) {
+            onMapCreated: (GoogleMapController controller) async {
               _mapController = controller;
+              // Silver 스타일 적용
+              await controller.setMapStyle(silverStyle);
               debugPrint('[GoogleMapWidget] ✅ 지도 생성 완료');
               if (widget.onMapCreated != null) {
                 widget.onMapCreated!(controller);
@@ -361,6 +446,11 @@ class _GoogleMapWidgetState extends State<GoogleMapWidget> {
             myLocationButtonEnabled: false,
             zoomControlsEnabled: false,
             mapToolbarEnabled: false,
+            // 제스처 제어: interactive가 false면 모든 제스처 비활성화
+            scrollGesturesEnabled: widget.interactive ? false : false, // 이동 불가 (원래 설정)
+            zoomGesturesEnabled: widget.interactive ? true : false, // interactive가 false면 확대/축소도 불가
+            tiltGesturesEnabled: false,
+            rotateGesturesEnabled: false,
           );
         } catch (e, stackTrace) {
           debugPrint('[GoogleMapWidget] ❌ GoogleMap 위젯 생성 중 오류: $e');

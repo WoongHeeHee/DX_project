@@ -10,7 +10,9 @@ import "../../data/repositories/api_repository.dart";
 import "models/search_result_model.dart";
 
 class TextSearchScreen extends StatefulWidget {
-  const TextSearchScreen({super.key});
+  final String? previousText;
+
+  const TextSearchScreen({super.key, this.previousText});
 
   @override
   State<TextSearchScreen> createState() => _TextSearchScreenState();
@@ -22,6 +24,15 @@ class _TextSearchScreenState extends State<TextSearchScreen> {
   final FocusNode _focusNode = FocusNode();
   double _keyboardHeight = 0;
   bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // 이전 입력값이 있으면 복원
+    if (widget.previousText != null && widget.previousText!.isNotEmpty) {
+      _textController.text = widget.previousText!;
+    }
+  }
 
   @override
   void dispose() {
@@ -284,7 +295,11 @@ class _TextSearchScreenState extends State<TextSearchScreen> {
           
           context.push(
             '/search/result',
-            extra: {'result': searchResult},
+            extra: {
+              'result': searchResult,
+              'previousScreenType': 'text',
+              'previousTextInput': query,
+            },
           );
         }
       }

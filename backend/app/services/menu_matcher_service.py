@@ -26,12 +26,18 @@ class MenuMatcherService:
         menu_items = self.db.query(MenuItem).all()
         return [item.name for item in menu_items]
     
-    def match_menu(self, image_url: Optional[str] = None, user_text: Optional[str] = None) -> Optional[str]:
+    def match_menu(
+        self, 
+        image_url: Optional[str] = None, 
+        image_base64: Optional[str] = None,
+        user_text: Optional[str] = None
+    ) -> Optional[str]:
         """
         GPT-4V를 이용하여 메뉴 추출
         
         Args:
-            image_url: 이미지 URL (선택)
+            image_url: 이미지 URL (선택, image_base64와 함께 사용 불가)
+            image_base64: base64 인코딩된 이미지 (선택, image_url과 함께 사용 불가)
             user_text: 사용자가 입력한 음식 묘사 (선택)
         
         Returns:
@@ -49,7 +55,35 @@ class MenuMatcherService:
         prompt += "메뉴 이름 혹은 None 만 출력하세요."
         
         try:
-            if image_url:
+            if image_base64:
+                # base64 이미지 사용 (메모리에서 직접 처리, 저장하지 않음)
+                logger.info(f"메뉴 매칭 시작: base64 이미지 사용, user_text={user_text}")
+                
+                # base64 데이터 URL 형식으로 변환
+                image_data_url = f"data:image/jpeg;base64,{image_base64}"
+                
+                # 이미지와 텍스트 모두 사용
+                response = self.openai_service.client.chat.completions.create(
+                    model="gpt-4o",
+                    messages=[{
+                        "role": "user",
+                        "content": [
+                            {"type": "text", "text": prompt},
+                            {"type": "image_url", "image_url": {"url": image_data_url}}
+                        ]
+                    }],
+                    max_tokens=50,
+                    temperature=0.1
+                )
+                
+                answer = response.choices[0].message.content.strip()
+                logger.info(f"OpenAI 응답: {answer}, 메뉴 목록에 포함 여부: {answer in menus}")
+                return answer if answer in menus else None
+                
+            elif image_url:
+                # 이미지 URL 사용
+                logger.info(f"메뉴 매칭 시작: image_url={image_url[:100] if image_url else None}..., user_text={user_text}")
+                
                 # 이미지와 텍스트 모두 사용
                 response = self.openai_service.client.chat.completions.create(
                     model="gpt-4o",
@@ -63,20 +97,31 @@ class MenuMatcherService:
                     max_tokens=50,
                     temperature=0.1
                 )
+                
+                answer = response.choices[0].message.content.strip()
+                logger.info(f"OpenAI 응답: {answer}, 메뉴 목록에 포함 여부: {answer in menus}")
+                return answer if answer in menus else None
             else:
                 # 텍스트만 사용
+                logger.info(f"텍스트만으로 메뉴 매칭: user_text={user_text}")
                 response = self.openai_service.client.chat.completions.create(
                     model="gpt-4o",
                     messages=[{"role": "user", "content": prompt}],
                     max_tokens=50,
                     temperature=0.1
                 )
-            
-            answer = response.choices[0].message.content.strip()
-            return answer if answer in menus else None
+                
+                answer = response.choices[0].message.content.strip()
+                logger.info(f"OpenAI 응답: {answer}, 메뉴 목록에 포함 여부: {answer in menus}")
+                return answer if answer in menus else None
             
         except Exception as e:
-            logger.error(f"메뉴 매칭 중 오류 발생: {e}")
+            logger.error(f"메뉴 매칭 중 오류 발생: {e}", exc_info=True)
+            # 더 자세한 오류 정보 로깅
+            if hasattr(e, 'response') and e.response:
+                logger.error(f"OpenAI API 응답: {e.response}")
+            if hasattr(e, 'body') and e.body:
+                logger.error(f"OpenAI API 응답 본문: {e.body}")
             return None
 
 

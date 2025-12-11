@@ -3,7 +3,7 @@
 """
 
 import os
-from typing import List, Union, Any
+from typing import List, Union, Any, Optional
 from pydantic import field_validator, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -36,6 +36,23 @@ class Settings(BaseSettings):
     AWS_SECRET_ACCESS_KEY: str = ""
     AWS_REGION: str = "ap-northeast-2"
     S3_BUCKET_NAME: str = "market-explorer-photos"
+    S3_ENDPOINT_URL: Optional[str] = None  # MinIO 등 사용 시 (빈 문자열이면 None으로 처리)
+    
+    @field_validator("S3_ENDPOINT_URL", mode="before")
+    @classmethod
+    def validate_s3_endpoint_url(cls, v: Any) -> Optional[str]:
+        """S3_ENDPOINT_URL이 빈 문자열이면 None으로 변환"""
+        if v is None:
+            return None
+        if isinstance(v, str):
+            v_stripped = v.strip()
+            if v_stripped == "":
+                return None
+            return v_stripped
+        return v
+    
+    # API 설정
+    API_BASE_URL: str = "http://localhost:8000"  # 프록시 fallback URL 생성용
     
     # OpenAI 설정
     OPENAI_API_KEY: str = ""

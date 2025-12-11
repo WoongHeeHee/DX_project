@@ -1,4 +1,4 @@
-/// 사진 업로드 초기화 응답 모델
+/// 사진 업로드 초기화 응답 모델 (기존 API - 하위 호환성 유지)
 class PhotoUploadInitResponse {
   final bool success;
   final String presignedUrl;
@@ -21,6 +21,50 @@ class PhotoUploadInitResponse {
       uploadToken: json['upload_token'] as String,
       s3Key: json['s3_key'] as String,
       message: json['message'] as String? ?? '',
+    );
+  }
+}
+
+/// Presigned URL 발급 응답 모델 (새 API)
+class PhotoPresignResponse {
+  final String uploadUrl;
+  final String fileUrl;
+
+  PhotoPresignResponse({
+    required this.uploadUrl,
+    required this.fileUrl,
+  });
+
+  factory PhotoPresignResponse.fromJson(Map<String, dynamic> json) {
+    return PhotoPresignResponse(
+      uploadUrl: json['upload_url'] as String,
+      fileUrl: json['file_url'] as String,
+    );
+  }
+}
+
+/// 사진 업로드 완료 응답 모델 (새 API)
+class PhotoUploadResponse {
+  final bool success;
+  final String message;
+  final List<String>? photoIds;
+  final String? matchedMenu;
+
+  PhotoUploadResponse({
+    required this.success,
+    required this.message,
+    this.photoIds,
+    this.matchedMenu,
+  });
+
+  factory PhotoUploadResponse.fromJson(Map<String, dynamic> json) {
+    return PhotoUploadResponse(
+      success: json['success'] as bool? ?? true,
+      message: json['message'] as String? ?? '',
+      photoIds: json['photo_ids'] != null
+          ? (json['photo_ids'] as List).map((e) => e.toString()).toList()
+          : null,
+      matchedMenu: json['matched_menu'] as String?,
     );
   }
 }

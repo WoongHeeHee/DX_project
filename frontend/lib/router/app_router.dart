@@ -238,12 +238,20 @@ class AppRouter {
         builder: (context, state) {
           final extra = state.extra as Map<String, dynamic>?;
           final initialImage = extra?['initialImage'] as XFile?;
-          return ImageSearchScreen(initialImage: initialImage);
+          final previousText = extra?['previousText'] as String?;
+          return ImageSearchScreen(
+            initialImage: initialImage,
+            previousText: previousText,
+          );
         },
       ),
       GoRoute(
         path: '/search/text',
-        builder: (context, state) => const TextSearchScreen(),
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>?;
+          final previousText = extra?['previousText'] as String?;
+          return TextSearchScreen(previousText: previousText);
+        },
       ),
       GoRoute(
         path: '/search/result',
@@ -253,7 +261,15 @@ class AppRouter {
           if (result == null) {
             throw Exception('SearchResultModel이 필요합니다.');
           }
-          return SearchResultScreen(result: result);
+          final previousScreenType = extra?['previousScreenType'] as String?;
+          final previousTextInput = extra?['previousTextInput'] as String?;
+          final previousImage = extra?['previousImage'] as XFile?;
+          return SearchResultScreen(
+            result: result,
+            previousScreenType: previousScreenType,
+            previousTextInput: previousTextInput,
+            previousImage: previousImage,
+          );
         },
       ),
       GoRoute(

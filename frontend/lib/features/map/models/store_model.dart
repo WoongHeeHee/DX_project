@@ -10,6 +10,8 @@ class StoreModel {
   final bool isSaved; // 저장 여부
   final String? operatingHours; // 영업시간 (SAVED 탭용)
   final String? closedDays; // 휴무일 (SAVED 탭용)
+  final double? lat; // 위도 (지도 이동용)
+  final double? lng; // 경도 (지도 이동용)
 
   StoreModel({
     required this.id,
@@ -20,6 +22,8 @@ class StoreModel {
     this.isSaved = false,
     this.operatingHours,
     this.closedDays,
+    this.lat,
+    this.lng,
   });
 }
 

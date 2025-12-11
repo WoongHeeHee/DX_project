@@ -183,8 +183,12 @@ class _OnboardingNameConfirmScreenState
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) =>
-                    OnboardingCountryScreen(userName: _koreanName),
+                builder: (context) => OnboardingCountryScreen(
+                  userName: _koreanName,
+                  inputName: widget.inputName,
+                  koreanName: widget.koreanName,
+                  englishPronunciation: widget.englishPronunciation,
+                ),
               ),
             );
           },
