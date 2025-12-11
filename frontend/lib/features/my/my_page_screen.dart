@@ -8,6 +8,7 @@ import "../../core/widgets/responsive_helper.dart";
 import "../../core/widgets/responsive_padding.dart";
 import "../../widgets/bottom_navigation_bar.dart";
 import "../../providers/auth_provider.dart";
+import "../../data/repositories/api_repository.dart";
 import "dart:async";
 import "settings_screen.dart";
 import "saved_stores_screen.dart";
@@ -25,9 +26,15 @@ class MyPageScreen extends StatefulWidget {
 }
 
 class _MyPageScreenState extends State<MyPageScreen> {
+  final _apiRepository = ApiRepository();
   bool _showFloatingButton = false; // 리뷰 작성 이벤트 발생 시 true
   bool _showToast = false; // 토스트 메시지 표시 여부
   Timer? _toastTimer;
+  bool _hasRecentVisit = false; // 최근 방문 이력 (7일 이내)
+  bool _hasMarketExperience = false; // 시장 방문 경험 여부
+  String? _recentMarketName; // 최근 방문한 시장 이름
+  String? _recentMarketId; // 최근 방문한 시장 ID (향후 사용 예정)
+  bool _isLoadingVisitData = true;
 
   @override
   void initState() {
@@ -36,7 +43,28 @@ class _MyPageScreenState extends State<MyPageScreen> {
     // TODO: 실제로는 리뷰 저장 성공 시 플래그를 설정하거나 Navigator 결과로 확인
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkReviewCompletion();
+      _loadVisitData();
     });
+  }
+
+  Future<void> _loadVisitData() async {
+    try {
+      final visitData = await _apiRepository.userService.getMarketVisits();
+      setState(() {
+        _hasRecentVisit = visitData.hasRecentVisit;
+        _recentMarketName = visitData.marketName;
+        _recentMarketId = visitData.marketId;
+        _hasMarketExperience = !_hasRecentVisit; // 최근 방문이 없으면 경험이 없는 것으로 간주
+        _isLoadingVisitData = false;
+      });
+    } catch (e) {
+      debugPrint("방문 기록 조회 실패: $e");
+      setState(() {
+        _hasRecentVisit = false;
+        _hasMarketExperience = false;
+        _isLoadingVisitData = false;
+      });
+    }
   }
 
   @override
@@ -91,14 +119,19 @@ class _MyPageScreenState extends State<MyPageScreen> {
     final authProvider = Provider.of<AuthProvider>(context);
     final user = authProvider.user;
 
-    // 시장 방문 경험 여부 (임시로 false, 추후 API로 확인)
-    // TODO: GPS 기반으로 시장 방문 이력 확인 (DB 연동)
-    final bool hasMarketExperience = false;
-    // 테스트용: 두 배너를 위아래로 나열하여 확인 (원래는 동시에 뜰 일 없음)
-    final bool hasRecentVisit = true; // 최근 방문 이력 (7일 이내)
-
     final koreanName = user?.koreanName ?? "김가희";
-    final englishPronunciation = user?.englishPronunciation ?? "Kim Ga-hee";
+    // korean_name이 "(한국이름, 영어발음)" 형식으로 저장될 수 있으므로 파싱
+    String englishPronunciation = "Kim Ga-hee";
+    if (user?.koreanName != null) {
+      final koreanNameValue = user!.koreanName!;
+      // "(한국이름, 영어발음)" 형식인지 확인
+      if (koreanNameValue.contains(',') && koreanNameValue.startsWith('(') && koreanNameValue.endsWith(')')) {
+        final parts = koreanNameValue.substring(1, koreanNameValue.length - 1).split(',');
+        if (parts.length >= 2) {
+          englishPronunciation = parts[1].trim();
+        }
+      }
+    }
 
     return Scaffold(
       backgroundColor: AppColors.white,
@@ -134,19 +167,19 @@ class _MyPageScreenState extends State<MyPageScreen> {
                           ),
                           // 조건부 배너들 (위아래로 나열)
                           // 방문 기록 작성 가능 배너 (시장을 다녀온 이력이 있으면)
-                          if (hasRecentVisit)
+                          if (!_isLoadingVisitData && _hasRecentVisit)
                             _buildReviewWriteBanner(
                                 responsive, textTheme, context),
-                          if (hasRecentVisit)
+                          if (!_isLoadingVisitData && _hasRecentVisit)
                             SizedBox(
                               height: responsive.responsivePadding(
                                   mobilePadding: 20),
                             ),
                           // 기록할 경험이 없어요 배너 (시장 방문 경험 없을 때)
-                          if (!hasMarketExperience)
+                          if (!_isLoadingVisitData && !_hasMarketExperience)
                             _buildNoExperienceBanner(
                                 responsive, textTheme, context),
-                          if (!hasMarketExperience)
+                          if (!_isLoadingVisitData && !_hasMarketExperience)
                             SizedBox(
                               height: responsive.responsivePadding(
                                   mobilePadding: 20),
@@ -366,19 +399,27 @@ class _MyPageScreenState extends State<MyPageScreen> {
             width: double.infinity,
             child: ElevatedButton(
               onPressed: () async {
-                // TODO: GPS 기반으로 방문한 시장 이름 가져오기 (DB 연동)
-                final marketName = "망원시장"; // 임시
+                if (_recentMarketName == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text("시장 정보를 찾을 수 없습니다"),
+                      backgroundColor: AppColors.primary,
+                    ),
+                  );
+                  return;
+                }
                 final result = await Navigator.push(
                   context,
                   MaterialPageRoute(
                     builder: (context) => MarketReviewWriteScreen(
-                      marketName: marketName,
+                      marketName: _recentMarketName!,
                     ),
                   ),
                 );
-                // 리뷰 작성 완료 시 팝업 표시
+                // 리뷰 작성 완료 시 팝업 표시 및 방문 데이터 새로고침
                 if (result == true && mounted) {
                   _showGiftPopup();
+                  _loadVisitData(); // 방문 데이터 새로고침
                 }
               },
               style: ElevatedButton.styleFrom(

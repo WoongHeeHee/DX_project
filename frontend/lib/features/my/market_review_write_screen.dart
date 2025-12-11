@@ -5,6 +5,7 @@ import "package:provider/provider.dart";
 import "../../core/theme/app_colors.dart";
 import "../../core/widgets/responsive_helper.dart";
 import "../../providers/auth_provider.dart";
+import "../../data/repositories/api_repository.dart";
 
 class MarketReviewWriteScreen extends StatefulWidget {
   final String marketName;
@@ -20,10 +21,13 @@ class MarketReviewWriteScreen extends StatefulWidget {
 }
 
 class _MarketReviewWriteScreenState extends State<MarketReviewWriteScreen> {
+  final _apiRepository = ApiRepository();
   Set<String> _selectedTags = {}; // 선택된 태그들
   List<MenuPhotoItem> _menuPhotos = []; // 사용자가 찍은 메뉴 사진들
   bool _isLoading = true;
-  Map<String, bool> _likedMenus = {}; // 메뉴별 좋아요 상태
+  Map<String, bool> _likedMenus = {}; // 메뉴별 좋아요 상태 (photo_id -> isLiked)
+  Map<String, String> _photoIdToMenuItemId = {}; // photo_id -> menu_item_id 매핑
+  String? _marketId; // 시장 ID
 
   // 리뷰 태그 옵션들 (아이콘 포함)
   final List<ReviewTagOption> _reviewTagOptions = [
@@ -106,31 +110,33 @@ class _MarketReviewWriteScreenState extends State<MarketReviewWriteScreen> {
     });
 
     try {
-      // TODO: API 호출하여 방문 기록 데이터 가져오기
-      // GPS 기반으로 시장 방문 이력 확인
-      // final reviewData = await _apiRepository.userService.getMarketVisitData(
-      //   widget.marketName,
-      // );
+      // 시장 이름으로 시장 ID 찾기
+      final markets = await _apiRepository.marketService.getMarkets();
+      final market = markets.firstWhere(
+        (m) => m.name == widget.marketName,
+        orElse: () => markets.first, // 찾지 못하면 첫 번째 시장 사용
+      );
+      _marketId = market.id;
 
-      // 더미 데이터 (화면 확인용)
-      await Future.delayed(const Duration(milliseconds: 500));
+      // 시장별 사용자 사진 조회
+      final marketPhotos = await _apiRepository.diaryService.getMarketPhotos(_marketId!);
+
+      // MenuPhotoItem으로 변환
+      final menuPhotoItems = marketPhotos.map((photo) {
+        // photo_id를 menu_item_id로 매핑 (좋아요 API 호출용)
+        if (photo.menuItemId != null) {
+          _photoIdToMenuItemId[photo.id] = photo.menuItemId!;
+        }
+        return MenuPhotoItem(
+          id: photo.id,
+          photoUrl: photo.photoUrl,
+          recognizedMenuName: photo.recognizedMenuName,
+          isLiked: photo.isLiked,
+        );
+      }).toList();
+
       setState(() {
-        _menuPhotos = [
-          MenuPhotoItem(
-            id: "1",
-            photoUrl:
-                "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%EC%A7%80%EB%8F%84_Musteat-%ED%83%90%EC%83%89_Musteat/%EB%A7%9D%EC%9B%90%EC%8B%9C%EC%9E%A5_%E1%84%84%E1%85%A5%E1%86%A8%E1%84%87%E1%85%A9%E1%86%A9%E1%84%8B%E1%85%B5_ME155.png",
-            recognizedMenuName: "Tteokbokki",
-            isLiked: true,
-          ),
-          MenuPhotoItem(
-            id: "2",
-            photoUrl:
-                "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%EC%A7%80%EB%8F%84_Musteat-%ED%83%90%EC%83%89_Musteat/%EB%A7%9D%EC%9B%90%EC%8B%9C%EC%9E%A5_%E1%84%89%E1%85%AE%E1%86%AB%E1%84%83%E1%85%A2_ME166.png",
-            recognizedMenuName: "Sundae",
-            isLiked: false,
-          ),
-        ];
+        _menuPhotos = menuPhotoItems;
 
         // 초기 좋아요 상태 설정
         for (var photo in _menuPhotos) {
@@ -144,6 +150,14 @@ class _MarketReviewWriteScreenState extends State<MarketReviewWriteScreen> {
         _isLoading = false;
       });
       debugPrint("리뷰 데이터 로드 실패: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("데이터 로드 실패: $e"),
+            backgroundColor: AppColors.primary,
+          ),
+        );
+      }
     }
   }
 
@@ -157,22 +171,80 @@ class _MarketReviewWriteScreenState extends State<MarketReviewWriteScreen> {
     });
   }
 
-  void _toggleLike(String menuPhotoId) {
+  Future<void> _toggleLike(String menuPhotoId) async {
+    final currentLikeState = _likedMenus[menuPhotoId] ?? false;
+    
     setState(() {
-      _likedMenus[menuPhotoId] = !(_likedMenus[menuPhotoId] ?? false);
+      _likedMenus[menuPhotoId] = !currentLikeState;
     });
-    // TODO: API 호출하여 좋아요 상태 업데이트
+
+    try {
+      // 사진에서 메뉴 아이템 ID 찾기
+      final menuItemId = _photoIdToMenuItemId[menuPhotoId];
+      if (menuItemId == null) {
+        debugPrint("메뉴 아이템 ID를 찾을 수 없습니다: $menuPhotoId");
+        // 실패 시 원래 상태로 복구
+        setState(() {
+          _likedMenus[menuPhotoId] = currentLikeState;
+        });
+        return;
+      }
+      
+      // 좋아요 API 호출
+      if (!currentLikeState) {
+        await _apiRepository.diaryService.addLike(menuItemId: menuItemId);
+      } else {
+        await _apiRepository.diaryService.removeLike(menuItemId: menuItemId);
+      }
+    } catch (e) {
+      // 실패 시 원래 상태로 복구
+      setState(() {
+        _likedMenus[menuPhotoId] = currentLikeState;
+      });
+      debugPrint("좋아요 토글 실패: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("좋아요 처리 실패: $e"),
+            backgroundColor: AppColors.primary,
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _saveReview() async {
+    if (_marketId == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("시장 정보를 찾을 수 없습니다"),
+            backgroundColor: AppColors.primary,
+          ),
+        );
+      }
+      return;
+    }
+
+    if (_selectedTags.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("최소 하나의 태그를 선택해주세요"),
+            backgroundColor: AppColors.primary,
+          ),
+        );
+      }
+      return;
+    }
+
     try {
-      // TODO: API 호출하여 리뷰 저장
-      // await _apiRepository.userService.saveMarketReview(
-      //   widget.marketName,
-      //   _selectedTags.toList(),
-      //   _menuPhotos,
-      //   _likedMenus,
-      // );
+      // 다이어리 생성 (키워드는 태그로 사용)
+      await _apiRepository.diaryService.createDiary(
+        marketId: _marketId!,
+        keywords: _selectedTags.toList(),
+        photoIds: _menuPhotos.map((p) => p.id).toList(),
+      );
 
       if (mounted) {
         Navigator.of(context).pop(true); // 리뷰 작성 완료 플래그 전달
@@ -561,8 +633,8 @@ class _MarketReviewWriteScreenState extends State<MarketReviewWriteScreen> {
         ),
         // 하트 버튼
         GestureDetector(
-          onTap: () {
-            _toggleLike(menuPhoto.id);
+          onTap: () async {
+            await _toggleLike(menuPhoto.id);
           },
           child: Icon(
             isLiked ? Icons.favorite : Icons.favorite_border,

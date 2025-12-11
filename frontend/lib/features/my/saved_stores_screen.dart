@@ -4,6 +4,8 @@ import "package:flutter/material.dart";
 import "../../core/theme/app_colors.dart";
 import "../../core/widgets/responsive_helper.dart";
 import "../map/models/store_model.dart";
+import "../../data/repositories/api_repository.dart";
+import "../../models/shop_model.dart";
 
 class SavedStoresScreen extends StatefulWidget {
   const SavedStoresScreen({super.key});
@@ -13,6 +15,7 @@ class SavedStoresScreen extends StatefulWidget {
 }
 
 class _SavedStoresScreenState extends State<SavedStoresScreen> {
+  final _apiRepository = ApiRepository();
   String _selectedFilter = "전체";
   List<String> _marketFilters = ["전체"]; // 처음엔 전체만, 나중에 시장 칩이 추가될 수 있음
   List<StoreModel> _savedStores = []; // 저장된 가게 리스트
@@ -25,43 +28,62 @@ class _SavedStoresScreenState extends State<SavedStoresScreen> {
   }
 
   Future<void> _loadSavedStores() async {
-    // TODO: API 호출하여 저장된 가게 리스트 가져오기
-    // 저장된 가게가 있으면 그 가게가 있는 시장을 _marketFilters에 추가
-    setState(() {
-      // 더미 데이터 (화면 확인용)
-      _savedStores = [
-        StoreModel(
-          id: "saved_1",
-          name: "이지현이좋아하는랜덤떡볶슨",
-          imageUrls: ["https://placehold.co/110x110"],
-          address: "서울특별시 마포구 망원동",
-          status: StoreStatus.open,
-          isSaved: true,
-          operatingHours: "09:00 - 22:00",
-          closedDays: "매주 월요일",
-        ),
-        StoreModel(
-          id: "saved_2",
-          name: "맛있는 김밥집",
-          imageUrls: ["https://placehold.co/110x110"],
-          address: "서울특별시 종로구 광장시장",
-          status: StoreStatus.closingSoon,
-          isSaved: true,
-          operatingHours: "10:00 - 21:00",
-          closedDays: "매주 일요일",
-        ),
-        StoreModel(
-          id: "saved_3",
-          name: "전통 떡볶이 전문점",
-          imageUrls: ["https://placehold.co/110x110"],
-          address: "서울특별시 마포구 망원동",
-          status: StoreStatus.open,
-          isSaved: true,
-          operatingHours: "11:00 - 23:00",
-          closedDays: "연중무휴",
-        ),
-      ];
-    });
+    try {
+      // API 호출하여 저장된 가게 리스트 가져오기
+      final shops = await _apiRepository.shopService.getPinnedShops();
+      
+      // ShopModel을 StoreModel로 변환
+      final stores = shops.map((shop) => _shopModelToStoreModel(shop)).toList();
+      
+      // 저장된 가게가 있으면 그 가게가 있는 시장을 _marketFilters에 추가
+      final marketNames = <String>{};
+      // TODO: 시장 정보는 ShopModel에 없으므로 별도로 조회해야 할 수 있음
+      // 일단 "전체"만 사용
+      
+      setState(() {
+        _savedStores = stores;
+        _marketFilters = ["전체", ...marketNames];
+      });
+    } catch (e) {
+      debugPrint("저장한 가게 로드 실패: $e");
+    }
+  }
+
+  StoreModel _shopModelToStoreModel(ShopModel shop) {
+    // status 문자열을 StoreStatus enum으로 변환
+    StoreStatus storeStatus;
+    switch (shop.status) {
+      case "green":
+        storeStatus = StoreStatus.open;
+        break;
+      case "yellow":
+        storeStatus = StoreStatus.closingSoon;
+        break;
+      case "red":
+        storeStatus = StoreStatus.closed;
+        break;
+      default:
+        storeStatus = StoreStatus.open;
+    }
+    
+    // operatingHours 포맷팅
+    String? operatingHours;
+    if (shop.openTime != null && shop.closeTime != null) {
+      operatingHours = "${shop.openTime} - ${shop.closeTime}";
+    }
+    
+    return StoreModel(
+      id: shop.id,
+      name: shop.name,
+      imageUrls: shop.imageUrls ?? (shop.repImageUrl != null ? [shop.repImageUrl!] : []),
+      address: shop.address ?? "",
+      status: storeStatus,
+      isSaved: true,
+      operatingHours: operatingHours,
+      closedDays: shop.closedDays,
+      lat: shop.lat,
+      lng: shop.lng,
+    );
   }
 
   void _moveToStoreLocation(StoreModel store) {
@@ -416,12 +438,28 @@ class _SavedStoresScreenState extends State<SavedStoresScreen> {
     );
   }
 
-  void _toggleSaveStore(String storeId) {
+  Future<void> _toggleSaveStore(String storeId) async {
+    final isCurrentlySaved = _isStoreSaved(storeId);
+    
     setState(() {
-      // 임시 저장 상태 토글 (화면을 나가기 전까지는 UI만 변경)
-      _tempSavedStates[storeId] = !(_tempSavedStates[storeId] ?? true);
+      // 임시 저장 상태 토글 (UI 즉시 반영)
+      _tempSavedStates[storeId] = !isCurrentlySaved;
     });
-    // TODO: 실제 API 호출은 화면을 나갔다가 다시 들어올 때 적용
+    
+    try {
+      // API 호출
+      if (!isCurrentlySaved) {
+        await _apiRepository.shopService.pinShop(storeId);
+      } else {
+        await _apiRepository.shopService.unpinShop(storeId);
+      }
+    } catch (e) {
+      // 실패 시 원래 상태로 복구
+      setState(() {
+        _tempSavedStates[storeId] = isCurrentlySaved;
+      });
+      debugPrint("가게 저장 토글 실패: $e");
+    }
   }
 
   bool _isStoreSaved(String storeId) {
@@ -437,8 +475,8 @@ class _SavedStoresScreenState extends State<SavedStoresScreen> {
     final isSaved = _isStoreSaved(store.id);
 
     return GestureDetector(
-      onTap: () {
-        _toggleSaveStore(store.id);
+      onTap: () async {
+        await _toggleSaveStore(store.id);
       },
       child: Container(
         height: 32,

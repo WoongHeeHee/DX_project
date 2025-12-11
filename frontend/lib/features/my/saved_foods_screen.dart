@@ -41,56 +41,10 @@ class _SavedFoodsScreenState extends State<SavedFoodsScreen> {
     });
 
     try {
-      // TODO: API 호출하여 찜한 음식 리스트 가져오기
-      // final foods = await _apiRepository.menuService.getSavedMenuItems();
-
-      // 더미 데이터 (화면 확인용)
-      await Future.delayed(const Duration(milliseconds: 500));
+      // API 호출하여 찜한 음식 리스트 가져오기
+      final foods = await _apiRepository.menuService.getSavedMenuItems();
       setState(() {
-        _savedFoods = [
-          MenuItemModel(
-            id: "ME001",
-            name: "떡볶이",
-            category: "Meals",
-            spiceLevel: 3,
-            repImageUrl: "https://placehold.co/200x200",
-          ),
-          MenuItemModel(
-            id: "ME002",
-            name: "김밥",
-            category: "Meals",
-            spiceLevel: 1,
-            repImageUrl: "https://placehold.co/200x200",
-          ),
-          MenuItemModel(
-            id: "ME003",
-            name: "순대",
-            category: "Snacks",
-            spiceLevel: 2,
-            repImageUrl: "https://placehold.co/200x200",
-          ),
-          MenuItemModel(
-            id: "ME004",
-            name: "호떡",
-            category: "Sweets",
-            spiceLevel: 1,
-            repImageUrl: "https://placehold.co/200x200",
-          ),
-          MenuItemModel(
-            id: "ME005",
-            name: "붕어빵",
-            category: "Sweets",
-            spiceLevel: 1,
-            repImageUrl: "https://placehold.co/200x200",
-          ),
-          MenuItemModel(
-            id: "ME006",
-            name: "아이스크림",
-            category: "Sweets",
-            spiceLevel: 1,
-            repImageUrl: "https://placehold.co/200x200",
-          ),
-        ];
+        _savedFoods = foods;
         _isLoading = false;
       });
     } catch (e) {
@@ -101,12 +55,28 @@ class _SavedFoodsScreenState extends State<SavedFoodsScreen> {
     }
   }
 
-  void _toggleSaveFood(String menuItemId) {
+  Future<void> _toggleSaveFood(String menuItemId) async {
+    final isCurrentlySaved = _isFoodSaved(menuItemId);
+    
     setState(() {
-      // 임시 저장 상태 토글 (화면을 나가기 전까지는 UI만 변경)
-      _tempSavedStates[menuItemId] = !(_tempSavedStates[menuItemId] ?? true);
+      // 임시 저장 상태 토글 (UI 즉시 반영)
+      _tempSavedStates[menuItemId] = !isCurrentlySaved;
     });
-    // TODO: 실제 API 호출은 화면을 나갔다가 다시 들어올 때 적용
+    
+    try {
+      // API 호출
+      if (!isCurrentlySaved) {
+        await _apiRepository.menuService.saveMenuItem(menuItemId);
+      } else {
+        await _apiRepository.menuService.unsaveMenuItem(menuItemId);
+      }
+    } catch (e) {
+      // 실패 시 원래 상태로 복구
+      setState(() {
+        _tempSavedStates[menuItemId] = isCurrentlySaved;
+      });
+      debugPrint("찜한 음식 토글 실패: $e");
+    }
   }
 
   bool _isFoodSaved(String menuItemId) {
@@ -428,8 +398,8 @@ class _SavedFoodsScreenState extends State<SavedFoodsScreen> {
     final isSaved = _isFoodSaved(food.id);
 
     return GestureDetector(
-      onTap: () {
-        _toggleSaveFood(food.id);
+      onTap: () async {
+        await _toggleSaveFood(food.id);
       },
       child: Icon(
         isSaved ? Icons.favorite : Icons.favorite_border,

@@ -83,9 +83,22 @@ class _SettingsScreenState extends State<SettingsScreen>
     final user = authProvider.user;
 
     if (user != null) {
+      // korean_name에서 영어 발음 파싱
+      String? englishPronunciation;
+      if (user.koreanName != null) {
+        final koreanNameValue = user.koreanName!;
+        // "(한국이름, 영어발음)" 형식인지 확인
+        if (koreanNameValue.contains(',') && koreanNameValue.startsWith('(') && koreanNameValue.endsWith(')')) {
+          final parts = koreanNameValue.substring(1, koreanNameValue.length - 1).split(',');
+          if (parts.length >= 2) {
+            englishPronunciation = parts[1].trim();
+          }
+        }
+      }
+      
       setState(() {
         _koreanName = user.koreanName;
-        _englishPronunciation = user.englishPronunciation;
+        _englishPronunciation = englishPronunciation;
         _selectedLanguage = user.locale.value;
         _birthYyyyMm = user.birthYyyyMm;
         _spicyLevel = user.spiceLevel;
@@ -198,8 +211,17 @@ class _SettingsScreenState extends State<SettingsScreen>
     });
 
     try {
-      // TODO: API 호출하여 설정 저장
-      // await _apiRepository.userService.updateProfile(...);
+      // API 호출하여 설정 저장
+      await _apiRepository.userService.updateProfileSettings(
+        koreanName: _koreanName,
+        locale: _selectedLanguage,
+        birthYyyyMm: _birthYyyyMm,
+        spiceLevel: _spicyLevel,
+      );
+
+      // AuthProvider 업데이트
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      await authProvider.refreshUser();
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

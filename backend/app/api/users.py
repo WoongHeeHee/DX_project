@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 import logging
 
 from app.db.database import get_db
-from app.db.models import User, AdventureLevel, KoreanExperience
+from app.db.models import User, AdventureLevel, KoreanExperience, Diary, Like, MenuItem, Market
 from app.models.schemas import (
     User as UserSchema, 
     UserUpdate, 
@@ -18,6 +18,8 @@ from app.models.schemas import (
 )
 from app.api.auth import get_current_user, get_optional_user
 from app.services.korean_name_service import KoreanNameService
+from datetime import datetime, timedelta, timezone
+from sqlalchemy import func, or_
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -75,6 +77,19 @@ async def complete_onboarding(
     logger.info(f"complete_onboarding 호출 - current_user: {current_user.id if current_user else None}")
     logger.info(f"user_update 원본: {user_update}")
     logger.info(f"update_data (exclude_unset=True): {update_data}")
+    
+    # display_name과 korean_name은 원본 객체에서 직접 확인
+    # Pydantic 모델의 __fields_set__를 사용하여 필드가 실제로 설정되었는지 확인
+    # 또는 dict(exclude_unset=False)를 사용하여 모든 필드를 포함한 다음 None 값 제외
+    all_data = user_update.dict(exclude_unset=False)
+    if 'display_name' in all_data and all_data['display_name'] is not None:
+        update_data['display_name'] = all_data['display_name']
+        logger.info(f"display_name 원본에서 가져옴: {all_data['display_name']}")
+    if 'korean_name' in all_data and all_data['korean_name'] is not None:
+        update_data['korean_name'] = all_data['korean_name']
+        logger.info(f"korean_name 원본에서 가져옴: {all_data['korean_name']}")
+    
+    logger.info(f"update_data (display_name/korean_name 추가 후): {update_data}")
 
     # 문자열로 넘어오는 Enum 필드 변환
     def _to_adventure(value):
@@ -238,4 +253,174 @@ async def generate_korean_name(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"한국 이름 생성 실패: {str(e)}"
+        )
+
+
+@router.get("/market-visits")
+async def get_market_visits(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    시장 방문 기록 조회 (7일 이내, 미완성 다이어리)
+    
+    keywords가 null이거나 빈 배열인 다이어리를 미완성으로 간주합니다.
+    7일 이내에 생성된 미완성 다이어리 중 가장 최근 것을 반환합니다.
+    """
+    try:
+        # 7일 이전 날짜 계산
+        seven_days_ago = datetime.now(timezone.utc) - timedelta(days=7)
+        
+        # 미완성 다이어리 조회 (keywords가 null이거나 빈 배열)
+        incomplete_diaries = db.query(Diary).filter(
+            Diary.user_id == current_user.id,
+            Diary.created_at >= seven_days_ago,
+            or_(
+                Diary.keywords.is_(None),
+                Diary.keywords == []
+            )
+        ).order_by(Diary.created_at.desc()).all()
+        
+        # 시장 정보 포함하여 반환
+        result = []
+        for diary in incomplete_diaries:
+            market = db.query(Market).filter(Market.id == diary.market_id).first()
+            if market:
+                result.append({
+                    "diary_id": diary.id,
+                    "market_id": diary.market_id,
+                    "market_name": market.name,
+                    "created_at": diary.created_at.isoformat()
+                })
+        
+        # 가장 최근 것 하나만 반환 (있으면)
+        if result:
+            return {
+                "has_recent_visit": True,
+                "market_name": result[0]["market_name"],
+                "market_id": result[0]["market_id"],
+                "diary_id": result[0]["diary_id"]
+            }
+        else:
+            return {
+                "has_recent_visit": False,
+                "market_name": None,
+                "market_id": None,
+                "diary_id": None
+            }
+            
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"시장 방문 기록 조회 실패: {str(e)}"
+        )
+
+
+@router.get("/top-3-favorite-foods")
+async def get_top_3_favorite_foods(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    제일 맛있게 먹은 음식 TOP 3 조회 (좋아요 기반)
+    
+    사용자가 좋아요한 메뉴 중 가장 최근 3개를 반환합니다.
+    """
+    try:
+        from app.models.schemas import MenuItem as MenuItemSchema
+        
+        # 좋아요한 메뉴 조회 (최근 순)
+        likes = db.query(Like).filter(
+            Like.user_id == current_user.id
+        ).order_by(Like.created_at.desc()).limit(3).all()
+        
+        # 메뉴 아이템 정보 포함
+        result = []
+        for like in likes:
+            menu_item = db.query(MenuItem).filter(MenuItem.id == like.menu_item_id).first()
+            if menu_item:
+                # CDN URL 생성
+                def s3_key_to_cdn_url(s3_key: str) -> str:
+                    if not s3_key:
+                        return ""
+                    cdn_base_url = "https://dnzeuzpu74ulj.cloudfront.net"
+                    if s3_key.startswith('http://') or s3_key.startswith('https://'):
+                        return s3_key
+                    return f"{cdn_base_url}/{s3_key}"
+                
+                result.append({
+                    "id": menu_item.id,
+                    "name": menu_item.name,
+                    "image_url": s3_key_to_cdn_url(menu_item.rep_image_url) if menu_item.rep_image_url else ""
+                })
+        
+        return result
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"TOP 3 음식 조회 실패: {str(e)}"
+        )
+
+
+@router.get("/market-history")
+async def get_market_history(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    지난 한국 시장 탐방 기록 조회
+    
+    완성된 다이어리(keywords가 있는 다이어리)를 시장별로 그룹화하여
+    각 시장의 방문 횟수와 최근 방문 날짜를 반환합니다.
+    """
+    try:
+        # 완성된 다이어리 조회 (keywords가 null이 아니고 빈 배열이 아닌 것)
+        completed_diaries = db.query(Diary).filter(
+            Diary.user_id == current_user.id,
+            Diary.keywords.isnot(None),
+            Diary.keywords != []
+        ).order_by(Diary.created_at.desc()).all()
+        
+        # 시장별로 그룹화
+        market_dict = {}
+        for diary in completed_diaries:
+            market_id = diary.market_id
+            if market_id not in market_dict:
+                market = db.query(Market).filter(Market.id == market_id).first()
+                if market:
+                    market_dict[market_id] = {
+                        "market_id": market_id,
+                        "market_name": market.name,
+                        "visit_count": 0,
+                        "last_visited_at": None
+                    }
+            
+            if market_id in market_dict:
+                market_dict[market_id]["visit_count"] += 1
+                # 가장 최근 방문 날짜 업데이트
+                if (market_dict[market_id]["last_visited_at"] is None or 
+                    diary.created_at > market_dict[market_id]["last_visited_at"]):
+                    market_dict[market_id]["last_visited_at"] = diary.created_at
+        
+        # 리스트로 변환
+        result = []
+        for market_data in market_dict.values():
+            result.append({
+                "id": market_data["market_id"],  # 프론트엔드 호환성을 위해 id 필드 추가
+                "market_id": market_data["market_id"],
+                "market_name": market_data["market_name"],
+                "visit_number": market_data["visit_count"],
+                "visited_at": market_data["last_visited_at"].isoformat() if market_data["last_visited_at"] else None
+            })
+        
+        # 최근 방문 순으로 정렬
+        result.sort(key=lambda x: x["visited_at"] or "", reverse=True)
+        
+        return result
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"시장 기록 조회 실패: {str(e)}"
         )

@@ -5,6 +5,9 @@ import "package:provider/provider.dart";
 import "../../core/theme/app_colors.dart";
 import "../../core/widgets/responsive_helper.dart";
 import "../../providers/auth_provider.dart";
+import "../../data/repositories/api_repository.dart";
+import "../../data/services/user_service.dart";
+import "../../data/services/diary_service.dart";
 import "../home/models/market_model.dart";
 import "market_story_detail_screen.dart";
 
@@ -16,6 +19,7 @@ class MarketHistoryScreen extends StatefulWidget {
 }
 
 class _MarketHistoryScreenState extends State<MarketHistoryScreen> {
+  final _apiRepository = ApiRepository();
   List<MustTryItem> _top3Foods = []; // 제일 맛있게 먹은 음식 TOP 3
   List<MarketHistoryItem> _marketHistories = []; // 지난 한국 시장 탐방 기록
   bool _isLoading = true;
@@ -32,48 +36,37 @@ class _MarketHistoryScreenState extends State<MarketHistoryScreen> {
     });
 
     try {
-      // TODO: API 호출하여 제일 맛있게 먹은 음식 TOP 3 가져오기
-      // final top3Foods = await _apiRepository.userService.getTop3FavoriteFoods();
-
-      // TODO: API 호출하여 지난 한국 시장 탐방 기록 가져오기
-      // final histories = await _apiRepository.userService.getMarketHistories();
-
-      // 더미 데이터 (화면 확인용)
-      await Future.delayed(const Duration(milliseconds: 500));
+      // API 호출하여 제일 맛있게 먹은 음식 TOP 3 가져오기
+      final top3Foods = await _apiRepository.userService.getTop3FavoriteFoods();
+      
+      // API 호출하여 지난 한국 시장 탐방 기록 가져오기
+      final marketHistories = await _apiRepository.userService.getMarketHistory();
+      
+      // TOP 3 음식을 MustTryItem으로 변환
+      final top3MustTryItems = top3Foods.take(3).map((food) {
+        return MustTryItem(
+          id: food.id,
+          name: food.name,
+          description: "",
+          imageUrl: food.imageUrl,
+        );
+      }).toList();
+      
+      // MarketHistoryItem으로 변환
+      final historyItems = marketHistories.map((history) {
+        return MarketHistoryItem(
+          id: history.id,
+          marketName: history.marketName,
+          visitNumber: history.visitNumber,
+          visitedAt: history.visitedAt != null 
+              ? DateTime.parse(history.visitedAt!) 
+              : DateTime.now(),
+        );
+      }).toList();
+      
       setState(() {
-        _top3Foods = [
-          MustTryItem(
-            id: "1",
-            name: "떡볶이",
-            description: "",
-            imageUrl:
-                "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%EC%A7%80%EB%8F%84_Musteat-%ED%83%90%EC%83%89_Musteat/%EB%A7%9D%EC%9B%90%EC%8B%9C%EC%9E%A5_%E1%84%84%E1%85%A5%E1%86%A8%E1%84%87%E1%85%A9%E1%86%A9%E1%84%8B%E1%85%B5_ME155.png",
-          ),
-          MustTryItem(
-            id: "2",
-            name: "닭강정",
-            description: "",
-            imageUrl:
-                "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%EC%A7%80%EB%8F%84_Musteat-%ED%83%90%EC%83%89_Musteat/%EB%A7%9D%EC%9B%90%EC%8B%9C%EC%9E%A5_%E1%84%83%E1%85%A1%E1%86%B0%E1%84%80%E1%85%A1%E1%86%BC%E1%84%8C%E1%85%A5%E1%86%BC_ME148.png",
-          ),
-          MustTryItem(
-            id: "3",
-            name: "구운옥수수",
-            description: "",
-            imageUrl:
-                "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Market_all/%EC%A7%80%EB%8F%84_Musteat-%ED%83%90%EC%83%89_Musteat/%EB%A7%9D%EC%9B%90%EC%8B%9C%EC%9E%A5_%E1%84%80%E1%85%AE%E1%84%8B%E1%85%AE%E1%86%AB%E1%84%8B%E1%85%A9%E1%86%A8%E1%84%89%E1%85%AE%E1%84%89%E1%85%AE_ME131.png",
-          ),
-        ];
-
-        _marketHistories = [
-          MarketHistoryItem(
-            id: "1",
-            marketName: "망원시장",
-            visitNumber: 1,
-            visitedAt: DateTime.now().subtract(const Duration(days: 5)),
-          ),
-        ];
-
+        _top3Foods = top3MustTryItems;
+        _marketHistories = historyItems;
         _isLoading = false;
       });
     } catch (e) {

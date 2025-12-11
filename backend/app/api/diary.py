@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db
-from app.db.models import User, Diary, Like, Photo, Market
+from app.db.models import User, Diary, Like, Photo, Market, Shop, MenuItem
 from app.models.schemas import (
     DiaryCreate,
     Diary as DiarySchema,
@@ -15,6 +15,7 @@ from app.models.schemas import (
     BaseResponse
 )
 from app.api.auth import get_current_user
+from typing import List, Dict, Any
 
 router = APIRouter()
 
@@ -327,5 +328,81 @@ async def get_my_likes(
     ).order_by(Like.created_at.desc()).offset(offset).limit(limit).all()
     
     return likes
+
+
+@router.get("/market-photos/{market_id}")
+async def get_market_photos(
+    market_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+) -> List[Dict[str, Any]]:
+    """
+    시장별 사용자 사진 조회 (다이어리 작성용)
+    
+    특정 시장의 가게들에 속한 사용자 사진을 조회합니다.
+    사진은 menu_item_id가 있는 것만 반환합니다 (메뉴 인식 완료된 것).
+    """
+    try:
+        # 시장 존재 확인
+        market = db.query(Market).filter(Market.id == market_id).first()
+        if not market:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="시장을 찾을 수 없습니다"
+            )
+        
+        # 시장 내 가게들 조회
+        shops = db.query(Shop).filter(Shop.market_id == market_id).all()
+        shop_ids = [shop.id for shop in shops]
+        
+        if not shop_ids:
+            return []
+        
+        # 해당 시장의 가게들에 속한 사용자 사진 조회
+        # menu_item_id가 있는 것만 (메뉴 인식 완료된 것)
+        photos = db.query(Photo).filter(
+            Photo.uploader_user_id == current_user.id,
+            Photo.shop_id.in_(shop_ids),
+            Photo.menu_item_id.isnot(None),
+            Photo.processed == True
+        ).order_by(Photo.taken_at.desc()).all()
+        
+        # CDN URL 생성 헬퍼 함수
+        def s3_key_to_cdn_url(s3_key: str) -> str:
+            if not s3_key:
+                return ""
+            cdn_base_url = "https://dnzeuzpu74ulj.cloudfront.net"
+            if s3_key.startswith('http://') or s3_key.startswith('https://'):
+                return s3_key
+            return f"{cdn_base_url}/{s3_key}"
+        
+        # 메뉴 정보 포함하여 반환
+        result = []
+        for photo in photos:
+            menu_item = db.query(MenuItem).filter(MenuItem.id == photo.menu_item_id).first()
+            if menu_item:
+                # 좋아요 여부 확인
+                like = db.query(Like).filter(
+                    Like.user_id == current_user.id,
+                    Like.menu_item_id == photo.menu_item_id
+                ).first()
+                
+                result.append({
+                    "id": photo.id,
+                    "photo_url": s3_key_to_cdn_url(photo.thumbnail_s3_key or photo.s3_key),
+                    "recognized_menu_name": menu_item.name_en or menu_item.name,
+                    "menu_item_id": photo.menu_item_id,  # 좋아요 API 호출용
+                    "is_liked": like is not None
+                })
+        
+        return result
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"시장별 사진 조회 실패: {str(e)}"
+        )
 
 
