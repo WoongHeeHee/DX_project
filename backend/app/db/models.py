@@ -120,10 +120,10 @@ class MarketInfo(Base):
     restroom_ja = Column(Text, nullable=True)  # 화장실 정보(일본어)
     open_time = Column(String(5), nullable=True)  # 운영 시작 시간 (HH:MM 형식)
     close_time = Column(String(5), nullable=True)  # 운영 종료 시간 (HH:MM 형식)
-    closed_days = Column(String(200), nullable=True)  # 휴무일 (한국어)
-    closed_days_en = Column(String(200), nullable=True)  # 휴무일 (영어)
-    closed_days_zh = Column(String(200), nullable=True)  # 휴무일 (중국어)
-    closed_days_ja = Column(String(200), nullable=True)  # 휴무일 (일본어)
+    closed_days = Column(String(200), nullable=True, name="close_days")  # 휴무일 (한국어) - DB 컬럼명: close_days
+    closed_days_en = Column(String(200), nullable=True, name="close_days_en")  # 휴무일 (영어) - DB 컬럼명: close_days_en
+    closed_days_zh = Column(String(200), nullable=True, name="close_days_zh")  # 휴무일 (중국어) - DB 컬럼명: close_days_zh
+    closed_days_ja = Column(String(200), nullable=True, name="close_days_ja")  # 휴무일 (일본어) - DB 컬럼명: close_days_ja
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
     # 관계
@@ -145,10 +145,10 @@ class Shop(Base):
     rep_image_url = Column(String(500), nullable=True)  # 가게 대표 사진
     open_time = Column(String(5), nullable=True)  # 운영 시작 시간 (HH:MM 형식)
     close_time = Column(String(5), nullable=True)  # 운영 종료 시간 (HH:MM 형식)
-    closed_days = Column(String(200), nullable=True)  # 휴무일 (한국어)
-    closed_days_en = Column(String(200), nullable=True)  # 휴무일 (영어)
-    closed_days_zh = Column(String(200), nullable=True)  # 휴무일 (중국어)
-    closed_days_ja = Column(String(200), nullable=True)  # 휴무일 (일본어)
+    closed_days = Column(String(200), nullable=True, name="close_days")  # 휴무일 (한국어) - DB 컬럼명: close_days
+    closed_days_en = Column(String(200), nullable=True, name="close_days_en")  # 휴무일 (영어) - DB 컬럼명: close_days_en
+    closed_days_zh = Column(String(200), nullable=True, name="close_days_zh")  # 휴무일 (중국어) - DB 컬럼명: close_days_zh
+    closed_days_ja = Column(String(200), nullable=True, name="close_days_ja")  # 휴무일 (일본어) - DB 컬럼명: close_days_ja
     last_reported_open_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
@@ -236,7 +236,7 @@ class Photo(Base):
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     uploader_user_id = Column(String(36), ForeignKey("users.id"), nullable=True)
     shop_id = Column(String(36), ForeignKey("shops.id"), nullable=True)  # 제보/리뷰용 사진의 가게 ID
-    menu_item_id = Column(String(36), ForeignKey("menu_items.id"), nullable=True)  # 음식 메뉴 ID (FK) - 처리 후 설정
+    menu_item_id = Column(String(36), ForeignKey("menu_items.id"), nullable=True, name="menu_items_id")  # 음식 메뉴 ID (FK) - 처리 후 설정 (DB 컬럼명: menu_items_id)
     upload_token = Column(String(255), nullable=True)  # 비회원용 임시 토큰
     s3_key = Column(String(500), nullable=False)
     thumbnail_s3_key = Column(String(500), nullable=True)

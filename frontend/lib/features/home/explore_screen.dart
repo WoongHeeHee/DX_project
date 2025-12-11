@@ -805,7 +805,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                "Now Trend yaho",
+                "Now Trend",
                 style: textTheme.titleMedium?.copyWith(
                   fontSize: responsive.responsiveFontSize(
                     mobileSize: 16,

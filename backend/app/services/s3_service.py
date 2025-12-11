@@ -141,6 +141,18 @@ class S3Service:
             logger.error(f"파일 다운로드 실패: {e}")
             return False
     
+    def download_object_to_bytes(self, s3_key: str) -> Optional[bytes]:
+        """S3 객체를 메모리로 직접 다운로드 (성능 최적화)"""
+        try:
+            response = self.s3_client.get_object(
+                Bucket=self.bucket_name,
+                Key=s3_key
+            )
+            return response['Body'].read()
+        except ClientError as e:
+            logger.error(f"S3 객체 다운로드 실패: {e}")
+            return None
+    
     def delete_object(self, s3_key: str) -> bool:
         """객체 삭제"""
         try:

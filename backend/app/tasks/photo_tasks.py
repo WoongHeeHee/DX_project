@@ -36,15 +36,14 @@ def process_photo(self, photo_id: str):
                 logger.error(f"사진을 찾을 수 없음: {photo_id}")
                 return
             
-            # S3에서 이미지 URL 생성
+            # s3_key를 직접 전달 (성능 최적화: presigned URL 생성 오버헤드 제거)
             s3_service = S3Service()
-            image_url = s3_service.generate_presigned_download_url(photo.s3_key)
             
             # 1. 썸네일 생성
-            thumbnail_task = generate_thumbnails.delay(photo_id, image_url)
+            thumbnail_task = generate_thumbnails.delay(photo_id, photo.s3_key)
             
             # 2. OpenAI 이미지 분석
-            analysis_task = analyze_image_with_openai.delay(photo_id, image_url)
+            analysis_task = analyze_image_with_openai.delay(photo_id, photo.s3_key)
             
             # 작업 완료 대기 (비동기적으로 처리하거나 체인으로 연결 가능)
             logger.info(f"사진 처리 작업 큐에 추가됨: {photo_id}")
@@ -58,17 +57,20 @@ def process_photo(self, photo_id: str):
 
 
 @celery_app.task(bind=True, max_retries=3)
-def generate_thumbnails(self, photo_id: str, image_url: str):
-    """썸네일 생성 작업"""
+def generate_thumbnails(self, photo_id: str, s3_key: str):
+    """썸네일 생성 작업 (성능 최적화: s3_key 직접 사용)"""
     try:
         logger.info(f"썸네일 생성 시작: {photo_id}")
         
-        # 이미지 다운로드
-        response = requests.get(image_url)
-        response.raise_for_status()
+        # S3에서 직접 다운로드 (presigned URL 생성 오버헤드 제거)
+        s3_service = S3Service()
+        image_bytes = s3_service.download_object_to_bytes(s3_key)
+        if not image_bytes:
+            logger.error(f"이미지 다운로드 실패: {photo_id}")
+            raise Exception("이미지 다운로드 실패")
         
         # PIL로 이미지 열기
-        image = Image.open(BytesIO(response.content))
+        image = Image.open(BytesIO(image_bytes))
         
         # 썸네일 크기 설정
         thumbnail_sizes = [(300, 300), (150, 150)]
@@ -119,8 +121,8 @@ def generate_thumbnails(self, photo_id: str, image_url: str):
 
 
 @celery_app.task(bind=True, max_retries=3)
-def analyze_image_with_openai(self, photo_id: str, image_url: str):
-    """OpenAI를 사용한 이미지 분석 (제보용/리뷰용 사진 처리)"""
+def analyze_image_with_openai(self, photo_id: str, s3_key: str):
+    """OpenAI를 사용한 이미지 분석 (제보용/리뷰용 사진 처리, 성능 최적화: s3_key 직접 사용)"""
     try:
         logger.info(f"이미지 분석 시작: {photo_id}")
         
@@ -136,6 +138,10 @@ def analyze_image_with_openai(self, photo_id: str, image_url: str):
             
             # 이미지 처리 서비스 초기화
             image_processor = ImageProcessorService(db)
+            
+            # s3_key를 presigned URL로 변환 (OpenAI Vision API용, 짧은 만료 시간)
+            s3_service = S3Service()
+            image_url = s3_service.generate_presigned_download_url(s3_key, expires_in=300)  # 5분
             
             # 사진 타입에 따라 처리
             if photo.photo_type == 'report':
@@ -178,7 +184,7 @@ def analyze_image_with_openai(self, photo_id: str, image_url: str):
                                 'bbox': [0, 0, 1, 1],
                                 'confidence': 1.0
                             }]
-                            process_cropped_photos.delay(photo_id, image_url, foods)
+                            process_cropped_photos.delay(photo_id, photo.s3_key, foods)
                         else:
                             # 메뉴를 찾을 수 없으면 삭제
                             logger.warning(f"메뉴를 찾을 수 없음: {menu_name}, 사진 삭제")
@@ -199,7 +205,7 @@ def analyze_image_with_openai(self, photo_id: str, image_url: str):
                         db.commit()
                 elif result.get('type') == 'multiple_foods':
                     # 여러 음식: 각 bbox로 크롭해서 저장, 원본 삭제
-                    process_cropped_photos.delay(photo_id, image_url, result.get('foods', []))
+                    process_cropped_photos.delay(photo_id, photo.s3_key, result.get('foods', []))
                     
             elif photo.photo_type == 'review':
                 # 리뷰용 사진 처리
@@ -221,7 +227,7 @@ def analyze_image_with_openai(self, photo_id: str, image_url: str):
                                     'confidence': food.get('confidence', 1.0)
                                 })
                         if processed_foods:
-                            process_cropped_photos.delay(photo_id, image_url, processed_foods)
+                            process_cropped_photos.delay(photo_id, photo.s3_key, processed_foods)
                         else:
                             # 음식을 찾을 수 없으면 삭제
                             logger.warning(f"리뷰 사진에서 음식을 찾을 수 없음, 삭제: {photo_id}")
@@ -341,13 +347,13 @@ def match_with_menu_items(self, photo_id: str, image_url: str, analysis_result: 
 
 
 @celery_app.task(bind=True, max_retries=3)
-def process_cropped_photos(self, photo_id: str, original_image_url: str, foods: List[Dict]):
+def process_cropped_photos(self, photo_id: str, original_s3_key: str, foods: List[Dict]):
     """
-    음식 사진을 crop하여 각각 저장 (원본 삭제)
+    음식 사진을 crop하여 각각 저장 (원본 삭제, 성능 최적화: s3_key 직접 사용)
     
     Args:
         photo_id: 원본 사진 ID
-        original_image_url: 원본 이미지 URL
+        original_s3_key: 원본 사진의 s3_key
         foods: 탐지된 음식 리스트 (bbox 포함, menu 이름 포함)
     """
     try:
@@ -355,7 +361,6 @@ def process_cropped_photos(self, photo_id: str, original_image_url: str, foods: 
         
         from app.db.database import SessionLocal
         from app.db.models import Photo, MenuItem
-        import requests
         from PIL import Image
         from io import BytesIO
         import uuid
@@ -370,10 +375,13 @@ def process_cropped_photos(self, photo_id: str, original_image_url: str, foods: 
                 logger.error(f"원본 사진을 찾을 수 없음: {photo_id}")
                 return
             
-            # 원본 이미지 다운로드
-            response = requests.get(original_image_url)
-            response.raise_for_status()
-            image = Image.open(BytesIO(response.content))
+            # S3에서 직접 다운로드 (presigned URL 생성 오버헤드 제거)
+            image_bytes = s3_service.download_object_to_bytes(original_s3_key)
+            if not image_bytes:
+                logger.error(f"원본 이미지 다운로드 실패: {photo_id}")
+                return
+            
+            image = Image.open(BytesIO(image_bytes))
             image_width, image_height = image.size
             
             # 각 음식에 대해 crop 및 저장

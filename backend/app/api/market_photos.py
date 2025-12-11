@@ -25,12 +25,12 @@ async def get_market_recent_photos(
     db: Session = Depends(get_db)
 ):
     """
-    시장의 최근 사진 조회 (60분 이내)
+    시장의 최근 사진 조회 (모든 사진, taken_at 기준 정렬)
     
     Args:
         market_id: 시장 ID
-        category: 메뉴 카테고리 필터
-        limit: 최대 반환 개수
+        category: 메뉴 카테고리 필터 (Meals, Snacks, Sweets, Drink)
+        limit: 최대 반환 개수 (기본값: 10)
     """
     try:
         # 시장 존재 확인
@@ -40,9 +40,6 @@ async def get_market_recent_photos(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="시장을 찾을 수 없습니다"
             )
-        
-        # 60분 이내 시간 계산
-        time_threshold = datetime.now(timezone.utc) - timedelta(minutes=60)
         
         # 시장 내 가게들 조회
         shops = db.query(Shop).filter(Shop.market_id == market_id).all()
@@ -55,34 +52,38 @@ async def get_market_recent_photos(
                 "total_count": 0
             }
         
-        # 사진 조회 (60분 이내, 해당 시장의 가게들)
-        query = db.query(Photo).filter(
+        # 사진 조회 (해당 시장의 가게들, MenuItem과 조인하여 카테고리 필터링)
+        query = db.query(Photo).join(
+            MenuItem, Photo.menu_item_id == MenuItem.id, isouter=True
+        ).filter(
             Photo.shop_id.in_(shop_ids),
-            Photo.created_at >= time_threshold,
             Photo.processed == True
         )
         
-        # 카테고리 필터링은 클라이언트에서 처리하거나, 
-        # 더 간단하게 모든 사진을 가져온 후 파이썬에서 필터링
-        # (성능 최적화는 나중에 필요시 개선)
+        # 카테고리 필터링
+        if category:
+            query = query.filter(MenuItem.category == category)
         
-        # 최신순 정렬
-        photos = query.order_by(Photo.created_at.desc()).limit(limit).all()
+        # taken_at 기준 내림차순 정렬
+        photos = query.order_by(Photo.taken_at.desc()).limit(limit).all()
         
-        # S3 URL 생성
-        s3_service = S3Service()
+        # s3_key만 반환 (성능 최적화: presigned URL 생성 오버헤드 제거, 프론트엔드에서 CDN URL로 변환)
         photo_list = []
         for photo in photos:
+            # MenuItem 정보 가져오기 (카테고리 포함)
+            menu_item = None
+            if photo.menu_item_id:
+                menu_item = db.query(MenuItem).filter(MenuItem.id == photo.menu_item_id).first()
+            
             photo_dict = {
                 "id": str(photo.id),
                 "s3_key": photo.s3_key,
                 "thumbnail_s3_key": photo.thumbnail_s3_key,
-                "image_url": s3_service.generate_presigned_download_url(photo.s3_key) if photo.s3_key else None,
-                "thumbnail_url": s3_service.generate_presigned_download_url(photo.thumbnail_s3_key) if photo.thumbnail_s3_key else None,
                 "lat": photo.lat,
                 "lng": photo.lng,
                 "taken_at": photo.taken_at,
-                "menu_item_id": str(photo.menu_item_id),
+                "menu_item_id": str(photo.menu_item_id) if photo.menu_item_id else None,
+                "category": menu_item.category if menu_item else None,
                 "created_at": photo.created_at
             }
             photo_list.append(photo_dict)

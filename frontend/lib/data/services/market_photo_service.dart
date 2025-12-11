@@ -6,20 +6,45 @@ class MarketPhotoService {
 
   MarketPhotoService(this._apiService);
 
-  /// 시장 최근 사진 조회 (60분 이내)
+  /// 시장 최근 사진 조회 (모든 사진, taken_at 기준 정렬)
   Future<MarketRecentPhotosResponse> getMarketRecentPhotos({
     required String marketId,
     String? category,
     int limit = 10,
   }) async {
     final queryParams = <String, dynamic>{'limit': limit};
-    if (category != null) queryParams['category'] = category;
+    if (category != null) {
+      // 한국어 카테고리를 영어로 매핑
+      final mappedCategory = _mapCategoryToEnglish(category);
+      if (mappedCategory != null) {
+        queryParams['category'] = mappedCategory;
+      }
+    }
 
     final response = await _apiService.get(
-      '/market-photos/$marketId/recent-photos',
+      '/markets/$marketId/recent-photos',
       queryParameters: queryParams,
     );
     return MarketRecentPhotosResponse.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  /// 한국어 카테고리를 영어로 매핑
+  /// "전체" → null, "식사" → "Meals", "간식" → "Snacks", "디저트" → "Sweets", "음료" → "Drink"
+  String? _mapCategoryToEnglish(String koreanCategory) {
+    switch (koreanCategory) {
+      case "전체":
+        return null;
+      case "식사":
+        return "Meals";
+      case "간식":
+        return "Snacks";
+      case "디저트":
+        return "Sweets";
+      case "음료":
+        return "Drink";
+      default:
+        return null;
+    }
   }
 
   /// 시장 베스트셀링 메뉴 조회
@@ -28,7 +53,7 @@ class MarketPhotoService {
     int limit = 3,
   }) async {
     final response = await _apiService.get(
-      '/market-photos/$marketId/bestselling',
+      '/markets/$marketId/bestselling',
       queryParameters: {'limit': limit},
     );
     return (response.data as List)
@@ -42,7 +67,7 @@ class MarketPhotoService {
     String locale = 'ko',
   }) async {
     final response = await _apiService.get(
-      '/market-photos/$marketId/shops/status',
+      '/markets/$marketId/shops/status',
       queryParameters: {'locale': locale},
     );
     return MarketShopsStatusResponse.fromJson(response.data as Map<String, dynamic>);
@@ -54,7 +79,7 @@ class MarketPhotoService {
     int limit = 10,
   }) async {
     final response = await _apiService.get(
-      '/market-photos/$marketId/photos/locations',
+      '/markets/$marketId/photos/locations',
       queryParameters: {'limit': limit},
     );
     return MarketPhotoLocationsResponse.fromJson(response.data as Map<String, dynamic>);
@@ -90,27 +115,23 @@ class MarketPhoto {
   final String id;
   final String s3Key;
   final String? thumbnailS3Key;
-  final String? imageUrl;
-  final String? thumbnailUrl;
   final double lat;
   final double lng;
   final DateTime takenAt;
   final String? menuItemId;
+  final String? category;
   final DateTime createdAt;
-  final int minutesAgo;
 
   MarketPhoto({
     required this.id,
     required this.s3Key,
     this.thumbnailS3Key,
-    this.imageUrl,
-    this.thumbnailUrl,
     required this.lat,
     required this.lng,
     required this.takenAt,
     this.menuItemId,
+    this.category,
     required this.createdAt,
-    required this.minutesAgo,
   });
 
   factory MarketPhoto.fromJson(Map<String, dynamic> json) {
@@ -118,14 +139,12 @@ class MarketPhoto {
       id: json['id'] as String,
       s3Key: json['s3_key'] as String,
       thumbnailS3Key: json['thumbnail_s3_key'] as String?,
-      imageUrl: json['image_url'] as String?,
-      thumbnailUrl: json['thumbnail_url'] as String?,
       lat: (json['lat'] as num).toDouble(),
       lng: (json['lng'] as num).toDouble(),
       takenAt: DateTime.parse(json['taken_at'] as String),
       menuItemId: json['menu_item_id'] as String?,
+      category: json['category'] as String?,
       createdAt: DateTime.parse(json['created_at'] as String),
-      minutesAgo: json['minutes_ago'] as int? ?? 0,
     );
   }
 }
