@@ -23,8 +23,10 @@ class ShopService {
           'limit': limit,
         },
       );
-      final List<dynamic> data = response.data as List<dynamic>;
-      return data.map((json) => ShopModel.fromJson(json)).toList();
+      // NearbyShopsResponse 형식: { success: bool, shops: List, total_count: int }
+      final responseData = response.data as Map<String, dynamic>;
+      final List<dynamic> shopsData = responseData['shops'] as List<dynamic>? ?? [];
+      return shopsData.map((json) => ShopModel.fromJson(json)).toList();
     } catch (e) {
       rethrow;
     }

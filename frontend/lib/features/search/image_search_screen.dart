@@ -2,6 +2,7 @@
 
 import "package:flutter/material.dart";
 import "package:flutter/foundation.dart";
+import "package:flutter/services.dart";
 import "package:go_router/go_router.dart";
 import "package:image_picker/image_picker.dart";
 import "../../core/widgets/responsive_helper.dart";
@@ -31,6 +32,7 @@ class _ImageSearchScreenState extends State<ImageSearchScreen> {
   final FocusNode _focusNode = FocusNode();
   double _keyboardHeight = 0;
   bool _isLoading = false;
+  bool _isPickingImage = false; // 이미지 선택 중 상태
 
   @override
   void initState() {
@@ -50,15 +52,82 @@ class _ImageSearchScreenState extends State<ImageSearchScreen> {
   }
 
   Future<void> _pickImage(ImageSource source) async {
+    if (_isPickingImage) return; // 이미 선택 중이면 중복 호출 방지
+    
+    setState(() {
+      _isPickingImage = true;
+    });
+
     try {
-      final XFile? image = await _picker.pickImage(source: source);
-      if (image != null) {
+      // 카메라인 경우 권한 확인 (웹에서는 자동으로 처리됨)
+      if (source == ImageSource.camera) {
+        // ImagePicker가 자동으로 권한을 요청하지만, 에러 처리를 위해 try-catch 사용
+        debugPrint("카메라 촬영 시작");
+      }
+
+      final XFile? image = await _picker.pickImage(
+        source: source,
+        imageQuality: 85, // 이미지 품질 설정
+      );
+      
+      if (image != null && mounted) {
         setState(() {
           _selectedImage = image;
+          _isPickingImage = false;
         });
+        debugPrint("이미지 선택 완료: ${image.path}");
+      } else if (source == ImageSource.camera && image == null) {
+        // 카메라에서 취소한 경우 사용자에게 알림 (선택사항 - 취소는 정상 동작)
+        if (mounted) {
+          setState(() {
+            _isPickingImage = false;
+          });
+        }
+      } else {
+        if (mounted) {
+          setState(() {
+            _isPickingImage = false;
+          });
+        }
       }
+    } on PlatformException catch (e) {
+      // 플랫폼별 에러 처리
+      String errorMessage = '이미지를 선택할 수 없습니다.';
+      if (e.code == 'camera_access_denied') {
+        errorMessage = '카메라 권한이 필요합니다. 설정에서 권한을 허용해주세요.';
+      } else if (e.code == 'photo_access_denied') {
+        errorMessage = '갤러리 권한이 필요합니다. 설정에서 권한을 허용해주세요.';
+      } else if (e.message != null) {
+        errorMessage = e.message!;
+      }
+      
+      if (mounted) {
+        setState(() {
+          _isPickingImage = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorMessage),
+            duration: const Duration(seconds: 3),
+            backgroundColor: AppColors.primary,
+          ),
+        );
+      }
+      debugPrint("이미지 선택 에러: $e");
     } catch (e) {
       debugPrint("이미지 선택 에러: $e");
+      if (mounted) {
+        setState(() {
+          _isPickingImage = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('이미지를 선택할 수 없습니다: ${e.toString()}'),
+            duration: const Duration(seconds: 3),
+            backgroundColor: AppColors.primary,
+          ),
+        );
+      }
     }
   }
 

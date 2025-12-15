@@ -207,8 +207,8 @@ class _MarketHistoryScreenState extends State<MarketHistoryScreen> {
                   child: Column(
                     children: [
                       Container(
-                        width: 100,
-                        height: 100,
+                        width: responsive.responsiveIconSize(mobileSize: 100),
+                        height: responsive.responsiveIconSize(mobileSize: 100),
                         decoration: BoxDecoration(
                           color: const Color(0xFFF3EEF3),
                           shape: BoxShape.circle,

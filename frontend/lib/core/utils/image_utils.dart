@@ -17,13 +17,21 @@ class ImageUtils {
       return '';
     }
     
-    // s3_key가 이미 전체 URL인 경우 그대로 반환
-    if (s3Key.startsWith('http://') || s3Key.startsWith('https://')) {
-      return s3Key;
+    final trimmed = s3Key.trim();
+    if (trimmed.isEmpty) {
+      return '';
     }
     
+    // s3_key가 이미 전체 URL인 경우 그대로 반환
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+      return trimmed;
+    }
+    
+    // 앞의 슬래시 제거 (중복 방지)
+    final cleanKey = trimmed.startsWith('/') ? trimmed.substring(1) : trimmed;
+    
     // s3_key를 CDN URL로 변환
-    return '$cdnBaseUrl/$s3Key';
+    return '$cdnBaseUrl/$cleanKey';
   }
 
   /// 썸네일 s3_key를 CDN URL로 변환

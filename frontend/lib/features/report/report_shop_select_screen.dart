@@ -3,6 +3,8 @@ import "package:go_router/go_router.dart";
 import "../../core/widgets/responsive_helper.dart";
 import "../../core/widgets/responsive_padding.dart";
 import "../../core/theme/app_colors.dart";
+import "../../data/repositories/api_repository.dart";
+import "../../models/shop_model.dart";
 
 class ReportShopSelectScreen extends StatefulWidget {
   const ReportShopSelectScreen({super.key});
@@ -13,25 +15,62 @@ class ReportShopSelectScreen extends StatefulWidget {
 
 class _ReportShopSelectScreenState extends State<ReportShopSelectScreen> {
   String? _selectedShopId;
+  List<ShopModel> _shops = [];
+  bool _isLoading = true;
+  String? _errorMessage;
+  final _apiRepository = ApiRepository();
 
-  // 더미 데이터 (나중에 DB에서 가져올 데이터)
-  final List<Map<String, String>> _dummyShops = [
-    {
-      "id": "1",
-      "name": "더미 가게 1",
-      "address": "서울시 강남구 테헤란로 123",
-    },
-    {
-      "id": "2",
-      "name": "더미 가게 2",
-      "address": "서울시 강남구 테헤란로 456",
-    },
-    {
-      "id": "3",
-      "name": "더미 가게 3",
-      "address": "서울시 강남구 테헤란로 789",
-    },
-  ];
+  bool _hasLoaded = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_hasLoaded) {
+      _hasLoaded = true;
+      _loadNearbyShops();
+    }
+  }
+
+  Future<void> _loadNearbyShops() async {
+    // extra에서 lat, lng 가져오기
+    final state = GoRouterState.of(context);
+    final extra = state.extra as Map<String, dynamic>?;
+    if (extra == null || !extra.containsKey('lat') || !extra.containsKey('lng')) {
+      setState(() {
+        _isLoading = false;
+        _errorMessage = '위치 정보가 없습니다.';
+      });
+      return;
+    }
+
+    final lat = extra['lat'] as double;
+    final lng = extra['lng'] as double;
+
+    try {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+
+      // 가까운 가게 3개 조회 (반경 1000m 내)
+      final shops = await _apiRepository.shopService.getNearbyShops(
+        lat: lat,
+        lng: lng,
+        radiusMeters: 1000.0,
+        limit: 3,
+      );
+
+      setState(() {
+        _shops = shops;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+        _errorMessage = '가게 정보를 불러오는데 실패했습니다: $e';
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -88,9 +127,59 @@ class _ReportShopSelectScreenState extends State<ReportShopSelectScreen> {
     ResponsiveHelper responsive,
     TextTheme textTheme,
   ) {
+    if (_isLoading) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(40.0),
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    if (_errorMessage != null) {
+      return Center(
+        child: Padding(
+          padding: EdgeInsets.all(responsive.responsivePadding(mobilePadding: 40)),
+          child: Column(
+            children: [
+              Text(
+                _errorMessage!,
+                style: textTheme.bodyMedium?.copyWith(
+                  color: AppColors.inactiveText,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(
+                height: responsive.responsivePadding(mobilePadding: 16),
+              ),
+              ElevatedButton(
+                onPressed: _loadNearbyShops,
+                child: const Text('다시 시도'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (_shops.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: EdgeInsets.all(responsive.responsivePadding(mobilePadding: 40)),
+          child: Text(
+            '주변에 가게가 없습니다.',
+            style: textTheme.bodyMedium?.copyWith(
+              color: AppColors.inactiveText,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ),
+      );
+    }
+
     return Column(
-      children: _dummyShops.map((shop) {
-        final isSelected = _selectedShopId == shop["id"];
+      children: _shops.map((shop) {
+        final isSelected = _selectedShopId == shop.id;
         return Padding(
           padding: EdgeInsets.only(
             bottom: responsive.responsivePadding(mobilePadding: 10),
@@ -98,7 +187,7 @@ class _ReportShopSelectScreenState extends State<ReportShopSelectScreen> {
           child: GestureDetector(
             onTap: () {
               setState(() {
-                _selectedShopId = shop["id"];
+                _selectedShopId = shop.id;
               });
             },
             child: Container(
@@ -123,19 +212,19 @@ class _ReportShopSelectScreenState extends State<ReportShopSelectScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    shop["name"] ?? "",
+                    shop.name,
                     style: textTheme.titleMedium?.copyWith(
                       fontSize: responsive.responsiveFontSize(mobileSize: 16),
                       fontWeight: FontWeight.w600,
                       color: AppColors.mainText,
                     ),
                   ),
-                  if (shop["address"] != null) ...[
+                  if (shop.address != null && shop.address!.isNotEmpty) ...[
                     SizedBox(
                       height: responsive.responsivePadding(mobilePadding: 4),
                     ),
                     Text(
-                      shop["address"]!,
+                      shop.address!,
                       style: textTheme.bodyMedium?.copyWith(
                         fontSize: responsive.responsiveFontSize(mobileSize: 13),
                         fontWeight: FontWeight.w400,

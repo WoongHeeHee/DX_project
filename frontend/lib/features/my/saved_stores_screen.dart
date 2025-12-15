@@ -290,10 +290,10 @@ class _SavedStoresScreenState extends State<SavedStoresScreen> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 이미지 영역 (단일 이미지, 110x110)
+          // 이미지 영역 (반응형 크기)
           Container(
-            width: 110,
-            height: 110,
+            width: responsive.responsiveIconSize(mobileSize: 110),
+            height: responsive.responsiveIconSize(mobileSize: 110),
             decoration: BoxDecoration(
               color: const Color(0xFFF3EEF3),
               borderRadius: BorderRadius.circular(6),
@@ -319,7 +319,7 @@ class _SavedStoresScreenState extends State<SavedStoresScreen> {
           // 정보 영역
           Expanded(
             child: SizedBox(
-              height: 110, // 이미지 높이와 동일
+              height: responsive.responsiveIconSize(mobileSize: 110), // 이미지 높이와 동일
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,

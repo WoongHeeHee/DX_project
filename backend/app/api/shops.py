@@ -2,10 +2,10 @@
 가게 관련 API 엔드포인트
 """
 
-from typing import List
+from typing import List, Optional
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import and_
 
@@ -94,88 +94,123 @@ async def get_nearby_shops(
 async def get_my_pinned_shops(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-    market_id: str = None,
-    limit: int = 20,
-    offset: int = 0
+    market_id: Optional[str] = Query(None, description="시장 ID로 필터링"),
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0)
 ):
     """내가 핀한 가게 목록 조회 (Shop 정보 및 영업 상태 포함)"""
-    from sqlalchemy.orm import joinedload
-    from app.api.market_photos import calculate_shop_status
-    
-    query = db.query(ShopPin).options(joinedload(ShopPin.shop)).filter(
-        ShopPin.user_id == current_user.id
-    )
-    
-    # 시장별 필터링 (선택사항)
-    if market_id:
-        query = query.join(Shop).filter(Shop.market_id == market_id)
-    
-    shop_pins = query.order_by(ShopPin.created_at.desc()).offset(offset).limit(limit).all()
-    
-    # 현재 시간 (한국 시간대 기준)
-    korea_tz = ZoneInfo("Asia/Seoul")
-    current_time = datetime.now(korea_tz)
-    current_hour = current_time.hour
-    current_minute = current_time.minute
-    current_time_minutes = current_hour * 60 + current_minute
-    
-    # CDN URL 생성 헬퍼 함수
-    def s3_key_to_cdn_url(s3_key: str) -> str:
-        """S3 key를 CDN URL로 변환"""
-        if not s3_key:
-            return ""
-        cdn_base_url = "https://dnzeuzpu74ulj.cloudfront.net"
-        if s3_key.startswith('http://') or s3_key.startswith('https://'):
-            return s3_key
-        return f"{cdn_base_url}/{s3_key}"
-    
-    # Shop 정보를 포함한 응답 생성
-    result = []
-    for shop_pin in shop_pins:
-        shop = shop_pin.shop
-        if not shop:
-            continue  # Shop이 없으면 스킵
+    try:
+        from sqlalchemy.orm import joinedload
+        from app.api.market_photos import calculate_shop_status
         
-        # 영업 상태 계산
-        status_color = calculate_shop_status(shop, current_time, current_time_minutes, db)
+        print(f"[get_my_pinned_shops] user_id: {current_user.id}, market_id: {market_id}")
         
-        # 가게 이미지 조회 (해당 가게의 모든 사진, 최대 3개)
-        from app.db.models import Photo
-        photos = db.query(Photo).filter(
-            Photo.shop_id == shop.id,
-            Photo.processed == True
-        ).order_by(Photo.taken_at.desc()).limit(3).all()
+        query = db.query(ShopPin).options(joinedload(ShopPin.shop)).filter(
+            ShopPin.user_id == current_user.id
+        )
         
-        image_urls = []
-        if photos:
-            for photo in photos:
-                image_url = s3_key_to_cdn_url(photo.thumbnail_s3_key or photo.s3_key)
-                image_urls.append(image_url)
-        else:
-            # 이미지가 없으면 대표 이미지 사용
-            if shop.rep_image_url:
-                image_urls.append(s3_key_to_cdn_url(shop.rep_image_url))
+        # 시장별 필터링 (선택사항)
+        if market_id:
+            query = query.join(Shop).filter(Shop.market_id == market_id)
+            print(f"[get_my_pinned_shops] market_id 필터링 적용: {market_id}")
         
-        shop_dict = {
-            "id": str(shop.id),
-            "name": shop.name,
-            "name_en": shop.name_en,
-            "name_zh": shop.name_zh,
-            "name_ja": shop.name_ja,
-            "lat": shop.lat,
-            "lng": shop.lng,
-            "address": None,  # Shop 모델에 address 필드가 없음
-            "rep_image_url": shop.rep_image_url,
-            "open_time": shop.open_time,
-            "close_time": shop.close_time,
-            "closed_days": shop.closed_days,
-            "average_price": None,  # Shop 모델에 average_price 필드가 없음
-            "status": status_color,  # "green", "yellow", "red"
-            "image_urls": image_urls,  # 실시간 사진 URL 리스트 (최대 3개)
-        }
-        result.append(shop_dict)
-    
-    return result
+        shop_pins = query.order_by(ShopPin.created_at.desc()).offset(offset).limit(limit).all()
+        
+        print(f"[get_my_pinned_shops] found {len(shop_pins)} shop_pins")
+        
+        # 각 shop_pin의 shop 정보 로깅
+        for i, shop_pin in enumerate(shop_pins):
+            shop = shop_pin.shop
+            if shop:
+                print(f"[get_my_pinned_shops] shop_pin[{i}]: shop_id={shop.id}, shop_name={shop.name}, shop.market_id={shop.market_id}")
+            else:
+                print(f"[get_my_pinned_shops] shop_pin[{i}]: shop이 None임")
+        
+        # 현재 시간 (한국 시간대 기준)
+        korea_tz = ZoneInfo("Asia/Seoul")
+        current_time = datetime.now(korea_tz)
+        current_hour = current_time.hour
+        current_minute = current_time.minute
+        current_time_minutes = current_hour * 60 + current_minute
+        
+        # CDN URL 생성 헬퍼 함수
+        def s3_key_to_cdn_url(s3_key: str) -> str:
+            """S3 key를 CDN URL로 변환"""
+            if not s3_key:
+                return ""
+            cdn_base_url = "https://dnzeuzpu74ulj.cloudfront.net"
+            if s3_key.startswith('http://') or s3_key.startswith('https://'):
+                return s3_key
+            return f"{cdn_base_url}/{s3_key}"
+        
+        # Shop 정보를 포함한 응답 생성
+        result = []
+        for shop_pin in shop_pins:
+            shop = shop_pin.shop
+            if not shop:
+                print(f"[get_my_pinned_shops] shop_pin.id={shop_pin.id}에 shop이 없음, 스킵")
+                continue  # Shop이 없으면 스킵
+            
+            try:
+                # 영업 상태 계산
+                status_color = calculate_shop_status(shop, current_time, current_time_minutes, db)
+                
+                # 가게 이미지 조회 (해당 가게의 모든 사진, 최대 3개)
+                from app.db.models import Photo
+                photos = db.query(Photo).filter(
+                    Photo.shop_id == shop.id,
+                    Photo.processed == True
+                ).order_by(Photo.taken_at.desc()).limit(3).all()
+                
+                image_urls = []
+                if photos:
+                    for photo in photos:
+                        image_url = s3_key_to_cdn_url(photo.thumbnail_s3_key or photo.s3_key)
+                        image_urls.append(image_url)
+                else:
+                    # 이미지가 없으면 대표 이미지 사용
+                    if shop.rep_image_url:
+                        image_urls.append(s3_key_to_cdn_url(shop.rep_image_url))
+                
+                shop_dict = {
+                    "id": str(shop.id),
+                    "name": shop.name,
+                    "name_en": shop.name_en,
+                    "name_zh": shop.name_zh,
+                    "name_ja": shop.name_ja,
+                    "market_id": str(shop.market_id),  # market_id 추가
+                    "lat": shop.lat,
+                    "lng": shop.lng,
+                    "address": None,  # Shop 모델에 address 필드가 없음
+                    "rep_image_url": shop.rep_image_url,
+                    "open_time": shop.open_time,
+                    "close_time": shop.close_time,
+                    "closed_days": shop.closed_days,
+                    "average_price": None,  # Shop 모델에 average_price 필드가 없음
+                    "status": status_color,  # "green", "yellow", "red"
+                    "image_urls": image_urls,  # 실시간 사진 URL 리스트 (최대 3개)
+                }
+                print(f"[get_my_pinned_shops] shop_dict 추가: id={shop_dict['id']}, name={shop_dict['name']}, market_id={shop_dict['market_id']}, image_urls 개수={len(image_urls)}")
+                result.append(shop_dict)
+            except Exception as e:
+                print(f"[get_my_pinned_shops] shop.id={shop.id} 처리 중 에러: {str(e)}")
+                import traceback
+                print(traceback.format_exc())
+                # 개별 shop 처리 에러는 무시하고 계속 진행
+                continue
+        
+        print(f"[get_my_pinned_shops] 최종 결과: {len(result)}개 shop 반환")
+        return result
+        
+    except Exception as e:
+        import traceback
+        error_traceback = traceback.format_exc()
+        print(f"[get_my_pinned_shops] 에러 발생: {str(e)}")
+        print(f"[get_my_pinned_shops] 스택 트레이스:\n{error_traceback}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"핀한 가게 목록 조회 실패: {str(e)}"
+        )
 
 
 @router.get("/", response_model=List[ShopSchema])

@@ -4,7 +4,6 @@ import "package:flutter/material.dart";
 import "../../../core/widgets/responsive_helper.dart";
 import "../../../core/theme/app_colors.dart";
 import "../../../core/utils/time_utils.dart";
-import "../../../core/utils/image_utils.dart";
 import "../../../data/repositories/api_repository.dart";
 import "../../../data/services/market_photo_service.dart";
 
@@ -58,30 +57,81 @@ class _FeedImageSliderState extends State<FeedImageSlider> {
     });
 
     try {
+      debugPrint("[FeedImageSlider] 사진 로드 시작: marketId=${widget.marketId}, filter=${widget.selectedFilter}");
+      
+      // 필터 값을 API 카테고리로 변환
+      String? category;
+      if (widget.selectedFilter != '전체') {
+        final filterMap = {
+          '식사': 'Meals',
+          '간식': 'Snacks',
+          '디저트': 'Sweets',
+          '음료': 'Drink',
+        };
+        category = filterMap[widget.selectedFilter];
+      }
+      
+      debugPrint("[FeedImageSlider] 변환된 category: $category");
       final response = await _apiRepository.marketPhotoService.getMarketRecentPhotos(
         marketId: widget.marketId,
-        category: widget.selectedFilter,
+        category: category,
         limit: 10,
       );
+
+      debugPrint("[FeedImageSlider] API 응답: photos 개수 = ${response.photos.length}");
+      if (response.photos.isNotEmpty) {
+        for (int i = 0; i < response.photos.length && i < 3; i++) {
+          final photo = response.photos[i];
+          final s3Key = photo.thumbnailS3Key ?? photo.s3Key;
+          final imageUrl = _s3KeyToCdnUrl(s3Key);
+          debugPrint("[FeedImageSlider] Photo[$i]: id=${photo.id}, s3Key='${photo.s3Key}', thumbnailS3Key='${photo.thumbnailS3Key}', finalUrl='$imageUrl'");
+        }
+      }
 
       if (mounted) {
         setState(() {
           _photos = response.photos;
           _isLoading = false;
         });
-        // 초기 사진 선택 알림
-        if (_photos.isNotEmpty && widget.onPhotoChanged != null) {
-          widget.onPhotoChanged!(_photos[0]);
-        }
+        // 다음 프레임에서 콜백 호출 (위젯 렌더링 완료 후)
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && _photos.isNotEmpty && widget.onPhotoChanged != null) {
+            widget.onPhotoChanged!(_photos[0]);
+          }
+        });
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       debugPrint("사진 로드 실패: $e");
+      debugPrint("스택 트레이스: $stackTrace");
       if (mounted) {
         setState(() {
           _isLoading = false;
         });
       }
     }
+  }
+
+  /// s3_key를 CDN URL로 변환 (explore_screen.dart의 _placeholderImage 방식 활용)
+  String _s3KeyToCdnUrl(String? s3Key) {
+    if (s3Key == null || s3Key.isEmpty) {
+      return '';
+    }
+    
+    final trimmed = s3Key.trim();
+    if (trimmed.isEmpty || trimmed.toLowerCase() == 'null') {
+      return '';
+    }
+    
+    // 이미 전체 URL인 경우 그대로 반환
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+      return trimmed;
+    }
+    
+    // 앞의 슬래시 제거 (중복 방지)
+    final cleanKey = trimmed.startsWith('/') ? trimmed.substring(1) : trimmed;
+    
+    // explore_screen.dart의 _placeholderImage 방식: 직접 CDN URL 구성
+    return "https://dnzeuzpu74ulj.cloudfront.net/$cleanKey";
   }
 
   @override
@@ -134,10 +184,17 @@ class _FeedImageSliderState extends State<FeedImageSlider> {
           final photo = _photos[index];
           final timeText = TimeUtils.formatTimeAgo(photo.takenAt);
 
-          // s3_key를 CDN URL로 변환 (성능 최적화)
-          final imageUrl = ImageUtils.s3KeyToCdnUrl(
-            photo.thumbnailS3Key ?? photo.s3Key,
-          );
+          // s3_key를 CDN URL로 변환 (explore_screen.dart의 _placeholderImage 방식 활용)
+          final s3Key = photo.thumbnailS3Key ?? photo.s3Key;
+          final imageUrl = _s3KeyToCdnUrl(s3Key);
+          
+          // 디버깅: s3_key 값 확인
+          debugPrint("[FeedImageSlider] Photo[$index]: id=${photo.id}, thumbnailS3Key='${photo.thumbnailS3Key}', s3Key='${photo.s3Key}', finalUrl='$imageUrl'");
+          
+          // 빈 URL 체크
+          if (imageUrl.isEmpty) {
+            debugPrint("[FeedImageSlider] 경고: 빈 imageUrl (photo.id: ${photo.id}, thumbnailS3Key: '${photo.thumbnailS3Key}', s3Key: '${photo.s3Key}')");
+          }
 
           return Padding(
             padding: EdgeInsets.only(
@@ -147,6 +204,7 @@ class _FeedImageSliderState extends State<FeedImageSlider> {
             child: _FeedImage(
               imageUrl: imageUrl,
               timeText: timeText,
+              photoId: photo.id,
             ),
           );
         },
@@ -158,15 +216,34 @@ class _FeedImageSliderState extends State<FeedImageSlider> {
 class _FeedImage extends StatelessWidget {
   final String imageUrl;
   final String timeText;
+  final String photoId;
 
   const _FeedImage({
     required this.imageUrl,
     required this.timeText,
+    required this.photoId,
   });
 
   @override
   Widget build(BuildContext context) {
     final responsive = context.responsive;
+
+    // 빈 URL일 경우 placeholder 표시
+    if (imageUrl.isEmpty) {
+      return Container(
+        decoration: BoxDecoration(
+          color: const Color(0xFFF3EEF3),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Center(
+          child: Icon(
+            Icons.image_not_supported,
+            color: AppColors.subText.withOpacity(0.5),
+            size: 48,
+          ),
+        ),
+      );
+    }
 
     return Container(
       decoration: BoxDecoration(
@@ -182,8 +259,33 @@ class _FeedImage extends StatelessWidget {
               width: double.infinity,
               height: double.infinity,
               fit: BoxFit.cover,
+              loadingBuilder: (context, child, loadingProgress) {
+                if (loadingProgress == null) return child;
+                return Container(
+                  color: const Color(0xFFF3EEF3),
+                  child: Center(
+                    child: CircularProgressIndicator(
+                      value: loadingProgress.expectedTotalBytes != null
+                          ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
+                          : null,
+                      strokeWidth: 2,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                );
+              },
               errorBuilder: (context, error, stackTrace) {
-                return Container(color: const Color(0xFFF3EEF3));
+                debugPrint("[FeedImageSlider] 이미지 로드 실패: photoId=$photoId, error=$error, URL=$imageUrl");
+                return Container(
+                  color: const Color(0xFFF3EEF3),
+                  child: Center(
+                    child: Icon(
+                      Icons.error_outline,
+                      color: AppColors.subText.withOpacity(0.5),
+                      size: 48,
+                    ),
+                  ),
+                );
               },
             ),
           ),

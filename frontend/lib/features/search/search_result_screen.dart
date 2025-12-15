@@ -9,6 +9,7 @@ import "../../core/widgets/loading_overlay.dart";
 import "../../data/repositories/api_repository.dart";
 import "models/search_result_model.dart";
 import "package:image_picker/image_picker.dart";
+import "../home/models/market_model.dart";
 
 class SearchResultScreen extends StatefulWidget {
   final SearchResultModel result;
@@ -338,22 +339,35 @@ class _SearchResultScreenState extends State<SearchResultScreen> {
     ResponsiveHelper responsive,
     TextTheme textTheme,
   ) {
-    // 서버에서 제공될 시장명과 메뉴명을 사용
-    // 일단 더미 데이터로 표시
-    final marketName = widget.result.nearestMarketName ?? "광장시장";
+    // LG DX 시장으로 고정
+    const marketName = "LG DX 시장";
     final menuName = widget.result.menuName;
 
     return GestureDetector(
       onTap: () {
-        // TODO: 서버에서 가장 가까운 시장 정보를 가져와서
-        // 시장 상세 페이지로 이동하는 로직
-        debugPrint("가장 가까운 시장: $marketName, 메뉴: $menuName");
-        // Navigator.push(
-        //   context,
-        //   MaterialPageRoute(
-        //     builder: (context) => MarketDetailScreen(market: market),
-        //   ),
-        // );
+        // LG DX 시장 MarketModel 생성
+        final lgDxMarket = MarketModel(
+          id: "MA0000",
+          name: marketName,
+          description: "LG DX 시장입니다.",
+          imageUrls: [],
+          mustTryItems: [],
+          address: "",
+          operatingHours: "",
+          transportation: "",
+          parking: "",
+          restroom: "",
+          mapImageUrl: "",
+        );
+
+        // 가게 리스트 화면으로 이동
+        context.push(
+          '/map/market/MA0000/store-list',
+          extra: {
+            'market': lgDxMarket,
+            'menuName': menuName,
+          },
+        );
       },
       child: Container(
         width: double.infinity,

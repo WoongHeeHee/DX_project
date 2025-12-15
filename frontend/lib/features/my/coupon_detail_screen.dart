@@ -10,7 +10,7 @@ class CouponDetailScreen extends StatelessWidget {
 
   const CouponDetailScreen({
     super.key,
-    this.couponCode = "임시값",
+    this.couponCode = "dnzeuzpu74ulj",
   });
 
   @override

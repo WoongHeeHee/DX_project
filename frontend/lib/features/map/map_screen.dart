@@ -49,12 +49,18 @@ class _MapScreenState extends State<MapScreen> {
     try {
       final locale = await _apiRepository.userService.getLocale();
       final markets = await _apiRepository.marketService.getMarkets();
-      // 서울 4개 시장만 표시
-      final allowedNames = {'광장시장', '망원시장', '통인시장', '서울풍물시장'};
+      // 서울 5개 시장만 표시 (market_id 또는 이름으로 필터링)
+      final allowedMarketIds = {'MA0001', 'MA0002', 'MA0003', 'MA0004', 'MA0000'}; // 광장시장, 망원시장, 통인시장, 서울풍물시장, DX시장
+      final allowedNames = {'광장시장', '망원시장', '통인시장', '서울풍물시장', 'DX시장', 'DX 시장'}; // 이름 변형 고려
       final filtered = markets.where((m) {
         final name = m.getNameByLocale(locale);
-        return allowedNames.contains(name);
+        return allowedMarketIds.contains(m.id) || allowedNames.contains(name);
       }).toList();
+      
+      debugPrint("[_loadMarkets] 전체 시장 개수: ${markets.length}, 필터링된 시장 개수: ${filtered.length}");
+      for (final market in filtered) {
+        debugPrint("[_loadMarkets] 시장: id=${market.id}, name=${market.getNameByLocale(locale)}");
+      }
       
       // 시장 상태 조회
       final marketsWithStatus = <MapMarketData>[];
@@ -71,18 +77,25 @@ class _MapScreenState extends State<MapScreen> {
           final marketName = market.getNameByLocale(locale);
           final marketImageUrl = _marketPlaceholder(marketName, market.id, variant: 1);
           
-          // 시장 정보 조회 (주소 등) - 별도 에러 처리
+          // 시장 정보 조회 (주소 등) - marketInfo에서 주소 가져오기
           String marketAddress = '';
           try {
             final marketInfo = await _apiRepository.marketService.getMarketInfo(market.id);
-            marketAddress = marketInfo.getAddressByLocale(locale) ?? '';
-            debugPrint("시장 주소 조회 성공: $marketName - $marketAddress");
+            final addressResult = marketInfo.getAddressByLocale(locale);
+            marketAddress = addressResult?.trim() ?? '';
+            debugPrint("[주소 조회] $marketName (${market.id}) - marketInfo 주소값: '$addressResult', 최종주소: '$marketAddress'");
             if (marketAddress.isEmpty) {
-              debugPrint("경고: 시장 주소가 비어있음 (market_id: ${market.id})");
+              debugPrint("[경고] 시장 주소가 비어있음: $marketName (market_id: ${market.id})");
+              debugPrint("[경고] marketInfo 데이터 - address: '${marketInfo.address}', addressEn: '${marketInfo.addressEn}', locale: '$locale'");
             }
           } catch (e) {
-            debugPrint("시장 정보 조회 실패: $marketName (market_id: ${market.id}) - $e");
+            debugPrint("[에러] 시장 정보 조회 실패: $marketName (market_id: ${market.id}) - $e");
             // market_info가 없을 수 있으므로 에러를 무시하고 계속 진행
+          }
+          
+          // 주소가 여전히 비어있으면 경고
+          if (marketAddress.isEmpty) {
+            debugPrint("[최종 경고] MapMarketData에 저장될 주소가 비어있음: $marketName (${market.id})");
           }
           
           // 키워드 조회 (top 2개만)
@@ -94,14 +107,14 @@ class _MapScreenState extends State<MapScreen> {
             debugPrint("키워드 조회 실패: $e");
           }
           
-          // 키워드가 2개 미만이면 placeholder 키워드로 채우기
+          // 키워드가 2개 미만이면 시장별로 랜덤한 placeholder 키워드로 채우기
           if (topKeywords.length < 2) {
-            final placeholderKeywords = _getPlaceholderKeywords();
-            final needed = 2 - topKeywords.length;
-            for (int i = 0; i < needed && i < placeholderKeywords.length; i++) {
+            final randomKeywords = _getRandomKeywords(market.id, 10); // 충분히 많은 키워드 가져오기
+            for (final keyword in randomKeywords) {
               // 이미 있는 키워드와 중복되지 않는 것만 추가
-              if (!topKeywords.contains(placeholderKeywords[i])) {
-                topKeywords.add(placeholderKeywords[i]);
+              if (!topKeywords.contains(keyword)) {
+                topKeywords.add(keyword);
+                if (topKeywords.length >= 2) break;
               }
             }
           }
@@ -123,18 +136,19 @@ class _MapScreenState extends State<MapScreen> {
           final marketName = market.getNameByLocale(locale);
           final marketImageUrl = _marketPlaceholder(marketName, market.id, variant: 1);
           
-          // 에러 발생 시에도 주소 조회 시도
+          // 에러 발생 시에도 주소 조회 시도 (marketInfo에서)
           String marketAddress = '';
           try {
             final marketInfo = await _apiRepository.marketService.getMarketInfo(market.id);
-            marketAddress = marketInfo.getAddressByLocale(locale) ?? '';
-            debugPrint("에러 상황에서 주소 조회 성공: $marketName - $marketAddress");
+            final addressResult = marketInfo.getAddressByLocale(locale);
+            marketAddress = addressResult?.trim() ?? '';
+            debugPrint("[에러상황 주소 조회] $marketName (${market.id}) - 주소값: '$addressResult', 최종주소: '$marketAddress'");
           } catch (e2) {
-            debugPrint("에러 상황에서 주소 조회도 실패: $marketName - $e2");
+            debugPrint("[에러] 에러 상황에서 주소 조회도 실패: $marketName (${market.id}) - $e2");
           }
           
-          // 에러 발생 시에도 placeholder 키워드 추가
-          final placeholderKeywords = _getPlaceholderKeywords().take(2).toList();
+          // 에러 발생 시에도 시장별로 랜덤한 placeholder 키워드 추가
+          final placeholderKeywords = _getRandomKeywords(market.id, 2);
           
           marketsWithStatus.add(MapMarketData(
             id: market.id,
@@ -172,6 +186,7 @@ class _MapScreenState extends State<MapScreen> {
       const Offset(0.6, 0.3),
       const Offset(0.3, 0.6),
       const Offset(0.7, 0.5),
+      const Offset(0.5, 0.7),
     ];
     return positions[index % positions.length];
   }
@@ -215,6 +230,29 @@ class _MapScreenState extends State<MapScreen> {
       "유모차 편리",
       "친절함",
     ];
+  }
+
+  /// 시장 ID를 시드로 사용하여 시장별로 랜덤하게 키워드 선택
+  List<String> _getRandomKeywords(String marketId, int count) {
+    final allKeywords = _getPlaceholderKeywords();
+    if (allKeywords.length <= count) {
+      return allKeywords;
+    }
+    
+    // 시장 ID를 시드로 사용하여 랜덤 선택
+    final seed = marketId.hashCode;
+    final random = (seed % 1000000) / 1000000.0; // 0.0 ~ 1.0 사이 값
+    
+    // 시드를 기반으로 키워드 섞기
+    final shuffled = List<String>.from(allKeywords);
+    for (int i = shuffled.length - 1; i > 0; i--) {
+      final j = ((random * (i + 1)) * 1000) % (i + 1);
+      final temp = shuffled[i];
+      shuffled[i] = shuffled[j.toInt()];
+      shuffled[j.toInt()] = temp;
+    }
+    
+    return shuffled.take(count).toList();
   }
 
   @override
@@ -469,7 +507,7 @@ class _MapScreenState extends State<MapScreen> {
         width: responsive.isMobile ? 343 : 400,
         padding: EdgeInsets.symmetric(
           horizontal: responsive.responsivePadding(mobilePadding: 12),
-          vertical: responsive.responsivePadding(mobilePadding: 20),
+          vertical: responsive.responsivePadding(mobilePadding: 12),
         ),
         decoration: BoxDecoration(
           color: _cardColor(),
@@ -478,6 +516,7 @@ class _MapScreenState extends State<MapScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.start,
           children: [
             // 시장 이름과 영업 상태
             Row(
@@ -515,15 +554,15 @@ class _MapScreenState extends State<MapScreen> {
                 ),
               ],
             ),
-            SizedBox(height: responsive.responsivePadding(mobilePadding: 20)),
+            SizedBox(height: responsive.responsivePadding(mobilePadding: 12)),
             // 이미지와 정보
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // 이미지
                 Container(
-                  width: responsive.isMobile ? 114 : 130,
-                  height: responsive.isMobile ? 113 : 130,
+                  width: responsive.isMobile ? 100 : 120,
+                  height: responsive.isMobile ? 100 : 120,
                   decoration: BoxDecoration(
                     color: AppColors.imagePlaceholder,
                     borderRadius: BorderRadius.circular(6),
@@ -544,14 +583,16 @@ class _MapScreenState extends State<MapScreen> {
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       // 키워드 칩들 (Column으로 세로 배치)
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
                         children: market.keywords.take(2).map((keyword) {
                           return Padding(
                             padding: EdgeInsets.only(
-                              bottom: responsive.responsivePadding(mobilePadding: 4),
+                              bottom: responsive.responsivePadding(mobilePadding: 3),
                             ),
                             child: Container(
                               padding: EdgeInsets.symmetric(
@@ -574,27 +615,35 @@ class _MapScreenState extends State<MapScreen> {
                           );
                         }).toList(),
                       ),
-                      SizedBox(height: responsive.responsivePadding(mobilePadding: 12)),
-                      // 주소
-                      Container(
-                        width: double.infinity,
-                        padding: EdgeInsets.symmetric(
-                          horizontal: responsive.responsivePadding(mobilePadding: 10),
-                          vertical: responsive.responsivePadding(mobilePadding: 8),
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.white,
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          market.address,
-                          style: textTheme.bodySmall?.copyWith(
-                            fontSize: responsive.responsiveFontSize(mobileSize: 11),
-                            color: AppColors.subText,
-                            fontWeight: FontWeight.w500,
+                      // 주소 표시 (비어있지 않으면 표시)
+                      if (market.address.trim().isNotEmpty) ...[
+                        SizedBox(height: responsive.responsivePadding(mobilePadding: 6)),
+                        // 주소
+                        Container(
+                          width: double.infinity,
+                          padding: EdgeInsets.symmetric(
+                            horizontal: responsive.responsivePadding(mobilePadding: 10),
+                            vertical: responsive.responsivePadding(mobilePadding: 4),
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.white,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            market.address,
+                            style: textTheme.bodySmall?.copyWith(
+                              fontSize: responsive.responsiveFontSize(mobileSize: 11),
+                              color: AppColors.subText,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                      ),
+                      ] else ...[
+                        // 주소가 없을 때도 디버깅을 위해 빈 공간 추가하지 않음
+                        SizedBox(height: responsive.responsivePadding(mobilePadding: 0)),
+                      ],
                     ],
                   ),
                 ),

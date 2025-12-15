@@ -6,6 +6,71 @@ import "../../../core/theme/app_colors.dart";
 import "../../home/models/market_model.dart";
 import "../../home/constants/must_try_items.dart";
 
+/// 메뉴 이미지를 로드하고 에러 시 대체 경로를 시도하는 위젯
+class _MenuImageWithFallback extends StatefulWidget {
+  final List<String> urls;
+  final double? width;
+  final double? height;
+  final BoxFit fit;
+
+  const _MenuImageWithFallback({
+    required this.urls,
+    this.width,
+    this.height,
+    this.fit = BoxFit.cover,
+  });
+
+  @override
+  State<_MenuImageWithFallback> createState() => _MenuImageWithFallbackState();
+}
+
+class _MenuImageWithFallbackState extends State<_MenuImageWithFallback> {
+  int _currentUrlIndex = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    if (_currentUrlIndex >= widget.urls.length) {
+      // 모든 URL 시도 실패
+      return Container(
+        width: widget.width,
+        height: widget.height,
+        color: const Color(0xFFF3EEF3),
+      );
+    }
+
+    return Image.network(
+      widget.urls[_currentUrlIndex],
+      width: widget.width,
+      height: widget.height,
+      fit: widget.fit,
+      errorBuilder: (context, error, stackTrace) {
+        // 다음 URL 시도
+        if (_currentUrlIndex < widget.urls.length - 1) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              setState(() {
+                _currentUrlIndex++;
+              });
+            }
+          });
+          // 로딩 중 표시
+          return Container(
+            width: widget.width,
+            height: widget.height,
+            color: const Color(0xFFF3EEF3),
+          );
+        }
+        // 모든 URL 시도 실패
+        return Container(
+          width: widget.width,
+          height: widget.height,
+          color: const Color(0xFFF3EEF3),
+        );
+      },
+    );
+  }
+}
+
 /// Must Eat 섹션 위젯
 class MustEatSection extends StatelessWidget {
   final MarketModel market;
@@ -17,6 +82,8 @@ class MustEatSection extends StatelessWidget {
 
   // 메뉴 ID에서 메뉴 이름 매핑
   static const Map<String, String> _menuIdToName = {
+    "ME012": "김밥",
+    "ME327": "식혜",
     "ME016": "꼬마김밥",
     "ME175": "빈대떡",
     "ME197": "육회",
@@ -61,6 +128,21 @@ class MustEatSection extends StatelessWidget {
     final clamped = variant < 1 ? 1 : (variant > 3 ? 3 : variant);
     // 경로 규칙: placeholders/Menu_all/{name}/{name}{variant}_{id}.png
     return "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Menu_all/${encodedName}/${encodedName}${clamped}_${id}.png";
+  }
+  
+  /// 메뉴 placeholder 이미지의 대체 경로 반환
+  /// 원본 경로와 대체 경로(잘못 저장된 형식)를 모두 반환
+  List<String> _placeholderImageUrls(String name, String id, {int variant = 1}) {
+    final encodedName = Uri.encodeComponent(name);
+    final clamped = variant < 1 ? 1 : (variant > 3 ? 3 : variant);
+    final baseUrl = "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Menu_all/${encodedName}";
+    
+    // 원본 경로: {name}{variant}_{id}.png
+    final originalUrl = "$baseUrl/${encodedName}${clamped}_${id}.png";
+    // 대체 경로: {name}_{name}{variant}_{id}.png
+    final alternateUrl = "$baseUrl/${encodedName}_${encodedName}${clamped}_${id}.png";
+    
+    return [originalUrl, alternateUrl];
   }
 
   List<MustTryItem> _getDefaultMustTryItems() {
@@ -137,19 +219,18 @@ class MustEatSection extends StatelessWidget {
                 child: Column(
                   children: [
                     Container(
-                      width: 100,
-                      height: 100,
+                      width: responsive.responsiveIconSize(mobileSize: 100),
+                      height: responsive.responsiveIconSize(mobileSize: 100),
                       decoration: BoxDecoration(
                         color: const Color(0xFFF3EEF3),
                         shape: BoxShape.circle,
                       ),
                       child: ClipOval(
-                        child: Image.network(
-                          item.imageUrl,
+                        child: _MenuImageWithFallback(
+                          urls: _placeholderImageUrls(item.name, item.id, variant: 1),
+                          width: responsive.responsiveIconSize(mobileSize: 100),
+                          height: responsive.responsiveIconSize(mobileSize: 100),
                           fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Container(color: const Color(0xFFF3EEF3));
-                          },
                         ),
                       ),
                     ),

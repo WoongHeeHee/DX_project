@@ -1,9 +1,6 @@
 // lib/features/home/market_detail_screen.dart
 
-import "dart:typed_data";
-import "dart:ui" as ui;
 import "package:flutter/material.dart";
-import "package:flutter/services.dart";
 import "package:go_router/go_router.dart";
 import "package:google_maps_flutter/google_maps_flutter.dart";
 import "../../core/theme/app_colors.dart";
@@ -53,58 +50,11 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
   Future<void> _loadCustomPinIcon() async {
     if (!mounted) return;
     
-    // 지도 가로 길이의 1/15 크기로 마커 생성
-    final double mapWidth = MediaQuery.of(context).size.width;
-    final int markerSize = (mapWidth / 15).round();
-    
-    try {
-      _customPinIcon = await _getResizedBitmapDescriptor(
-        'assets/images/custom_pin.png',
-        markerSize,
-      );
-      if (mounted) {
-        setState(() {});
-      }
-    } catch (e) {
-      try {
-        _customPinIcon = await _getResizedBitmapDescriptor(
-          'assets/designs/images/custom_pin.png',
-          markerSize,
-        );
-        if (mounted) {
-          setState(() {});
-        }
-      } catch (e2) {
-        debugPrint("커스텀 핀 이미지 로드 실패: $e2");
-        _customPinIcon = BitmapDescriptor.defaultMarker;
-        if (mounted) {
-          setState(() {});
-        }
-      }
+    // 일반 구글 핀 사용
+    _customPinIcon = BitmapDescriptor.defaultMarker;
+    if (mounted) {
+      setState(() {});
     }
-  }
-
-  /// 이미지를 리사이즈하여 BitmapDescriptor 생성
-  Future<BitmapDescriptor> _getResizedBitmapDescriptor(
-    String assetPath,
-    int targetSize,
-  ) async {
-    final ByteData data = await rootBundle.load(assetPath);
-    final ui.Codec codec = await ui.instantiateImageCodec(
-      data.buffer.asUint8List(),
-      targetWidth: targetSize,
-    );
-    final ui.FrameInfo frameInfo = await codec.getNextFrame();
-    final ByteData? byteData = await frameInfo.image.toByteData(
-      format: ui.ImageByteFormat.png,
-    );
-    
-    if (byteData == null) {
-      throw Exception('Failed to convert image to byte data');
-    }
-    
-    final Uint8List uint8List = byteData.buffer.asUint8List();
-    return BitmapDescriptor.fromBytes(uint8List);
   }
 
   Future<void> _loadMarketData() async {
@@ -423,10 +373,10 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 이미지 (117x77 고정)
+            // 이미지 (반응형 크기)
             Container(
-              width: 117,
-              height: 77,
+              width: responsive.responsiveIconSize(mobileSize: 117),
+              height: responsive.responsiveIconSize(mobileSize: 77),
               decoration: BoxDecoration(
                 color: AppColors.imagePlaceholder,
                 borderRadius: BorderRadius.circular(6),
@@ -435,14 +385,14 @@ class _MarketDetailScreenState extends State<MarketDetailScreen> {
                 borderRadius: BorderRadius.circular(6),
                 child: Image.network(
                   item.imageUrl,
-                  width: 117,
-                  height: 77,
+                  width: responsive.responsiveIconSize(mobileSize: 117),
+                  height: responsive.responsiveIconSize(mobileSize: 77),
                   fit: BoxFit.cover,
                   errorBuilder: (context, error, stackTrace) {
                     debugPrint("[MarketDetail] 이미지 로드 실패: ${item.imageUrl}");
                     return Container(
-                      width: 117,
-                      height: 77,
+                      width: responsive.responsiveIconSize(mobileSize: 117),
+                      height: responsive.responsiveIconSize(mobileSize: 77),
                       color: AppColors.imagePlaceholder,
                     );
                   },

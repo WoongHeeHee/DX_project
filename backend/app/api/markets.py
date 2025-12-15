@@ -322,12 +322,26 @@ async def get_shops_by_menu(
             )
         
         # 메뉴 아이템 조회 (이름으로)
+        print(f"[get_shops_by_menu] market_id={market_id}, menu_name='{menu_name}'")
         menu_item = db.query(MenuItem).filter(MenuItem.name == menu_name).first()
         if not menu_item:
+            # 디버깅: 실제 DB에 있는 메뉴 이름 확인
+            sample_menu = db.query(MenuItem).limit(5).all()
+            sample_names = [m.name for m in sample_menu]
+            print(f"[get_shops_by_menu] 메뉴를 찾을 수 없음. 요청한 이름: '{menu_name}', DB 샘플 메뉴 이름: {sample_names}")
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="메뉴를 찾을 수 없습니다"
+                detail=f"메뉴를 찾을 수 없습니다: '{menu_name}'"
             )
+        
+        print(f"[get_shops_by_menu] 메뉴 찾음: id={menu_item.id}, name='{menu_item.name}'")
+        
+        # ShopMenu 테이블에서 해당 메뉴를 판매하는 가게가 있는지 먼저 확인
+        shop_menus = db.query(ShopMenu).filter(
+            ShopMenu.menu_item_id == menu_item.id,
+            ShopMenu.available == True
+        ).all()
+        print(f"[get_shops_by_menu] ShopMenu 레코드 개수 (전체): {len(shop_menus)}")
         
         # 해당 메뉴를 판매하는 가게 조회 (ShopMenu 조인)
         shops_query = db.query(Shop).join(ShopMenu).filter(
@@ -337,6 +351,21 @@ async def get_shops_by_menu(
         )
         
         shops = shops_query.all()
+        print(f"[get_shops_by_menu] 가게 개수: {len(shops)} (market_id={market_id}, menu_item_id={menu_item.id})")
+        
+        # Photo 테이블을 통한 대안 조회 (ShopMenu에 데이터가 없는 경우를 위한 fallback)
+        if len(shops) == 0:
+            print(f"[get_shops_by_menu] ShopMenu에서 가게를 찾지 못함. Photo 테이블을 통한 대안 조회 시도...")
+            from app.db.models import Photo
+            # Photo 테이블에서 해당 메뉴를 가진 사진의 shop_id를 찾아서 가게 조회
+            photo_shops = db.query(Shop).join(Photo).filter(
+                Shop.market_id == market_id,
+                Photo.menu_item_id == menu_item.id,
+                Photo.processed == True
+            ).distinct().all()
+            print(f"[get_shops_by_menu] Photo 테이블을 통한 가게 개수: {len(photo_shops)}")
+            if len(photo_shops) > 0:
+                shops = photo_shops
         
         # 현재 시간 (한국 시간대 기준)
         korea_tz = ZoneInfo("Asia/Seoul")

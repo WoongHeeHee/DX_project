@@ -5,7 +5,6 @@
 
 from typing import List, Optional, Dict, Any
 from datetime import datetime, timedelta, timezone
-from zoneinfo import ZoneInfo
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import func, and_, or_
@@ -46,7 +45,11 @@ async def get_market_recent_photos(
         shops = db.query(Shop).filter(Shop.market_id == market_id).all()
         shop_ids = [shop.id for shop in shops]
         
+        # 디버깅 로그
+        print(f"[get_market_recent_photos] market_id: {market_id}, found {len(shops)} shops, shop_ids: {shop_ids}")
+        
         if not shop_ids:
+            print(f"[get_market_recent_photos] No shops found for market_id: {market_id}")
             return {
                 "success": True,
                 "photos": [],
@@ -68,6 +71,10 @@ async def get_market_recent_photos(
         # taken_at 기준 내림차순 정렬
         photos = query.order_by(Photo.taken_at.desc()).limit(limit).all()
         
+        print(f"[get_market_recent_photos] Found {len(photos)} photos after filtering (category: {category})")
+        if len(photos) > 0:
+            print(f"[get_market_recent_photos] First photo: id={photos[0].id}, shop_id={photos[0].shop_id}, processed={photos[0].processed}")
+        
         # s3_key만 반환 (성능 최적화: presigned URL 생성 오버헤드 제거, 프론트엔드에서 CDN URL로 변환)
         photo_list = []
         for photo in photos:
@@ -82,10 +89,10 @@ async def get_market_recent_photos(
                 "thumbnail_s3_key": photo.thumbnail_s3_key,
                 "lat": photo.lat,
                 "lng": photo.lng,
-                "taken_at": photo.taken_at,
+                "taken_at": photo.taken_at.isoformat() if photo.taken_at else None,
                 "menu_item_id": str(photo.menu_item_id) if photo.menu_item_id else None,
                 "category": menu_item.category if menu_item else None,
-                "created_at": photo.created_at
+                "created_at": photo.created_at.isoformat() if photo.created_at else None
             }
             photo_list.append(photo_dict)
         
@@ -98,6 +105,10 @@ async def get_market_recent_photos(
     except HTTPException:
         raise
     except Exception as e:
+        import traceback
+        error_traceback = traceback.format_exc()
+        print(f"[get_market_recent_photos] 에러 발생: {str(e)}")
+        print(f"[get_market_recent_photos] 스택 트레이스:\n{error_traceback}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"사진 조회 실패: {str(e)}"
@@ -188,9 +199,7 @@ async def get_shops_with_status(
             )
         
         shops = db.query(Shop).filter(Shop.market_id == market_id).all()
-        # 현재 시간 (한국 시간대 기준)
-        korea_tz = ZoneInfo("Asia/Seoul")
-        current_time = datetime.now(korea_tz)
+        current_time = datetime.now(timezone.utc)
         current_hour = current_time.hour
         current_minute = current_time.minute
         current_time_minutes = current_hour * 60 + current_minute

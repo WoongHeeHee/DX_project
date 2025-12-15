@@ -303,8 +303,8 @@ class _SavedStoreCardState extends State<_SavedStoreCard> {
     final imagesToShow = widget.store.imageUrls.take(3).toList();
 
     return Container(
-      width: 110,
-      height: 110,
+      width: responsive.responsiveIconSize(mobileSize: 110),
+      height: responsive.responsiveIconSize(mobileSize: 110),
       decoration: BoxDecoration(
         color: const Color(0xFFF3EEF3),
         borderRadius: BorderRadius.circular(6),
@@ -351,8 +351,8 @@ class _SavedStoreCardState extends State<_SavedStoreCard> {
               left: 0,
               bottom: 0,
               child: Container(
-                width: 110,
-                height: 23,
+                width: responsive.responsiveIconSize(mobileSize: 110),
+                height: responsive.responsiveIconSize(mobileSize: 23),
                 padding: const EdgeInsets.only(bottom: 4),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,

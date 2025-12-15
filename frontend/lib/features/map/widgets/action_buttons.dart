@@ -38,6 +38,8 @@ class ActionButtons extends StatelessWidget {
 
   void _navigateToStoreList(BuildContext context) {
     final menuName = _getMenuName();
+    // 디버깅: 전달되는 메뉴 이름 확인
+    debugPrint("[ActionButtons] Find Shops 버튼 클릭: menuName='$menuName', selectedMenuItem?.name='${selectedMenuItem?.name}', selectedMenuItem?.id='${selectedMenuItem?.id}'");
     context.push(
       '/map/market/${market.id}/store-list',
       extra: {
@@ -100,7 +102,7 @@ class ActionButtons extends StatelessWidget {
             onTap: () => _navigateToStoreList(context),
             child: Container(
               width: double.infinity,
-              height: 47,
+              height: responsive.responsiveIconSize(mobileSize: 47),
               padding: EdgeInsets.symmetric(
                 horizontal: responsive.responsivePadding(mobilePadding: 12),
                 vertical: responsive.responsivePadding(mobilePadding: 10),

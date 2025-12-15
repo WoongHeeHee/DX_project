@@ -18,6 +18,71 @@ import "models/market_model.dart";
 import "models/food_model.dart";
 import "models/trend_banner_model.dart";
 
+/// 메뉴 이미지를 로드하고 에러 시 대체 경로를 시도하는 위젯
+class _MenuImageWithFallback extends StatefulWidget {
+  final List<String> urls;
+  final double? width;
+  final double? height;
+  final BoxFit fit;
+
+  const _MenuImageWithFallback({
+    required this.urls,
+    this.width,
+    this.height,
+    this.fit = BoxFit.cover,
+  });
+
+  @override
+  State<_MenuImageWithFallback> createState() => _MenuImageWithFallbackState();
+}
+
+class _MenuImageWithFallbackState extends State<_MenuImageWithFallback> {
+  int _currentUrlIndex = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    if (_currentUrlIndex >= widget.urls.length) {
+      // 모든 URL 시도 실패
+      return Container(
+        width: widget.width,
+        height: widget.height,
+        color: AppColors.imagePlaceholder,
+      );
+    }
+
+    return Image.network(
+      widget.urls[_currentUrlIndex],
+      width: widget.width,
+      height: widget.height,
+      fit: widget.fit,
+      errorBuilder: (context, error, stackTrace) {
+        // 다음 URL 시도
+        if (_currentUrlIndex < widget.urls.length - 1) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              setState(() {
+                _currentUrlIndex++;
+              });
+            }
+          });
+          // 로딩 중 표시
+          return Container(
+            width: widget.width,
+            height: widget.height,
+            color: AppColors.imagePlaceholder,
+          );
+        }
+        // 모든 URL 시도 실패
+        return Container(
+          width: widget.width,
+          height: widget.height,
+          color: AppColors.imagePlaceholder,
+        );
+      },
+    );
+  }
+}
+
 class ExploreScreen extends StatefulWidget {
   const ExploreScreen({super.key});
 
@@ -55,6 +120,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
     {"region": "서울", "name": "망원시장", "id": "MA0002"},
     {"region": "서울", "name": "통인시장", "id": "MA0003"},
     {"region": "서울", "name": "서울풍물시장", "id": "MA0004"},
+    {"region": "서울", "name": "DX시장", "id": "MA0000"},
     {"region": "경기", "name": "수원남문로데오시장", "id": "MA0005"},
     {"region": "인천", "name": "신포국제시장", "id": "MA0006"},
     {"region": "강원", "name": "단양 구경시장", "id": "MA0007"},
@@ -867,7 +933,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
           showAgeDropdown = false;
         });
       },
-      width: 200,
+      width: responsive.responsiveIconSize(mobileSize: 200),
       maxHeight: 300,
       placeholder: "국가 선택",
     );
@@ -896,7 +962,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
           showCountryDropdown = false;
         });
       },
-      width: 150,
+      width: responsive.responsiveIconSize(mobileSize: 150),
       placeholder: "연령 선택",
     );
   }
@@ -976,18 +1042,10 @@ class _ExploreScreenState extends State<ExploreScreen> {
             // 이미지
           ClipRRect(
             borderRadius: BorderRadius.circular(12),
-            child: Image.network(
-                _menuImageUrl(menu),
-                width: width,
-                height: height,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) {
-                return Container(
-                  width: width,
-                  height: height,
-                  color: AppColors.imagePlaceholder,
-                );
-              },
+            child: _MenuImageWithFallback(
+              urls: _placeholderImageUrls(menu.name, menu.id, variant: 1),
+              width: width,
+              height: height,
             ),
           ),
           // 그라데이션 오버레이 (하단)
@@ -1118,26 +1176,18 @@ class _ExploreScreenState extends State<ExploreScreen> {
           children: [
             // 이미지
             Container(
-              width: 40,
-              height: 40,
+              width: responsive.responsiveIconSize(mobileSize: 40),
+              height: responsive.responsiveIconSize(mobileSize: 40),
               decoration: BoxDecoration(
                 color: AppColors.imagePlaceholder,
                 borderRadius: BorderRadius.circular(999),
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(999),
-                child: Image.network(
-                  _menuImageUrl(menu),
-                  width: 40,
-                  height: 40,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      width: 40,
-                      height: 40,
-                      color: AppColors.imagePlaceholder,
-                    );
-                  },
+                child: _MenuImageWithFallback(
+                  urls: _placeholderImageUrls(menu.name, menu.id, variant: 1),
+                  width: responsive.responsiveIconSize(mobileSize: 40),
+                  height: responsive.responsiveIconSize(mobileSize: 40),
                 ),
               ),
             ),
@@ -1193,6 +1243,21 @@ class _ExploreScreenState extends State<ExploreScreen> {
     final clamped = variant < 1 ? 1 : (variant > 3 ? 3 : variant);
     // 경로 규칙: placeholders/Menu_all/{name}/{name}{variant}_{id}.png
     return "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Menu_all/${encodedName}/${encodedName}${clamped}_${id}.png";
+  }
+  
+  /// 메뉴 placeholder 이미지의 대체 경로 반환
+  /// 원본 경로와 대체 경로(잘못 저장된 형식)를 모두 반환
+  List<String> _placeholderImageUrls(String name, String id, {int variant = 1}) {
+    final encodedName = Uri.encodeComponent(name);
+    final clamped = variant < 1 ? 1 : (variant > 3 ? 3 : variant);
+    final baseUrl = "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Menu_all/${encodedName}";
+    
+    // 원본 경로: {name}{variant}_{id}.png
+    final originalUrl = "$baseUrl/${encodedName}${clamped}_${id}.png";
+    // 대체 경로: {name}_{name}{variant}_{id}.png
+    final alternateUrl = "$baseUrl/${encodedName}_${encodedName}${clamped}_${id}.png";
+    
+    return [originalUrl, alternateUrl];
   }
 
   String _marketPlaceholder(String name, String id, {int variant = 1}) {
@@ -1422,11 +1487,6 @@ class _ExploreScreenState extends State<ExploreScreen> {
     double cardWidth,
     double cardHeight,
   ) {
-    final primaryImage = (food.imageUrls.isNotEmpty ? food.imageUrls.first : food.imageUrl);
-    final imageUrl = (primaryImage.isNotEmpty)
-        ? primaryImage
-        : _placeholderImage(food.baseName, food.id);
-
     return GestureDetector(
       onTap: () {
         context.push(
@@ -1445,18 +1505,11 @@ class _ExploreScreenState extends State<ExploreScreen> {
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(6),
-              child: Image.network(
-                _resolveImage(imageUrl, fallback: _placeholderImage(food.baseName, food.id)),
+              child: _MenuImageWithFallback(
+                urls: _placeholderImageUrls(food.baseName, food.id, variant: 1),
                 width: cardWidth,
                 height: cardHeight,
                 fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    width: cardWidth,
-                    height: cardHeight,
-                    color: AppColors.imagePlaceholder,
-                  );
-                },
               ),
             ),
             Positioned(

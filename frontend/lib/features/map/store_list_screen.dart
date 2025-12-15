@@ -42,6 +42,7 @@ class _StoreListScreenState extends State<StoreListScreen> {
   Set<String> _pinnedShopIds = {}; // 핀한 가게 ID 집합
   double? _marketLat;
   double? _marketLng;
+  String? _menuId; // 메뉴 ID (음식 사진 URL 생성용)
 
   // 스냅 포인트: 최소, 중간, 최대
   static const double _minSize = 0.1; // 인디케이터만 보일 정도
@@ -63,6 +64,27 @@ class _StoreListScreenState extends State<StoreListScreen> {
     });
 
     try {
+      // 디버깅: 전달받은 메뉴 이름 확인
+      debugPrint("[StoreListScreen] 가게 목록 로드 시작: marketId='${widget.market.id}', menuName='${widget.menuName}'");
+      
+      // 메뉴 이름으로 메뉴 ID 조회 (음식 사진 URL 생성용)
+      try {
+        final menus = await _apiRepository.menuService.getMenuItems();
+        final matchedMenu = menus.firstWhere(
+          (menu) => menu.name == widget.menuName,
+          orElse: () => menus.first, // 매칭 실패 시 첫 번째 메뉴 사용
+        );
+        if (mounted) {
+          setState(() {
+            _menuId = matchedMenu.id;
+          });
+        }
+        debugPrint("[StoreListScreen] 메뉴 ID 조회: menuName='${widget.menuName}', menuId='${_menuId}'");
+      } catch (e) {
+        debugPrint("[StoreListScreen] 메뉴 ID 조회 실패: $e");
+        // 메뉴 ID 조회 실패해도 계속 진행
+      }
+      
       // 시장 정보를 API에서 가져와서 위치 정보 사용
       final marketInfo = await _apiRepository.marketService.getMarket(widget.market.id);
       final lat = marketInfo.lat;
@@ -81,6 +103,8 @@ class _StoreListScreenState extends State<StoreListScreen> {
         lat: lat,
         lng: lng,
       );
+
+      debugPrint("[StoreListScreen] API 응답: 가게 개수=${response.shops.length}");
 
       if (mounted) {
         setState(() {
@@ -111,12 +135,20 @@ class _StoreListScreenState extends State<StoreListScreen> {
         // 가게 목록 로드 완료 후 핀한 가게 목록 로드
         _loadPinnedShops();
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       debugPrint("가게 목록 로드 실패: $e");
+      debugPrint("스택 트레이스: $stackTrace");
       if (mounted) {
         setState(() {
           _isLoading = false;
         });
+        // 에러 메시지 표시
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("가게 목록을 불러오는 중 오류가 발생했습니다: ${e.toString()}"),
+            duration: const Duration(seconds: 3),
+          ),
+        );
       }
     }
   }
@@ -364,7 +396,7 @@ class _StoreListScreenState extends State<StoreListScreen> {
                 ),
                 child: Column(
                   children: [
-                    _buildIndicator(),
+                    _buildIndicator(responsive),
                     Expanded(
                       child: _buildBottomSheetContent(
                         responsive,
@@ -393,8 +425,8 @@ class _StoreListScreenState extends State<StoreListScreen> {
             Navigator.of(context).pop();
           },
           child: Container(
-            width: 40,
-            height: 40,
+            width: responsive.responsiveIconSize(mobileSize: 40),
+            height: responsive.responsiveIconSize(mobileSize: 40),
             decoration: BoxDecoration(
               color: AppColors.white,
               shape: BoxShape.circle,
@@ -417,11 +449,11 @@ class _StoreListScreenState extends State<StoreListScreen> {
     );
   }
 
-  Widget _buildIndicator() {
+  Widget _buildIndicator(ResponsiveHelper responsive) {
     return Container(
       margin: const EdgeInsets.only(top: 8, bottom: 8),
-      width: 40,
-      height: 4,
+      width: responsive.responsiveIconSize(mobileSize: 40),
+      height: responsive.responsiveIconSize(mobileSize: 4),
       decoration: BoxDecoration(
         color: AppColors.subText.withOpacity(0.3),
         borderRadius: BorderRadius.circular(2),
@@ -565,7 +597,7 @@ class _StoreListScreenState extends State<StoreListScreen> {
           // 정보 영역
           Expanded(
             child: SizedBox(
-              height: 110, // 이미지 높이와 동일
+              height: responsive.responsiveIconSize(mobileSize: 110), // 이미지 높이와 동일
               child: _buildStoreInfo(responsive, textTheme, shop, storeStatus, isPinned),
             ),
           ),
@@ -574,17 +606,31 @@ class _StoreListScreenState extends State<StoreListScreen> {
     );
   }
 
+  /// 음식 사진 placeholder URL 생성
+  String _getMenuImageUrl(String menuName, String? menuId, {int variant = 1}) {
+    final encodedName = Uri.encodeComponent(menuName);
+    final clamped = variant < 1 ? 1 : (variant > 3 ? 3 : variant);
+    final id = menuId ?? "ME000"; // 메뉴 ID가 없으면 기본값 사용
+    // 경로 규칙: placeholders/Menu_all/{name}/{name}{variant}_{id}.png
+    return "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Menu_all/$encodedName/$encodedName${clamped}_$id.png";
+  }
+
+  /// 음식 사진 placeholder URL 리스트 생성 (3개 variant)
+  List<String> _getMenuImageUrls(String menuName, String? menuId) {
+    return List.generate(3, (index) => _getMenuImageUrl(menuName, menuId, variant: index + 1));
+  }
+
   Widget _buildStoreImage(
     ResponsiveHelper responsive,
     api_models.ShopByMenuModel shop,
   ) {
-    // 최대 3개의 이미지만 표시
-    final imagesToShow = shop.imageUrls.take(3).toList();
+    // 음식 사진 URL 생성 (메뉴 이름과 ID 사용)
+    final menuImageUrls = _getMenuImageUrls(widget.menuName, _menuId);
     final currentIndex = _storeImageIndices[shop.id] ?? 0;
 
     return Container(
-      width: 179,
-      height: 110,
+      width: responsive.responsiveIconSize(mobileSize: 179),
+      height: responsive.responsiveIconSize(mobileSize: 110),
       decoration: BoxDecoration(
         color: const Color(0xFFF3EEF3),
         borderRadius: BorderRadius.circular(6),
@@ -594,70 +640,56 @@ class _StoreListScreenState extends State<StoreListScreen> {
           // 이미지 슬라이더
           ClipRRect(
             borderRadius: BorderRadius.circular(6),
-            child: imagesToShow.length > 1
-                ? PageView.builder(
-                    controller: PageController(initialPage: currentIndex),
-                    onPageChanged: (index) {
-                      setState(() {
-                        _storeImageIndices[shop.id] = index;
-                      });
-                    },
-                    itemCount: imagesToShow.length,
-                    itemBuilder: (context, index) {
-                      return Image.network(
-                        imagesToShow[index],
-                        width: double.infinity,
-                        height: double.infinity,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Container(color: const Color(0xFFF3EEF3));
-                        },
-                      );
-                    },
-                  )
-                : Image.network(
-                    imagesToShow.isNotEmpty ? imagesToShow[0] : "",
-                    width: double.infinity,
-                    height: double.infinity,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Container(color: const Color(0xFFF3EEF3));
-                    },
-                  ),
+            child: PageView.builder(
+              controller: PageController(initialPage: currentIndex),
+              onPageChanged: (index) {
+                setState(() {
+                  _storeImageIndices[shop.id] = index;
+                });
+              },
+              itemCount: menuImageUrls.length,
+              itemBuilder: (context, index) {
+                return Image.network(
+                  menuImageUrls[index],
+                  width: double.infinity,
+                  height: double.infinity,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Container(color: const Color(0xFFF3EEF3));
+                  },
+                );
+              },
+            ),
           ),
           // 인디케이터
-          if (imagesToShow.length > 1)
-            Positioned(
-              left: 0,
-              bottom: 0,
-              child: Container(
-                width: 179,
-                height: 23,
-                padding: const EdgeInsets.only(bottom: 4),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: List.generate(3, (index) {
-                    final isActive = index < imagesToShow.length;
-                    final isCurrent = index == currentIndex;
-                    return Container(
-                      width: isCurrent ? 14 : 6,
-                      height: 6,
-                      margin: EdgeInsets.only(
-                        right: index < 2 ? 6 : 0,
-                      ),
-                      decoration: BoxDecoration(
-                        color: isActive
-                            ? (isCurrent
-                                ? AppColors.mainText
-                                : const Color(0xFFF2F2F3))
-                            : const Color(0xFFF2F2F3),
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                    );
-                  }),
-                ),
+          Positioned(
+            left: 0,
+            bottom: 0,
+            child: Container(
+              width: responsive.responsiveIconSize(mobileSize: 179),
+              height: responsive.responsiveIconSize(mobileSize: 23),
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(3, (index) {
+                  final isCurrent = index == currentIndex;
+                  return Container(
+                    width: isCurrent ? 14 : 6,
+                    height: 6,
+                    margin: EdgeInsets.only(
+                      right: index < 2 ? 6 : 0,
+                    ),
+                    decoration: BoxDecoration(
+                      color: isCurrent
+                          ? AppColors.mainText
+                          : const Color(0xFFF2F2F3),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                  );
+                }),
               ),
             ),
+          ),
         ],
       ),
     );
@@ -783,7 +815,7 @@ class _StoreListScreenState extends State<StoreListScreen> {
         _togglePin(shop);
       },
       child: Container(
-        height: 32,
+        height: responsive.responsiveIconSize(mobileSize: 32),
         padding: EdgeInsets.symmetric(
           horizontal: responsive.responsivePadding(mobilePadding: 10),
           vertical: responsive.responsivePadding(mobilePadding: 8),

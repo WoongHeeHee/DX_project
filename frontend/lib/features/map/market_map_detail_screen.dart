@@ -1,10 +1,8 @@
 // lib/features/map/market_map_detail_screen.dart
 
 import "dart:async";
-import "dart:ui" as ui;
 import "package:flutter/foundation.dart";
 import "package:flutter/material.dart";
-import "package:flutter/services.dart";
 import "package:google_maps_flutter/google_maps_flutter.dart";
 import "../../core/widgets/responsive_helper.dart";
 import "../../core/theme/app_colors.dart";
@@ -88,45 +86,17 @@ class _MarketMapDetailScreenState extends State<MarketMapDetailScreen> {
 
     if (!mounted) return;
 
-    try {
-      // custom_pin.png를 BitmapDescriptor로 로드
-      // assets/images 또는 assets/designs/images에서 찾기
-      final ImageConfiguration imageConfig = createLocalImageConfiguration(context);
-      
-      BitmapDescriptor? customIcon;
-      try {
-        // assets/images/custom_pin.png 시도
-        customIcon = await BitmapDescriptor.fromAssetImage(
-          imageConfig,
-          'assets/images/custom_pin.png',
-        );
-      } catch (e) {
-        try {
-          // assets/designs/images/custom_pin.png 시도
-          customIcon = await BitmapDescriptor.fromAssetImage(
-            imageConfig,
-            'assets/designs/images/custom_pin.png',
-          );
-        } catch (e2) {
-          debugPrint("커스텀 핀 이미지 로드 실패: $e2");
-          // 기본 마커 사용
-          customIcon = BitmapDescriptor.defaultMarker;
-        }
-      }
-
-      if (mounted) {
-        setState(() {
-          _marketMarkers = {
-            Marker(
-              markerId: const MarkerId('market'),
-              position: LatLng(_apiMarket!.lat!, _apiMarket!.lng!),
-              icon: customIcon ?? BitmapDescriptor.defaultMarker,
-            ),
-          };
-        });
-      }
-    } catch (e) {
-      debugPrint("시장 마커 생성 실패: $e");
+    // 일반 구글 핀 사용
+    if (mounted) {
+      setState(() {
+        _marketMarkers = {
+          Marker(
+            markerId: const MarkerId('market'),
+            position: LatLng(_apiMarket!.lat!, _apiMarket!.lng!),
+            icon: BitmapDescriptor.defaultMarker,
+          ),
+        };
+      });
     }
   }
 
@@ -183,10 +153,14 @@ class _MarketMapDetailScreenState extends State<MarketMapDetailScreen> {
       }
     }
 
-    if (targetLatLng != null) {
-      _mapController!.animateCamera(
-        CameraUpdate.newLatLngZoom(targetLatLng, zoom),
-      );
+    if (targetLatLng != null && _mapController != null) {
+      try {
+        _mapController!.animateCamera(
+          CameraUpdate.newLatLngZoom(targetLatLng, zoom),
+        );
+      } catch (e) {
+        debugPrint("[_updateMapPosition] 지도 위치 업데이트 실패: $e");
+      }
     }
   }
 
@@ -198,26 +172,7 @@ class _MarketMapDetailScreenState extends State<MarketMapDetailScreen> {
           limit: 10,
         );
         
-        // custom_pin.png 로드
-        final ImageConfiguration imageConfig = createLocalImageConfiguration(context);
-        BitmapDescriptor customIcon;
-        try {
-          customIcon = await BitmapDescriptor.fromAssetImage(
-            imageConfig,
-            'assets/images/custom_pin.png',
-          );
-        } catch (e) {
-          try {
-            customIcon = await BitmapDescriptor.fromAssetImage(
-              imageConfig,
-              'assets/designs/images/custom_pin.png',
-            );
-          } catch (e2) {
-            debugPrint("커스텀 핀 이미지 로드 실패: $e2");
-            customIcon = BitmapDescriptor.defaultMarker;
-          }
-        }
-        
+        // 일반 구글 핀 사용
         final markers = <Marker>{};
         for (var i = 0; i < response.locations.length; i++) {
           final location = response.locations[i];
@@ -225,7 +180,7 @@ class _MarketMapDetailScreenState extends State<MarketMapDetailScreen> {
             Marker(
               markerId: MarkerId('photo_${location.photoId}'),
               position: LatLng(location.lat, location.lng),
-              icon: customIcon,
+              icon: BitmapDescriptor.defaultMarker,
             ),
           );
         }
@@ -250,9 +205,16 @@ class _MarketMapDetailScreenState extends State<MarketMapDetailScreen> {
 
   Future<void> _loadSavedStores() async {
     try {
+      debugPrint("[_loadSavedStores] 핀한 가게 목록 로드 시작: marketId='${widget.market.id}'");
       final pinnedShops = await _apiRepository.shopService.getPinnedShops(
         marketId: widget.market.id,
       );
+      
+      debugPrint("[_loadSavedStores] API 응답: 가게 개수=${pinnedShops.length}");
+      for (var i = 0; i < pinnedShops.length; i++) {
+        final shop = pinnedShops[i];
+        debugPrint("[_loadSavedStores] 가게[$i]: id='${shop.id}', name='${shop.name}', market_id='${shop.marketId}'");
+      }
       
       if (mounted) {
         setState(() {
@@ -284,8 +246,12 @@ class _MarketMapDetailScreenState extends State<MarketMapDetailScreen> {
             );
           }).toList();
         });
-        // 저장된 가게 목록이 업데이트되면 지도 위치 업데이트
-        _updateMapPosition();
+        // 저장된 가게 목록이 업데이트되면 지도 위치 업데이트 (컨트롤러가 준비된 후)
+        Future.delayed(const Duration(milliseconds: 100), () {
+          if (mounted && _mapController != null) {
+            _updateMapPosition();
+          }
+        });
         // 가게 마커 생성
         _createStoreMarkers();
       }
@@ -309,137 +275,28 @@ class _MarketMapDetailScreenState extends State<MarketMapDetailScreen> {
       return;
     }
 
-    try {
-      final markers = <Marker>{};
-      final ImageConfiguration imageConfig = createLocalImageConfiguration(context);
+    // 일반 구글 핀 사용
+    final markers = <Marker>{};
+    for (var i = 0; i < _savedStores.length; i++) {
+      final store = _savedStores[i];
+      if (store.lat == null || store.lng == null) continue;
 
-      // custom_pin.png 로드
-      BitmapDescriptor baseIcon;
-      try {
-        baseIcon = await BitmapDescriptor.fromAssetImage(
-          imageConfig,
-          'assets/images/custom_pin.png',
-        );
-      } catch (e) {
-        try {
-          baseIcon = await BitmapDescriptor.fromAssetImage(
-            imageConfig,
-            'assets/designs/images/custom_pin.png',
-          );
-        } catch (e2) {
-          debugPrint("커스텀 핀 이미지 로드 실패: $e2");
-          baseIcon = BitmapDescriptor.defaultMarker;
-        }
-      }
+      markers.add(
+        Marker(
+          markerId: MarkerId('store_${store.id}'),
+          position: LatLng(store.lat!, store.lng!),
+          icon: BitmapDescriptor.defaultMarker,
+        ),
+      );
+    }
 
-      // 각 가게에 대해 넘버링이 있는 마커 생성
-      
-      for (var i = 0; i < _savedStores.length; i++) {
-        final store = _savedStores[i];
-        if (store.lat == null || store.lng == null) continue;
-
-        final number = (i + 1).toString();
-        final numberedIcon = await _createNumberedMarker(baseIcon, number);
-
-        markers.add(
-          Marker(
-            markerId: MarkerId('store_${store.id}'),
-            position: LatLng(store.lat!, store.lng!),
-            icon: numberedIcon,
-          ),
-        );
-      }
-
-      if (mounted) {
-        setState(() {
-          _storeMarkers = markers;
-        });
-      }
-    } catch (e) {
-      debugPrint("가게 마커 생성 실패: $e");
+    if (mounted) {
+      setState(() {
+        _storeMarkers = markers;
+      });
     }
   }
 
-  /// 넘버링이 있는 마커 이미지 생성
-  Future<BitmapDescriptor> _createNumberedMarker(
-    BitmapDescriptor baseIcon,
-    String number,
-  ) async {
-    try {
-      // custom_pin.png 이미지 로드
-      ByteData? imageData;
-      try {
-        imageData = await rootBundle.load('assets/images/custom_pin.png');
-      } catch (e) {
-        try {
-          imageData = await rootBundle.load('assets/designs/images/custom_pin.png');
-        } catch (e2) {
-          debugPrint("커스텀 핀 이미지 로드 실패: $e2");
-          return baseIcon;
-        }
-      }
-
-      final codec = await ui.instantiateImageCodec(
-        imageData.buffer.asUint8List(),
-      );
-      final frame = await codec.getNextFrame();
-      final image = frame.image;
-
-      final size = 100.0;
-      final recorder = ui.PictureRecorder();
-      final canvas = Canvas(recorder, Rect.fromLTWH(0, 0, size, size));
-
-      // custom_pin.png 그리기
-      final paint = Paint();
-      canvas.drawImageRect(
-        image,
-        Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
-        Rect.fromLTWH(0, 0, size, size),
-        paint,
-      );
-
-      // 숫자 텍스트 그리기 (Figma 디자인에 맞춰 핀 위쪽에 표시)
-      final textSpan = TextSpan(
-        text: number,
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 14.33,
-          fontWeight: FontWeight.w500,
-          fontFamily: 'Inter',
-          height: 1.2,
-        ),
-      );
-      final textPainter = TextPainter(
-        text: textSpan,
-        textAlign: TextAlign.center,
-        textDirection: TextDirection.ltr,
-      );
-      textPainter.layout();
-      
-      // 숫자를 핀의 상단 중앙에 배치 (Figma 디자인 기준)
-      textPainter.paint(
-        canvas,
-        Offset(
-          (size - textPainter.width) / 2,
-          size * 0.15, // 핀 상단에서 약간 아래
-        ),
-      );
-
-      final picture = recorder.endRecording();
-      final finalImage = await picture.toImage(size.toInt(), size.toInt());
-      final bytes = await finalImage.toByteData(format: ui.ImageByteFormat.png);
-
-      if (bytes == null) {
-        return baseIcon;
-      }
-
-      return BitmapDescriptor.fromBytes(bytes.buffer.asUint8List());
-    } catch (e) {
-      debugPrint("넘버링 마커 생성 실패: $e");
-      return baseIcon;
-    }
-  }
-  
   StoreStatus _convertStatusStringToEnum(String status) {
     switch (status) {
       case "green":
@@ -557,11 +414,17 @@ class _MarketMapDetailScreenState extends State<MarketMapDetailScreen> {
             height: MediaQuery.of(context).size.height,
             markers: _getMarkersForCurrentScreen(),
             onMapCreated: (controller) {
-              _mapController = controller;
-              // 지도 생성 후 위치 업데이트
-              Future.delayed(const Duration(milliseconds: 300), () {
-                _updateMapPosition();
-              });
+              if (mounted) {
+                setState(() {
+                  _mapController = controller;
+                });
+                // 지도 생성 후 위치 업데이트 (웹 환경에서 컨트롤러 초기화 완료 대기)
+                Future.delayed(const Duration(milliseconds: 300), () {
+                  if (mounted && _mapController != null) {
+                    _updateMapPosition();
+                  }
+                });
+              }
             },
             zoom: _calculateZoomLevel(widget.market.name),
           ),

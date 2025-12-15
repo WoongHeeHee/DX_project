@@ -19,10 +19,23 @@ class _CameraSuccessScreenState extends State<CameraSuccessScreen>
   late AnimationController _animationController;
   late Animation<double> _scaleAnimation;
   late Animation<double> _fadeAnimation;
+  late String _successMessage; // 한 번만 선택된 메시지 저장
 
   @override
   void initState() {
     super.initState();
+    
+    // 메시지를 한 번만 선택하여 저장
+    final messages = [
+      "완벽한 사진이에요! 📸",
+      "멋진 순간을 담았네요! ✨",
+      "훌륭한 촬영입니다! 🎉",
+      "사진이 정말 좋아요! 🌟",
+    ];
+    // 시간 기반으로 랜덤하게 선택 (밀리초까지 사용하여 더 랜덤하게)
+    final messageIndex = DateTime.now().millisecondsSinceEpoch % messages.length;
+    _successMessage = messages[messageIndex];
+    
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 2000),
       vsync: this,
@@ -124,20 +137,8 @@ class _CameraSuccessScreenState extends State<CameraSuccessScreen>
     ResponsiveHelper responsive,
     TextTheme textTheme,
   ) {
-    final messages = [
-      "완벽한 사진이에요! 📸",
-      "멋진 순간을 담았네요! ✨",
-      "훌륭한 촬영입니다! 🎉",
-      "사진이 정말 좋아요! 🌟",
-    ];
-
-    // 랜덤하게 메시지 선택 (간단하게 시간 기반으로)
-    final messageIndex =
-        DateTime.now().millisecondsSinceEpoch % messages.length;
-    final message = messages[messageIndex];
-
     return Text(
-      message,
+      _successMessage, // initState에서 선택된 메시지 사용
       textAlign: TextAlign.center,
       style: textTheme.titleLarge?.copyWith(
         fontSize: responsive.responsiveFontSize(mobileSize: 24),

@@ -9,6 +9,71 @@ import "../../data/repositories/api_repository.dart";
 import "../../data/models/menu_models.dart";
 import "models/food_model.dart";
 
+/// 메뉴 이미지를 로드하고 에러 시 대체 경로를 시도하는 위젯
+class _MenuImageWithFallback extends StatefulWidget {
+  final List<String> urls;
+  final double? width;
+  final double? height;
+  final BoxFit fit;
+
+  const _MenuImageWithFallback({
+    required this.urls,
+    this.width,
+    this.height,
+    this.fit = BoxFit.cover,
+  });
+
+  @override
+  State<_MenuImageWithFallback> createState() => _MenuImageWithFallbackState();
+}
+
+class _MenuImageWithFallbackState extends State<_MenuImageWithFallback> {
+  int _currentUrlIndex = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    if (_currentUrlIndex >= widget.urls.length) {
+      // 모든 URL 시도 실패
+      return Container(
+        width: widget.width,
+        height: widget.height,
+        color: AppColors.imagePlaceholder,
+      );
+    }
+
+    return Image.network(
+      widget.urls[_currentUrlIndex],
+      width: widget.width,
+      height: widget.height,
+      fit: widget.fit,
+      errorBuilder: (context, error, stackTrace) {
+        // 다음 URL 시도
+        if (_currentUrlIndex < widget.urls.length - 1) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              setState(() {
+                _currentUrlIndex++;
+              });
+            }
+          });
+          // 로딩 중 표시
+          return Container(
+            width: widget.width,
+            height: widget.height,
+            color: AppColors.imagePlaceholder,
+          );
+        }
+        // 모든 URL 시도 실패
+        return Container(
+          width: widget.width,
+          height: widget.height,
+          color: AppColors.imagePlaceholder,
+        );
+      },
+    );
+  }
+}
+
 class FoodDetailScreen extends StatefulWidget {
   final FoodModel food;
 
@@ -229,14 +294,9 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
                   ),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(12),
-                    child: Image.network(
-                      images[index],
+                    child: _MenuImageWithFallback(
+                      urls: images[index],
                       fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
-                          color: AppColors.imagePlaceholder,
-                        );
-                      },
                     ),
                   ),
                 );
@@ -634,13 +694,13 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
     );
   }
 
-  List<String> _menuImages() {
+  List<List<String>> _menuImages() {
     // 이미지 경로는 locale과 무관하게 원본(ko) 이름 사용, rep_image_url 미사용
     final baseName = widget.food.baseName;
     final baseId = _menuItemDetail?.id ?? widget.food.id;
     return List.generate(
       3,
-      (index) => _placeholderImage(baseName, baseId, variant: index + 1),
+      (index) => _placeholderImageUrls(baseName, baseId, variant: index + 1),
     );
   }
 
@@ -650,6 +710,21 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
         ? 1
         : (variant > 3 ? 3 : variant); // 파일명은 1~3 변형만 존재
     return "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Menu_all/${encodedName}/${encodedName}${clampedVariant}_${id}.png";
+  }
+  
+  /// 메뉴 placeholder 이미지의 대체 경로 반환
+  /// 원본 경로와 대체 경로(잘못 저장된 형식)를 모두 반환
+  List<String> _placeholderImageUrls(String name, String id, {int variant = 1}) {
+    final encodedName = Uri.encodeComponent(name);
+    final clampedVariant = variant < 1 ? 1 : (variant > 3 ? 3 : variant);
+    final baseUrl = "https://dnzeuzpu74ulj.cloudfront.net/placeholders/Menu_all/${encodedName}";
+    
+    // 원본 경로: {name}{variant}_{id}.png
+    final originalUrl = "$baseUrl/${encodedName}${clampedVariant}_${id}.png";
+    // 대체 경로: {name}_{name}{variant}_{id}.png
+    final alternateUrl = "$baseUrl/${encodedName}_${encodedName}${clampedVariant}_${id}.png";
+    
+    return [originalUrl, alternateUrl];
   }
 
 }

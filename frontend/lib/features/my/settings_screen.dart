@@ -854,7 +854,7 @@ class _SettingsScreenState extends State<SettingsScreen>
   ) {
     return SizedBox(
       width: double.infinity,
-      height: 60,
+      height: responsive.responsiveIconSize(mobileSize: 60),
       child: ElevatedButton(
         onPressed: _isLoading ? null : _saveSettings,
         style: ElevatedButton.styleFrom(
@@ -888,7 +888,7 @@ class _SettingsScreenState extends State<SettingsScreen>
   ) {
     return SizedBox(
       width: double.infinity,
-      height: 60,
+      height: responsive.responsiveIconSize(mobileSize: 60),
       child: ElevatedButton(
         onPressed: _showLogoutConfirmation,
         style: ElevatedButton.styleFrom(
@@ -1126,7 +1126,7 @@ class _YearMonthPickerDialogState extends State<YearMonthPickerDialog> {
                         height: responsive.responsivePadding(mobilePadding: 8),
                       ),
                       Container(
-                        height: 200,
+                        height: responsive.responsiveIconSize(mobileSize: 200),
                         decoration: BoxDecoration(
                           color: AppColors.white,
                           border: Border.all(
@@ -1202,7 +1202,7 @@ class _YearMonthPickerDialogState extends State<YearMonthPickerDialog> {
                         height: responsive.responsivePadding(mobilePadding: 8),
                       ),
                       Container(
-                        height: 200,
+                        height: responsive.responsiveIconSize(mobileSize: 200),
                         decoration: BoxDecoration(
                           color: AppColors.white,
                           border: Border.all(

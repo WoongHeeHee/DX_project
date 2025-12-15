@@ -15,6 +15,7 @@ import "saved_stores_screen.dart";
 import "saved_foods_screen.dart";
 import "market_history_screen.dart";
 import "market_review_write_screen.dart";
+import "demo_diary_write_screen.dart";
 import "gift_popup_dialog.dart";
 import "coupon_detail_screen.dart";
 
@@ -197,7 +198,7 @@ class _MyPageScreenState extends State<MyPageScreen> {
             if (_showFloatingButton)
               Positioned(
                 left: responsive.responsivePadding(mobilePadding: 20),
-                bottom: 80, // 하단 네비게이션 바 위 (더 하단으로 이동)
+                bottom: responsive.responsivePadding(mobilePadding: 80), // 하단 네비게이션 바 위 (더 하단으로 이동)
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
@@ -205,8 +206,8 @@ class _MyPageScreenState extends State<MyPageScreen> {
                     GestureDetector(
                       onTap: _onFloatingButtonTap,
                       child: Container(
-                        width: 56,
-                        height: 56,
+                        width: responsive.responsiveIconSize(mobileSize: 56),
+                        height: responsive.responsiveIconSize(mobileSize: 56),
                         decoration: BoxDecoration(
                           color: AppColors.primary,
                           shape: BoxShape.circle,
@@ -221,7 +222,7 @@ class _MyPageScreenState extends State<MyPageScreen> {
                         child: Icon(
                           Icons.card_giftcard,
                           color: AppColors.white,
-                          size: 28,
+                          size: responsive.responsiveIconSize(mobileSize: 28),
                         ),
                       ),
                     ),
@@ -304,47 +305,58 @@ class _MyPageScreenState extends State<MyPageScreen> {
     String koreanName,
     String englishPronunciation,
   ) {
-    return Column(
-      children: [
-        // 프로필 사진
-        Container(
-          width: responsive.responsiveFontSize(mobileSize: 120),
-          height: responsive.responsiveFontSize(mobileSize: 120),
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: AppColors.primary.withOpacity(0.3),
+    return GestureDetector(
+      onDoubleTap: () {
+        // 더블탭 시 임의 다이어리 작성 화면으로 이동
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const DemoDiaryWriteScreen(),
           ),
-          child: Icon(
-            Icons.person,
-            size: responsive.responsiveFontSize(mobileSize: 60),
-            color: AppColors.primary,
+        );
+      },
+      child: Column(
+        children: [
+          // 프로필 사진
+          Container(
+            width: responsive.responsiveFontSize(mobileSize: 120),
+            height: responsive.responsiveFontSize(mobileSize: 120),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: AppColors.primary.withOpacity(0.3),
+            ),
+            child: Icon(
+              Icons.person,
+              size: responsive.responsiveFontSize(mobileSize: 60),
+              color: AppColors.primary,
+            ),
           ),
-        ),
-        SizedBox(
-          height: responsive.responsivePadding(mobilePadding: 20),
-        ),
-        // 한국어 이름
-        Text(
-          koreanName,
-          style: textTheme.headlineLarge?.copyWith(
-            fontSize: responsive.responsiveFontSize(mobileSize: 24),
-            fontWeight: FontWeight.w700,
-            color: AppColors.mainText,
+          SizedBox(
+            height: responsive.responsivePadding(mobilePadding: 20),
           ),
-        ),
-        SizedBox(
-          height: responsive.responsivePadding(mobilePadding: 8),
-        ),
-        // 영문 발음
-        Text(
-          englishPronunciation,
-          style: textTheme.bodyMedium?.copyWith(
-            fontSize: responsive.responsiveFontSize(mobileSize: 16),
-            fontWeight: FontWeight.w400,
-            color: AppColors.inactiveText,
+          // 한국어 이름
+          Text(
+            koreanName,
+            style: textTheme.headlineLarge?.copyWith(
+              fontSize: responsive.responsiveFontSize(mobileSize: 24),
+              fontWeight: FontWeight.w700,
+              color: AppColors.mainText,
+            ),
           ),
-        ),
-      ],
+          SizedBox(
+            height: responsive.responsivePadding(mobilePadding: 8),
+          ),
+          // 영문 발음
+          Text(
+            englishPronunciation,
+            style: textTheme.bodyMedium?.copyWith(
+              fontSize: responsive.responsiveFontSize(mobileSize: 16),
+              fontWeight: FontWeight.w400,
+              color: AppColors.inactiveText,
+            ),
+          ),
+        ],
+      ),
     );
   }
 

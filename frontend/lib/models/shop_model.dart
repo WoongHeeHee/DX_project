@@ -6,6 +6,7 @@ class ShopModel {
   final String? nameEn;
   final String? nameZh;
   final String? nameJa;
+  final String? marketId;  // 시장 ID
   final double lat;
   final double lng;
   final String? address;
@@ -23,6 +24,7 @@ class ShopModel {
     this.nameEn,
     this.nameZh,
     this.nameJa,
+    this.marketId,
     required this.lat,
     required this.lng,
     this.address,
@@ -42,6 +44,7 @@ class ShopModel {
       nameEn: json['name_en'],
       nameZh: json['name_zh'],
       nameJa: json['name_ja'],
+      marketId: json['market_id']?.toString(),
       lat: (json['lat'] as num).toDouble(),
       lng: (json['lng'] as num).toDouble(),
       address: json['address'],

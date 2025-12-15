@@ -22,8 +22,8 @@ class MapBackButton extends StatelessWidget {
             Navigator.of(context).pop();
           },
           child: Container(
-            width: 40,
-            height: 40,
+            width: responsive.responsiveIconSize(mobileSize: 40),
+            height: responsive.responsiveIconSize(mobileSize: 40),
             decoration: BoxDecoration(
               color: AppColors.white,
               shape: BoxShape.circle,

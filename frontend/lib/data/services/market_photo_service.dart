@@ -135,16 +135,44 @@ class MarketPhoto {
   });
 
   factory MarketPhoto.fromJson(Map<String, dynamic> json) {
+    // DateTime 파싱 시 null 처리
+    DateTime parseDateTime(dynamic value) {
+      if (value == null) {
+        return DateTime.now().toUtc();
+      }
+      if (value is String) {
+        try {
+          return DateTime.parse(value);
+        } catch (e) {
+          return DateTime.now().toUtc();
+        }
+      }
+      return DateTime.now().toUtc();
+    }
+    
+    // s3_key와 thumbnail_s3_key null 처리 (JSON에서 "null" 문자열도 체크)
+    String? parseS3Key(dynamic value) {
+      if (value == null) return null;
+      if (value is String) {
+        final trimmed = value.trim();
+        if (trimmed.isEmpty || trimmed.toLowerCase() == 'null') {
+          return null;
+        }
+        return trimmed;
+      }
+      return null;
+    }
+    
     return MarketPhoto(
       id: json['id'] as String,
-      s3Key: json['s3_key'] as String,
-      thumbnailS3Key: json['thumbnail_s3_key'] as String?,
+      s3Key: parseS3Key(json['s3_key']) ?? '',
+      thumbnailS3Key: parseS3Key(json['thumbnail_s3_key']),
       lat: (json['lat'] as num).toDouble(),
       lng: (json['lng'] as num).toDouble(),
-      takenAt: DateTime.parse(json['taken_at'] as String),
+      takenAt: parseDateTime(json['taken_at']),
       menuItemId: json['menu_item_id'] as String?,
       category: json['category'] as String?,
-      createdAt: DateTime.parse(json['created_at'] as String),
+      createdAt: parseDateTime(json['created_at']),
     );
   }
 }
